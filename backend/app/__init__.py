@@ -53,11 +53,11 @@ def create_app(config_object=None):
         logger.error(f"Server error: {error}")
         return {"error": "Internal server error"}, 500
     
-    # Register blueprints
-    app.register_blueprint(content_bp)
-    app.register_blueprint(rag_bp)
-    app.register_blueprint(health_bp)
-    app.register_blueprint(drive_bp)
+    # Register blueprints with /api prefix
+    app.register_blueprint(content_bp, url_prefix='/api')
+    app.register_blueprint(rag_bp, url_prefix='/api')
+    app.register_blueprint(health_bp, url_prefix='/api')
+    app.register_blueprint(drive_bp, url_prefix='/api')
     
     # Create a simple root route
     @app.route('/')
