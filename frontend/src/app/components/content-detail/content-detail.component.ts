@@ -200,26 +200,26 @@ The main takeaways include:
   private getMockContentDetails(id: string): ContentDetails {
     return {
       id: id,
-      title: 'Modern Frontend Architecture with Angular and State Management',
-      description: 'In this session, we explore advanced patterns for building large-scale Angular applications. We cover state management strategies using NgRx, performance optimization techniques, and modular architecture approaches that help teams scale their development efforts. You\'ll learn how to structure your application for maintainability, implement effective testing strategies, and leverage Angular\'s latest features to create robust enterprise applications.',
+      title: '10 infrastructure innovations to accelerate your AI solutions anywhere',
+      description: 'Up to 90% of organizations are building across cloud environments, from edge to to multiple clouds - and the scale and speed of AI is putting pressure on these architectures. In this spotlight discover how organizations are leveraging decades of our infrastructure expertise to build secure, sovereign AI solutions. Also, learn how industry leaders are using the latest advances in networking, storage, and distributed cloud solutions to accelerate AI solution deployment anywhere.',
       track: 'Web Development',
       sessionType: 'Presentation',
-      tags: ['Angular', 'Architecture', 'State Management', 'NgRx', 'Performance'],
+      tags: ['AI', 'Infrastructure', 'On demand session', 'Technical', 'Retrieval augmented generation'],
       slideUrl: 'https://slides.example.com/angular-architecture',
       videoUrl: 'https://youtube.com/watch?v=example',
       resourcesUrl: 'https://github.com/example/angular-architecture',
-      dateAdded: '2023-06-15',
+      dateAdded: '2025-04-10',
       views: 423,
       likes: 87,
       files: [
         {
           id: 'f1',
-          name: 'Angular Architecture Slides.pdf',
+          name: 'Infrastructure Innovations Slides.pdf',
           type: 'pdf',
           size: 2400000, // 2.4 MB
           url: '/assets/mock/slides.pdf',
           thumbnailUrl: '/assets/images/content/pdf-thumbnail.jpg',
-          dateAdded: '2023-06-15'
+          dateAdded: '2025-04-10'
         },
         {
           id: 'f2',
@@ -227,16 +227,16 @@ The main takeaways include:
           type: 'zip',
           size: 5800000, // 5.8 MB
           url: '/assets/mock/code.zip',
-          dateAdded: '2023-06-15'
+          dateAdded: '2025-04-10'
         },
         {
           id: 'f3',
-          name: 'Architecture Diagram.png',
+          name: 'Infrastructure Diagram.png',
           type: 'image',
           size: 850000, // 850 KB
           url: '/assets/images/content/architecture-diagram.png',
           thumbnailUrl: '/assets/images/content/architecture-diagram.png',
-          dateAdded: '2023-06-15'
+          dateAdded: '2025-04-10'
         }
       ],
       presenters: [
@@ -245,11 +245,11 @@ The main takeaways include:
           name: 'Sarah Chen',
           title: 'Product Lead',
           company: 'InnovateTech',
-          bio: 'Sarah Chen is a product lead with over 8 years of experience building enterprise web applications. She specializes in Angular development and modern frontend architecture.',
+          bio: 'Sarah Chen is a product lead with over 8 years of experience building enterprise web applications. She specializes in cloud infrastructure and AI solutions deployment.',
           photoUrl: '/assets/images/presenters/sarah.jpg'
         }
       ],
-      aiSummary: 'This presentation covers modern Angular architecture patterns with a focus on state management using NgRx. The speaker discusses component design, module organization, and performance optimization techniques. Key takeaways include implementing effective testing strategies, structuring large-scale applications, and leveraging dependency injection for maintainable code.'
+      aiSummary: 'Up to 90% of organizations are building across cloud environments, from edge to to multiple clouds - and the scale and speed of AI is putting pressure on these architectures. In this spotlight discover how organizations are leveraging decades of our infrastructure expertise to build secure, sovereign AI solutions. Also, learn how industry leaders are using the latest advances in networking, storage, and distributed cloud solutions to accelerate AI solution deployment anywhere.'
     };
   }
 } 
