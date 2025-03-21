@@ -402,4 +402,71 @@ class EmbeddingService:
             
         except Exception as e:
             logger.error(f"Error finding most similar embeddings: {e}")
-            return [] 
+            return []
+    
+    def search(self, query: str, limit: int = 100) -> List[str]:
+        """Search for similar content using the query embedding.
+        
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+            
+        Returns:
+            List[str]: List of content IDs sorted by relevance
+        """
+        try:
+            # Generate embedding for the query
+            query_embedding = self.generate_embedding(query)
+            if not query_embedding:
+                logger.warning("Failed to generate embedding for search query")
+                return []
+                
+            # Use vector search if available
+            if hasattr(self, 'vector_search') and self.vector_search:
+                return self._vector_search(query_embedding, limit)
+            else:
+                # Fall back to local similarity search
+                from app.repository.firestore_repo import FirestoreRepository
+                repo = FirestoreRepository()
+                all_content = repo.get_all_content()
+                
+                # Get embeddings for all content if available
+                content_with_embeddings = []
+                for content in all_content:
+                    if 'embedding' in content:
+                        content_with_embeddings.append({
+                            'id': content['id'],
+                            'embedding': content['embedding']
+                        })
+                
+                # Find most similar content
+                if content_with_embeddings:
+                    similar_results = self.find_most_similar(
+                        query_embedding, 
+                        content_with_embeddings, 
+                        top_k=limit
+                    )
+                    return [result['id'] for result in similar_results]
+                else:
+                    logger.warning("No content with embeddings found")
+                    return []
+                
+        except Exception as e:
+            logger.error(f"Error in vector search: {e}")
+            logger.error(traceback.format_exc())
+            return []
+            
+    def _vector_search(self, query_embedding: List[float], limit: int = 100) -> List[str]:
+        """Search using Vector Search API if available.
+        
+        Args:
+            query_embedding: The query embedding vector
+            limit: Maximum number of results to return
+            
+        Returns:
+            List[str]: List of content IDs sorted by relevance
+        """
+        # Not implemented - would connect to Vector Search API
+        # This is a placeholder for future implementation
+        logger.warning("Vector Search API not implemented yet")
+        return [] 

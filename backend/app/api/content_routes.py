@@ -29,26 +29,60 @@ def upload_content():
         
         # Debug request information
         logger.info(f"Request content type: {request.content_type}")
-        logger.info(f"Request form keys: {list(request.form.keys()) if request.form else 'No form data'}")
-        logger.info(f"Request files keys: {list(request.files.keys()) if request.files else 'No files'}")
         
-        # Process form data
-        title = request.form.get('title', '')
+        # Check if the request is multipart form data
+        if not request.content_type or 'multipart/form-data' not in request.content_type:
+            logger.warning(f"Invalid content type: {request.content_type}")
+            return jsonify({
+                "error": "Invalid content type", 
+                "message": "Uploads must use multipart/form-data content type",
+                "success": False
+            }), 400
+        
+        # Safely access form data with exception handling
+        try:
+            form_keys = list(request.form.keys()) if request.form else []
+            logger.info(f"Request form keys: {form_keys}")
+        except Exception as form_err:
+            logger.warning(f"Could not access form data: {form_err}")
+            form_keys = []
+        
+        # Safely access file data with exception handling    
+        try:
+            file_keys = list(request.files.keys()) if request.files else []
+            logger.info(f"Request files keys: {file_keys}")
+        except Exception as file_err:
+            logger.warning(f"Could not access file data: {file_err}")
+            file_keys = []
+        
+        # Process form data with proper error handling
+        try:
+            title = request.form.get('title', '')
+            description = request.form.get('description', '')
+            track = request.form.get('track', '')
+            tags = request.form.get('tags', '')
+            session_type = request.form.get('session_type', '')
+            presenters = request.form.get('presenters', '')
+            slide_url = request.form.get('slide_url', '')
+            drive_link = request.form.get('drive_link', '')
+        except Exception as field_err:
+            logger.warning(f"Error accessing form fields: {field_err}")
+            # Set defaults if form data cannot be accessed
+            title = f"Untitled Upload {logging.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            description = track = tags = session_type = presenters = slide_url = drive_link = ''
+            
         if not title:
             logger.warning("No title provided in request")
             title = f"Untitled Upload {logging.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             
-        description = request.form.get('description', '')
-        track = request.form.get('track', '')
-        tags = request.form.get('tags', '')
-        session_type = request.form.get('session_type', '')
-        presenters = request.form.get('presenters', '')
-        slide_url = request.form.get('slide_url', '')
-        drive_link = request.form.get('drive_link', '')
-        
-        # Parse lists
-        tags_list = tags.split(",") if tags else []
-        presenters_list = presenters.split(",") if presenters else []
+        # Parse lists with error handling
+        try:
+            tags_list = tags.split(",") if tags else []
+            presenters_list = presenters.split(",") if presenters else []
+        except Exception as parse_err:
+            logger.warning(f"Error parsing list fields: {parse_err}")
+            tags_list = []
+            presenters_list = []
         
         # Create metadata object
         metadata = {
@@ -62,15 +96,28 @@ def upload_content():
             "drive_link": drive_link
         }
         
-        # Check if files were uploaded
+        # Check if files were uploaded with improved error handling
         files = []
-        if 'files' in request.files:
-            files = request.files.getlist('files')
-            logger.info(f"Received {len(files)} files")
-        elif 'file' in request.files:
-            # Try singular 'file' as well
-            files = request.files.getlist('file')
-            logger.info(f"Received {len(files)} files from 'file' field")
+        try:
+            if 'files' in request.files:
+                file_list = request.files.getlist('files')
+                # Validate each file before adding to the list
+                for file in file_list:
+                    if file and file.filename:
+                        files.append(file)
+                logger.info(f"Received {len(files)} valid files from 'files' field")
+            elif 'file' in request.files:
+                # Try singular 'file' as well
+                file_list = request.files.getlist('file')
+                # Validate each file
+                for file in file_list:
+                    if file and file.filename:
+                        files.append(file)
+                logger.info(f"Received {len(files)} valid files from 'file' field")
+        except Exception as files_err:
+            logger.error(f"Error processing uploaded files: {files_err}")
+            import traceback
+            logger.error(traceback.format_exc())
         
         # Process the content even if no files were uploaded
         result = content_service.process_content(files, metadata)
