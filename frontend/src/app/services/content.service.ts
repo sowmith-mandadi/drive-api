@@ -23,6 +23,31 @@ export class ContentService {
     );
   }
   
+  // Import files from Google Drive
+  importDriveFiles(fileIds: string[], metadata: any): Observable<any> {
+    const payload = { 
+      fileIds,
+      metadata 
+    };
+    
+    return this.http.post(`${this.apiUrl}/drive/import`, payload).pipe(
+      catchError(error => {
+        console.error('Error importing files from Google Drive:', error);
+        return throwError(() => new Error('Failed to import files from Google Drive. Please try again.'));
+      })
+    );
+  }
+  
+  // Create content without files (only links/metadata)
+  createContentWithoutFiles(metadata: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/content`, metadata).pipe(
+      catchError(error => {
+        console.error('Error creating content:', error);
+        return throwError(() => new Error('Failed to create content. Please try again.'));
+      })
+    );
+  }
+  
   // Get content details by ID
   getContentById(id: string): Observable<Content> {
     return this.http.get<Content>(`${this.apiUrl}/content/${id}`).pipe(

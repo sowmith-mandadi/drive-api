@@ -1,4 +1,5 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:3000', // Backend API URL
+  vertexAIApiUrl: 'http://localhost:3000/rag' // Vertex AI API endpoint
 }; 

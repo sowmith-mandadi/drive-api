@@ -1,0 +1,148 @@
+<div class="home-container">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1>Conference Content Management & Discovery</h1>
+      <p class="subtitle">Find, share, and discover conference presentations, videos, and resources</p>
+      <div class="hero-actions">
+        <button mat-raised-button color="primary" class="action-button" (click)="navigateToSearch()">
+          <mat-icon>search</mat-icon>
+          Browse Content
+        </button>
+        <button mat-raised-button class="action-button upload-button" (click)="navigateToUpload()">
+          <mat-icon>cloud_upload</mat-icon>
+          Upload Content
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading content...</p>
+  </div>
+
+  <div *ngIf="!isLoading" class="content-container">
+    <!-- Recent Content Section -->
+    <section class="content-section">
+      <div class="section-header">
+        <h2>
+          <mat-icon class="section-icon">update</mat-icon>
+          Recently Added
+        </h2>
+        <button mat-button color="primary" (click)="navigateToSearch({sort: 'recent'})">
+          View All <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+      
+      <div class="content-grid">
+        <mat-card *ngFor="let content of recentContent" class="content-card" (click)="navigateToContent(content.id)">
+          <div class="card-image-container">
+            <img mat-card-image [src]="content.imageUrl" [alt]="content.title">
+            <div class="view-count">
+              <mat-icon>visibility</mat-icon>
+              <span>{{ content.views }}</span>
+            </div>
+          </div>
+          <mat-card-content>
+            <h3 class="card-title">{{ content.title }}</h3>
+            <p class="card-presenter">
+              <mat-icon>person</mat-icon>
+              {{ content.presenter }}
+            </p>
+            <p class="card-date">
+              <mat-icon>event</mat-icon>
+              {{ content.date | date:'mediumDate' }}
+            </p>
+            <div class="card-tags">
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of content.tags | slice:0:2" color="primary" selected>
+                  {{ tag }}
+                </mat-chip>
+                <mat-chip *ngIf="content.tags.length > 2">+{{ content.tags.length - 2 }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+
+    <!-- Track Stats Section -->
+    <section class="stats-section">
+      <div class="section-header">
+        <h2>
+          <mat-icon class="section-icon">category</mat-icon>
+          Content by Track
+        </h2>
+      </div>
+      
+      <div class="track-stats-container">
+        <div *ngFor="let track of trackStats" class="track-stat-card" (click)="navigateToSearch(track.name)">
+          <div class="track-stat-bar" [style.background-color]="track.color"></div>
+          <div class="track-stat-content">
+            <div class="track-stat-name">{{ track.name }}</div>
+            <div class="track-stat-count">{{ track.count }} items</div>
+          </div>
+          <mat-icon class="track-stat-icon">arrow_forward</mat-icon>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Popular Content Section -->
+    <section class="content-section">
+      <div class="section-header">
+        <h2>
+          <mat-icon class="section-icon">trending_up</mat-icon>
+          Most Popular
+        </h2>
+        <button mat-button color="primary" (click)="navigateToSearch({sort: 'popular'})">
+          View All <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+      
+      <div class="content-grid">
+        <mat-card *ngFor="let content of popularContent" class="content-card" (click)="navigateToContent(content.id)">
+          <div class="card-image-container">
+            <img mat-card-image [src]="content.imageUrl" [alt]="content.title">
+            <div class="view-count">
+              <mat-icon>visibility</mat-icon>
+              <span>{{ content.views }}</span>
+            </div>
+          </div>
+          <mat-card-content>
+            <h3 class="card-title">{{ content.title }}</h3>
+            <p class="card-presenter">
+              <mat-icon>person</mat-icon>
+              {{ content.presenter }}
+            </p>
+            <p class="card-date">
+              <mat-icon>event</mat-icon>
+              {{ content.date | date:'mediumDate' }}
+            </p>
+            <div class="card-tags">
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of content.tags | slice:0:2" color="primary" selected>
+                  {{ tag }}
+                </mat-chip>
+                <mat-chip *ngIf="content.tags.length > 2">+{{ content.tags.length - 2 }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+    
+    <!-- Call to Action -->
+    <section class="cta-section">
+      <div class="cta-content">
+        <h2>Share Your Knowledge</h2>
+        <p>Upload your conference presentations, videos, and resources to share with the community.</p>
+        <button mat-raised-button color="accent" (click)="navigateToUpload()">
+          <mat-icon>cloud_upload</mat-icon>
+          Upload Content
+        </button>
+      </div>
+    </section>
+  </div>
+</div> 

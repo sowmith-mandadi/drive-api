@@ -1,0 +1,244 @@
+<div class="detail-container">
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading content...</p>
+  </div>
+  
+  <!-- Error State -->
+  <div *ngIf="error" class="error-container">
+    <mat-icon class="error-icon">error</mat-icon>
+    <h2>Content Not Found</h2>
+    <p>We couldn't find the content you were looking for.</p>
+    <button mat-raised-button color="primary" (click)="navigateBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Go Back
+    </button>
+  </div>
+  
+  <!-- Content Detail View -->
+  <div *ngIf="content && !isLoading && !error" class="content-detail">
+    <!-- Back Button -->
+    <div class="action-bar">
+      <button mat-button color="primary" class="back-button" (click)="navigateBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Back to Search
+      </button>
+      
+      <div class="detail-actions">
+        <button mat-icon-button [color]="isLiked ? 'accent' : ''" (click)="toggleLike()" matTooltip="Add to favorites">
+          <mat-icon>{{ isLiked ? 'favorite' : 'favorite_border' }}</mat-icon>
+        </button>
+        <button mat-icon-button (click)="shareContent()" matTooltip="Share">
+          <mat-icon>share</mat-icon>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Main Content Header -->
+    <div class="content-header">
+      <h1 class="content-title">{{ content.title }}</h1>
+      
+      <div class="content-meta">
+        <div class="meta-item">
+          <mat-icon>category</mat-icon>
+          <span>{{ content.track }}</span>
+        </div>
+        <div class="meta-item">
+          <mat-icon>event</mat-icon>
+          <span>{{ content.sessionType }}</span>
+        </div>
+        <div class="meta-item">
+          <mat-icon>calendar_today</mat-icon>
+          <span>{{ content.dateAdded | date:'mediumDate' }}</span>
+        </div>
+        <div class="meta-item">
+          <mat-icon>visibility</mat-icon>
+          <span>{{ content.views }} views</span>
+        </div>
+        <div class="meta-item">
+          <mat-icon>favorite</mat-icon>
+          <span>{{ content.likes }} likes</span>
+        </div>
+      </div>
+      
+      <!-- Tags -->
+      <div class="content-tags">
+        <mat-chip-set>
+          <mat-chip *ngFor="let tag of content.tags" color="primary" selected>
+            {{ tag }}
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+    </div>
+    
+    <!-- Main Content Body -->
+    <mat-card class="detail-card">
+      <!-- Tabs Navigation -->
+      <mat-tab-group [(selectedIndex)]="activeTab" animationDuration="300ms">
+        <!-- Overview Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">description</mat-icon>
+            Overview
+          </ng-template>
+          
+          <div class="tab-content">
+            <!-- Presenters -->
+            <div class="presenters-section">
+              <h2 class="section-title">Presenters</h2>
+              <div class="presenters-container">
+                <mat-card *ngFor="let presenter of content.presenters" class="presenter-card">
+                  <div class="presenter-info">
+                    <img [src]="presenter.photoUrl || 'assets/images/avatar-placeholder.png'" 
+                         [alt]="presenter.name" class="presenter-photo">
+                    <div class="presenter-details">
+                      <h3 class="presenter-name">{{ presenter.name }}</h3>
+                      <p class="presenter-title">{{ presenter.title }}</p>
+                      <p class="presenter-company">{{ presenter.company }}</p>
+                    </div>
+                  </div>
+                  <p *ngIf="presenter.bio" class="presenter-bio">{{ presenter.bio }}</p>
+                </mat-card>
+              </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="description-section">
+              <h2 class="section-title">Description</h2>
+              <p class="content-description">{{ content.description }}</p>
+            </div>
+            
+            <!-- AI Summary -->
+            <div *ngIf="content.aiSummary" class="ai-summary-section">
+              <h2 class="section-title">
+                <mat-icon>smart_toy</mat-icon>
+                AI-Generated Summary
+              </h2>
+              <mat-card class="ai-summary-card">
+                <p>{{ content.aiSummary }}</p>
+              </mat-card>
+            </div>
+            
+            <!-- External Links -->
+            <div class="links-section" *ngIf="content.slideUrl || content.videoUrl || content.resourcesUrl">
+              <h2 class="section-title">External Links</h2>
+              <div class="links-container">
+                <a *ngIf="content.slideUrl" mat-stroked-button color="primary" class="external-link" 
+                   (click)="openUrl(content.slideUrl)">
+                  <mat-icon>slideshow</mat-icon>
+                  Slides
+                </a>
+                <a *ngIf="content.videoUrl" mat-stroked-button color="primary" class="external-link" 
+                   (click)="openUrl(content.videoUrl)">
+                  <mat-icon>videocam</mat-icon>
+                  Video
+                </a>
+                <a *ngIf="content.resourcesUrl" mat-stroked-button color="primary" class="external-link" 
+                   (click)="openUrl(content.resourcesUrl)">
+                  <mat-icon>code</mat-icon>
+                  Resources
+                </a>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+        
+        <!-- Files Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">folder</mat-icon>
+            Files
+            <span class="tab-badge" *ngIf="content.files.length > 0">{{ content.files.length }}</span>
+          </ng-template>
+          
+          <div class="tab-content">
+            <h2 class="section-title">Available Files</h2>
+            
+            <div *ngIf="content.files.length === 0" class="no-files-message">
+              <mat-icon>info</mat-icon>
+              <p>No files are available for this content.</p>
+            </div>
+            
+            <div *ngIf="content.files.length > 0" class="files-list">
+              <mat-card *ngFor="let file of content.files" class="file-card">
+                <div class="file-preview">
+                  <div [ngSwitch]="file.type" class="file-thumbnail">
+                    <img *ngSwitchCase="'image'" [src]="file.thumbnailUrl || file.url" [alt]="file.name">
+                    <img *ngSwitchCase="'pdf'" [src]="file.thumbnailUrl || 'assets/icons/pdf-icon.png'" alt="PDF Icon">
+                    <mat-icon *ngSwitchCase="'zip'" class="file-icon zip">archive</mat-icon>
+                    <mat-icon *ngSwitchDefault class="file-icon">insert_drive_file</mat-icon>
+                  </div>
+                </div>
+                
+                <div class="file-details">
+                  <h3 class="file-name">{{ file.name }}</h3>
+                  <div class="file-meta">
+                    <span class="file-type">{{ file.type.toUpperCase() }}</span>
+                    <span class="file-size">{{ file.size | number:'1.0-1' }} bytes</span>
+                    <span class="file-date">Added {{ file.dateAdded | date:'mediumDate' }}</span>
+                  </div>
+                </div>
+                
+                <div class="file-actions">
+                  <button mat-mini-fab color="primary" (click)="downloadFile(file)" matTooltip="Download file">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              </mat-card>
+            </div>
+          </div>
+        </mat-tab>
+        
+        <!-- RAG-Search Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">search</mat-icon>
+            Ask Questions
+          </ng-template>
+          
+          <div class="tab-content">
+            <div class="rag-search-section">
+              <h2 class="section-title">
+                <mat-icon>psychology</mat-icon>
+                AI-Powered Question Answering
+              </h2>
+              
+              <p class="rag-description">
+                Ask questions about this content and get AI-generated answers based on the
+                content's documents using Retrieval Augmented Generation (RAG).
+              </p>
+              
+              <div class="search-form">
+                <mat-form-field appearance="outline" class="search-input">
+                  <mat-label>Ask a question about this content</mat-label>
+                  <input matInput placeholder="e.g., What are the key points about NgRx?">
+                  <mat-icon matSuffix>question_answer</mat-icon>
+                </mat-form-field>
+                
+                <button mat-raised-button color="primary" class="search-button">
+                  <mat-icon>search</mat-icon>
+                  Ask
+                </button>
+              </div>
+              
+              <!-- Placeholder for search results -->
+              <div class="search-results-placeholder">
+                <mat-icon>tips_and_updates</mat-icon>
+                <p>Ask a question to see AI-generated answers based on the content's documents.</p>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card>
+    
+    <!-- Related Content (future implementation) -->
+    <!-- <div class="related-content-section">
+      <h2 class="section-title">Related Content</h2>
+      <div class="content-grid">
+        ... Related content would go here ...
+      </div>
+    </div> -->
+  </div>
+</div> 

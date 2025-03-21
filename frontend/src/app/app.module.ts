@@ -1,4 +1,4 @@
-import { NgModule, CUSTOM_ELEMENTS_SCHEMA, Component } from '@angular/core';
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule } from '@angular/common/http';
@@ -34,19 +34,8 @@ import { HeaderComponent } from './components/header/header.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { UploadComponent } from './components/upload/upload.component';
 import { SearchComponent } from './components/search/search.component';
-
-// Placeholder Components for missing components
-@Component({
-  selector: 'app-home',
-  template: '<h2>Home Component</h2><p>This is a temporary placeholder for the Home component</p>'
-})
-export class HomeComponent {}
-
-@Component({
-  selector: 'app-content-detail',
-  template: '<h2>Content Detail Component</h2><p>This is a temporary placeholder for the Content Detail component</p>'
-})
-export class ContentDetailComponent {}
+import { HomeComponent } from './components/home/home.component';
+import { ContentDetailComponent } from './components/content-detail/content-detail.component';
 
 // Services
 import { ContentService } from './services/content.service';
