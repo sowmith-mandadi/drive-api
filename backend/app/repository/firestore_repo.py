@@ -3,6 +3,7 @@
 import logging
 import datetime
 import os.path
+import os
 from typing import List, Dict, Optional, Any, Union
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -21,7 +22,20 @@ class FirestoreRepository:
     def _initialize_firestore(self):
         """Initialize Firestore client."""
         try:
-            # Check if credentials file exists
+            # First check if we're running in Cloud Shell with environment variables
+            if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+                project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+                logger.info(f"Using environment variables for authentication with project: {project_id}")
+                # In Cloud Shell, default credentials should work without a credentials file
+                if not firebase_admin._apps:
+                    firebase_admin.initialize_app()
+                
+                self.db = firestore.client()
+                self.initialized = True
+                logger.info("Firestore initialized successfully using Cloud Shell credentials")
+                return
+                
+            # If not in Cloud Shell, check for credentials file
             if not os.path.exists('credentials.json'):
                 logger.warning("Credentials file not found. Running in development mode.")
                 self.db = None

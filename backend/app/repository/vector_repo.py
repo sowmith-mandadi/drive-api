@@ -22,8 +22,22 @@ class VectorRepository:
         self.initialized = False
         self.vector_collection = None
         
+        # Check if running in Cloud Shell with GCP environment variables
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ and 'VECTOR_INDEX_ID' in os.environ:
+            logger.info("Using Cloud Shell environment for vector search")
+            
+            try:
+                if USE_VERTEX_AI:
+                    # Initialize Vertex AI Vector Search client in Cloud Shell
+                    self._init_vertex_ai_vector_search()
+                    return
+            except Exception as e:
+                logger.error(f"Failed to initialize Vector Search in Cloud Shell: {e}")
+                logger.warning("Falling back to in-memory store in Cloud Shell")
+                
+        # If not in Cloud Shell or initialization failed, try other options
         try:
-            if USE_VERTEX_AI:
+            if USE_VERTEX_AI and os.path.exists('credentials.json'):
                 # Initialize Vertex AI Vector Search client if configured
                 self._init_vertex_ai_vector_search()
             elif USE_CHROMA:

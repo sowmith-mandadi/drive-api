@@ -21,7 +21,26 @@ class StorageRepository:
     def _initialize_storage(self):
         """Initialize Google Cloud Storage client."""
         try:
-            # Check if credentials file exists
+            # First check if we're running in Cloud Shell with environment variables
+            if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+                project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+                logger.info(f"Using environment variables for authentication with project: {project_id}")
+                
+                # In Cloud Shell, default credentials should work without a credentials file
+                self.storage_client = storage.Client()
+                bucket_name = os.getenv('GCS_BUCKET_NAME', 'conference-content-bucket')
+                
+                # Get or create bucket
+                if self.storage_client.lookup_bucket(bucket_name):
+                    self.bucket = self.storage_client.bucket(bucket_name)
+                else:
+                    self.bucket = self.storage_client.create_bucket(bucket_name)
+                    
+                self.initialized = True
+                logger.info(f"Connected to GCS bucket: {bucket_name} using Cloud Shell credentials")
+                return
+            
+            # If not in Cloud Shell, check for credentials file
             if not os.path.exists('credentials.json'):
                 logger.warning("Credentials file not found. Running in development mode.")
                 self.storage_client = None

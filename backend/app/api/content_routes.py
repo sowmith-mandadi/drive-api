@@ -27,8 +27,17 @@ def upload_content():
     try:
         logger.info("Received upload request")
         
+        # Debug request information
+        logger.info(f"Request content type: {request.content_type}")
+        logger.info(f"Request form keys: {list(request.form.keys()) if request.form else 'No form data'}")
+        logger.info(f"Request files keys: {list(request.files.keys()) if request.files else 'No files'}")
+        
         # Process form data
-        title = request.form.get('title')
+        title = request.form.get('title', '')
+        if not title:
+            logger.warning("No title provided in request")
+            title = f"Untitled Upload {logging.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
         description = request.form.get('description', '')
         track = request.form.get('track', '')
         tags = request.form.get('tags', '')
@@ -58,8 +67,12 @@ def upload_content():
         if 'files' in request.files:
             files = request.files.getlist('files')
             logger.info(f"Received {len(files)} files")
+        elif 'file' in request.files:
+            # Try singular 'file' as well
+            files = request.files.getlist('file')
+            logger.info(f"Received {len(files)} files from 'file' field")
         
-        # Process the content
+        # Process the content even if no files were uploaded
         result = content_service.process_content(files, metadata)
         
         # If AI content was generated, include it in the response
@@ -89,6 +102,8 @@ def upload_content():
         return resp
     except Exception as e:
         logger.error(f"Error in upload: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         # Return a more user-friendly error response
         return jsonify({
             "error": "Upload failed", 

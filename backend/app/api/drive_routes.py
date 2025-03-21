@@ -4,6 +4,8 @@ from flask import Blueprint, request, jsonify
 import logging
 import os
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from app.services.content_service import ContentService
 
@@ -20,11 +22,24 @@ content_service = ContentService()
 def get_drive_service():
     """Get an authorized Google Drive API service."""
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            'credentials.json',
-            scopes=['https://www.googleapis.com/auth/drive.readonly']
-        )
-        return build('drive', 'v3', credentials=credentials)
+        # First check if we're running in Cloud Shell with environment variables
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+            project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+            logger.info(f"Using environment variables for Google Drive API with project: {project_id}")
+            
+            # Use default credentials in Cloud Shell
+            return build('drive', 'v3', cache_discovery=False)
+        
+        # If not in Cloud Shell, try to use credentials file
+        if os.path.exists('credentials.json'):
+            credentials = service_account.Credentials.from_service_account_file(
+                'credentials.json',
+                scopes=['https://www.googleapis.com/auth/drive.readonly']
+            )
+            return build('drive', 'v3', credentials=credentials)
+        else:
+            logger.warning("Credentials file not found. Running Drive API in limited mode.")
+            return build('drive', 'v3', cache_discovery=False)
     except Exception as e:
         logger.error(f"Error initializing Drive service: {e}")
         return None

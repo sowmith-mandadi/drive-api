@@ -4,7 +4,7 @@ export const environment = {
   vertexAIApiUrl: '/api/rag', // Changed to relative path to use with proxy
   google: {
     apiKey: 'AIzaSyB_mMBUKeIBqn4DkcwXEpnmQeUW1DbVGfE', // Placeholder - replace with real API key
-    clientId: '912741596522-o66d95l1m46feg4p4v1c4elscq6iv6dq.apps.googleusercontent.com', // Placeholder - replace with real client ID
+    clientId: '652983476232-v67gfls5hujb3jb8qgvsloo016drc7go.apps.googleusercontent.com', // From client_credentials.json
     scopes: [
       'https://www.googleapis.com/auth/drive.readonly'
     ]

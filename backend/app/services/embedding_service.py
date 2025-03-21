@@ -22,6 +22,26 @@ class EmbeddingService:
         self.initialized = False
         self.embedding_model = None
         self.embedding_dim = 768  # Default dimension
+        
+        # Check if running in Cloud Shell with GCP environment variables
+        if 'GOOGLE_CLOUD_PROJECT' in os.environ:
+            logger.info("Using Cloud Shell environment for embedding service")
+            self.dev_mode = False
+            try:
+                if USE_VERTEX_AI:
+                    # Initialize Vertex AI embedding model in Cloud Shell
+                    self._init_vertex_ai()
+                else:
+                    # Initialize local sentence-transformers model as fallback
+                    self._init_local_model()
+            except Exception as e:
+                logger.error(f"Failed to initialize embedding service in Cloud Shell: {e}")
+                logger.error(traceback.format_exc())
+                logger.warning("Running embedding service in development mode with mock embeddings")
+                self.dev_mode = True
+            return
+            
+        # If not in Cloud Shell, check for credentials file
         self.dev_mode = not os.path.exists('credentials.json')
         
         if self.dev_mode:
