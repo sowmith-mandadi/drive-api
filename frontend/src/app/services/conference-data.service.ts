@@ -78,37 +78,50 @@ export class ConferenceDataService {
         name: 'Thomas Kurian',
         title: 'CEO, Google Cloud',
         bio: 'Thomas Kurian is CEO of Google Cloud, responsible for leading the cloud division of Google.',
-        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Thomas-Kurian.max-1000x1000.jpg'
+        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Thomas-Kurian.max-1000x1000.jpg',
+        company: 'Google Cloud'
       },
       {
         id: 'urs-holzle',
         name: 'Urs Hölzle',
         title: 'SVP, Technical Infrastructure, Google Cloud',
         bio: 'Urs Hölzle oversees the design and operation of the servers, networks, and data centers that power Google\'s services.',
-        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Urs_Hoelzle.max-1000x1000.jpg'
+        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Urs_Hoelzle.max-1000x1000.jpg',
+        company: 'Google Cloud'
       },
       {
         id: 'sundar-pichai',
         name: 'Sundar Pichai',
         title: 'CEO, Google and Alphabet',
         bio: 'Sundar Pichai is the CEO of Google and its parent company Alphabet, overseeing the company\'s technological innovation and business strategy.',
-        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Sundar_Pichai.max-1000x1000.jpg'
+        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Sundar_Pichai.max-1000x1000.jpg',
+        company: 'Google & Alphabet'
       },
       {
         id: 'fiona-cicconi',
         name: 'Fiona Cicconi',
         title: 'Chief People Officer, Google',
         bio: 'Fiona Cicconi leads Google\'s People Operations team, responsible for the company\'s human resources function.',
-        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Fiona_Cicconi.max-1000x1000.jpg'
+        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Fiona_Cicconi.max-1000x1000.jpg',
+        company: 'Google'
       },
       {
         id: 'phil-venables',
         name: 'Phil Venables',
         title: 'CISO, Google Cloud',
         bio: 'Phil Venables is the Chief Information Security Officer for Google Cloud, leading security strategy, engineering, and operations.',
-        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Phil_Venables.max-1000x1000.jpg'
+        photoUrl: 'https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Phil_Venables.max-1000x1000.jpg',
+        company: 'Google Cloud'
       }
     ]);
+  }
+  
+  /**
+   * Get presenters (alias for getSpeakers for backward compatibility)
+   * @returns Observable of presenter data
+   */
+  getPresenters(): Observable<any[]> {
+    return this.getSpeakers();
   }
   
   /**

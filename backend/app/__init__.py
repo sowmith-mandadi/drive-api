@@ -9,6 +9,7 @@ import logging
 from app.api.content_routes import content_bp
 from app.api.rag_routes import rag_bp
 from app.api.health_routes import health_bp
+from app.api.drive_routes import drive_bp
 
 def create_app(config_object=None):
     """Create and configure the Flask application.
@@ -56,6 +57,7 @@ def create_app(config_object=None):
     app.register_blueprint(content_bp)
     app.register_blueprint(rag_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(drive_bp)
     
     # Create a simple root route
     @app.route('/')

@@ -4,6 +4,8 @@ import os
 import uuid
 import logging
 import datetime
+import tempfile
+import io
 from typing import List, Dict, Any, Optional
 from werkzeug.datastructures import FileStorage
 from app.repository.firestore_repo import FirestoreRepository
@@ -12,6 +14,7 @@ from app.services.ai_service import AIService
 from app.services.embedding_service import EmbeddingService
 from app.extractors.pdf_extractor import PdfExtractor
 from app.extractors.pptx_extractor import PptxExtractor
+from googleapiclient.http import MediaIoBaseDownload
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -357,4 +360,171 @@ class ContentService:
             logger.info(f"[DEV MODE] Retrieved {len(popular_tags)} popular tags")
             return popular_tags
             
-        return self.firestore_repo.get_popular_tags(limit) 
+        return self.firestore_repo.get_popular_tags(limit)
+    
+    def process_drive_content(self, drive_service, file_ids: List[str], metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Process Google Drive files and store metadata.
+        
+        Args:
+            drive_service: Authorized Google Drive service
+            file_ids: List of Google Drive file IDs
+            metadata: Content metadata
+            
+        Returns:
+            Dict: Processed content data
+        """
+        try:
+            # Use existing content ID if provided, otherwise generate a new one
+            content_id = metadata.get('contentId') or str(uuid.uuid4())
+            
+            # If in dev mode, use mock implementation
+            if self.dev_mode:
+                # Create a mock content object
+                content_data = {
+                    "id": content_id,
+                    "metadata": metadata,
+                    "created_at": datetime.datetime.now().isoformat(),
+                    "updated_at": datetime.datetime.now().isoformat(),
+                    "file_count": len(file_ids) if file_ids else 0,
+                    "file_ids": file_ids,
+                    "source": "google_drive"
+                }
+                
+                # Store in mock data
+                MOCK_CONTENT[content_id] = content_data
+                logger.info(f"[DEV MODE] Stored mock Drive content with ID: {content_id}")
+                
+                return {
+                    "status": "success",
+                    "message": "Drive content processed in development mode",
+                    "content_id": content_id,
+                    "success": True
+                }
+            
+            # Ensure title exists
+            if not metadata.get("title"):
+                metadata["title"] = f"Drive Content {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            # Create or update a record for the content
+            content_data = {
+                "id": content_id,
+                "metadata": metadata,
+                "file_urls": {},
+                "drive_files": {},
+                "created_at": datetime.datetime.now(),
+                "updated_at": datetime.datetime.now(),
+                "source": "google_drive"
+            }
+            
+            # Generate embeddings for metadata
+            try:
+                # Create combined text from metadata
+                metadata_text = self._create_metadata_text(metadata)
+                
+                # Generate embedding
+                metadata_embedding = self.ai_service.generate_embedding(metadata_text)
+                
+                if metadata_embedding:
+                    content_data["metadata_embedding"] = metadata_embedding
+                    logger.info(f"Generated embedding for Drive content metadata: {content_id}")
+            except Exception as e:
+                logger.error(f"Error generating Drive metadata embedding: {e}")
+            
+            # Process document chunks
+            content_data["document_chunks"] = {}
+            
+            # Process Drive files
+            if file_ids:
+                for file_id in file_ids:
+                    try:
+                        # Get file metadata
+                        file_metadata = drive_service.files().get(
+                            fileId=file_id,
+                            fields="id,name,mimeType,webViewLink,iconLink,thumbnailLink"
+                        ).execute()
+                        
+                        # Store the file metadata
+                        content_data["drive_files"][file_id] = file_metadata
+                        content_data["file_urls"][file_metadata.get('name')] = file_metadata.get('webViewLink')
+                        
+                        # Check if we should process the file based on MIME type
+                        mime_type = file_metadata.get('mimeType', '')
+                        
+                        # Process documents if possible
+                        if self.document_processing_available:
+                            if mime_type in [
+                                'application/pdf',
+                                'application/vnd.google-apps.document',
+                                'application/vnd.google-apps.presentation',
+                                'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                            ]:
+                                # Download the file content
+                                request = drive_service.files().get_media(fileId=file_id)
+                                file_content = io.BytesIO()
+                                downloader = MediaIoBaseDownload(file_content, request)
+                                
+                                done = False
+                                while not done:
+                                    _, done = downloader.next_chunk()
+                                
+                                # Reset pointer to beginning of file
+                                file_content.seek(0)
+                                
+                                # Save to temporary file
+                                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                                tmp_file.write(file_content.read())
+                                tmp_file.close()
+                                
+                                # Extract text based on file type
+                                chunks = []
+                                if mime_type == 'application/pdf':
+                                    chunks = self.pdf_extractor.extract_text(tmp_file.name)
+                                elif mime_type in ['application/vnd.google-apps.presentation', 
+                                                 'application/vnd.openxmlformats-officedocument.presentationml.presentation']:
+                                    chunks = self.pptx_extractor.extract_text(tmp_file.name)
+                                
+                                # Process chunks
+                                if chunks:
+                                    processed_chunks = self._process_chunks(chunks, content_id, mime_type)
+                                    content_data["document_chunks"][file_metadata.get('name')] = processed_chunks
+                                
+                                # Clean up temporary file
+                                os.unlink(tmp_file.name)
+                    except Exception as e:
+                        logger.error(f"Error processing Drive file {file_id}: {e}")
+                        continue
+            
+            # Store the content data
+            self.firestore_repo.store_content(content_id, content_data)
+            
+            # Generate AI enhancements asynchronously
+            # Note: In a production environment, this would be done with a background task
+            try:
+                # Generate AI summary
+                summary = self.ai_service.summarize_content(content_data)
+                if summary:
+                    self.firestore_repo.update_content(content_id, {
+                        "metadata.ai_summary": summary
+                    })
+                
+                # Generate AI tags
+                ai_tags = self.ai_service.generate_tags(content_data)
+                if ai_tags:
+                    self.firestore_repo.update_content(content_id, {
+                        "metadata.ai_tags": ai_tags
+                    })
+            except Exception as e:
+                logger.error(f"Error generating AI enhancements for Drive content: {e}")
+            
+            return {
+                "success": True,
+                "content_id": content_id,
+                "message": f"Successfully processed {len(file_ids)} Drive files"
+            }
+        except Exception as e:
+            logger.error(f"Error processing Drive content: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": "Error processing Drive content"
+            } 

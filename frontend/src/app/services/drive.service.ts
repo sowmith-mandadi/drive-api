@@ -37,8 +37,8 @@ export class DriveService {
     gsisScript.onload = () => {
       // Create token client for authorization
       this.tokenClient = (window as any).google?.accounts.oauth2.initTokenClient({
-        client_id: '912741596522-o66d95l1m46feg4p4v1c4elscq6iv6dq.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        client_id: environment.google.clientId,
+        scope: environment.google.scopes.join(' '),
         callback: () => {}
       });
     };
@@ -50,7 +50,7 @@ export class DriveService {
    */
   private initGapiClient(): void {
     this.gapi.client.init({
-      apiKey: 'AIzaSyB_mMBUKeIBqn4DkcwXEpnmQeUW1DbVGfE',
+      apiKey: environment.google.apiKey,
       discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
     });
   }
@@ -97,7 +97,7 @@ export class DriveService {
         .addView(new (window as any).google.picker.DocsView())
         .addView(new (window as any).google.picker.DocsUploadView())
         .setOAuthToken(accessToken)
-        .setDeveloperKey('AIzaSyB_mMBUKeIBqn4DkcwXEpnmQeUW1DbVGfE')
+        .setDeveloperKey(environment.google.apiKey)
         .setCallback((data: any) => {
           if (data.action === 'picked') {
             result.next(data.docs);
