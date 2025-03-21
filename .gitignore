@@ -3,3 +3,28 @@ backend/DEPENDENCY_NOTES.md
 backend/fix_dependencies.sh
 backend/update_dependencies.sh
 update_dependencies.sh
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+ENV/
+
+# Angular
+.angular/
+node_modules/
+/dist
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+.eslintcache
+
+# Credentials
+credentials.json
