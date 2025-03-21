@@ -24,19 +24,125 @@
     <div class="filters-panel">
       <h3>Filters</h3>
       
-      <div class="filter-section">
-        <h4>Tracks</h4>
+      <!-- Session Dates Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Session Dates
+          </mat-panel-title>
+        </mat-expansion-panel-header>
         <mat-selection-list [multiple]="true">
-          <mat-list-option *ngFor="let track of tracks" 
-                          [selected]="selectedTracks.includes(track.id)"
-                          (click)="toggleTrack(track.id)">
-            {{ track.name }}
+          <mat-list-option *ngFor="let date of sessionDates" 
+                         [selected]="selectedSessionDates.includes(date.id)"
+                         (click)="toggleSessionDate(date.id)">
+            {{ date.date }}
           </mat-list-option>
         </mat-selection-list>
-      </div>
+      </mat-expansion-panel>
       
-      <div class="filter-section">
-        <h4>Popular Tags</h4>
+      <!-- Session Types Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Session Types
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true" class="scrollable-list">
+          <mat-list-option *ngFor="let type of sessionTypes" 
+                         [selected]="selectedSessionTypes.includes(type.id)"
+                         (click)="toggleSessionType(type.id)">
+            {{ type.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Learning Level Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Learning Level
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true">
+          <mat-list-option *ngFor="let level of learningLevels" 
+                         [selected]="selectedLearningLevels.includes(level.id)"
+                         (click)="toggleLearningLevel(level.id)">
+            {{ level.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Topic Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Topic
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true" class="scrollable-list">
+          <mat-list-option *ngFor="let topic of topics" 
+                         [selected]="selectedTopics.includes(topic.id)"
+                         (click)="toggleTopic(topic.id)">
+            {{ topic.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Job Role Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Job Role
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true" class="scrollable-list">
+          <mat-list-option *ngFor="let role of jobRoles" 
+                         [selected]="selectedJobRoles.includes(role.id)"
+                         (click)="toggleJobRole(role.id)">
+            {{ role.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Area of Interest Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Area of Interest
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true" class="scrollable-list">
+          <mat-list-option *ngFor="let area of areasOfInterest" 
+                         [selected]="selectedAreasOfInterest.includes(area.id)"
+                         (click)="toggleAreaOfInterest(area.id)">
+            {{ area.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Industry Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Industry
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-selection-list [multiple]="true" class="scrollable-list">
+          <mat-list-option *ngFor="let industry of industries" 
+                         [selected]="selectedIndustries.includes(industry.id)"
+                         (click)="toggleIndustry(industry.id)">
+            {{ industry.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </mat-expansion-panel>
+      
+      <!-- Popular Tags Filter -->
+      <mat-expansion-panel class="filter-section">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Popular Tags
+          </mat-panel-title>
+        </mat-expansion-panel-header>
         <div class="tag-chips">
           <mat-chip-set>
             <mat-chip *ngFor="let tag of availableTags"
@@ -46,9 +152,12 @@
             </mat-chip>
           </mat-chip-set>
         </div>
-      </div>
+      </mat-expansion-panel>
       
-      <button mat-raised-button color="primary" (click)="clearFilters()" [disabled]="!selectedTracks.length && !selectedTags.length">
+      <button mat-raised-button color="primary" class="clear-filters-btn" (click)="clearFilters()" 
+              [disabled]="!selectedTracks.length && !selectedTags.length && !selectedSessionDates.length && 
+                         !selectedSessionTypes.length && !selectedLearningLevels.length && !selectedTopics.length && 
+                         !selectedJobRoles.length && !selectedAreasOfInterest.length && !selectedIndustries.length">
         Clear Filters
       </button>
     </div>
@@ -87,21 +196,23 @@
       
       <!-- Results List -->
       <div class="results-list">
-        <mat-card *ngFor="let content of searchResults" class="content-card">
-          <mat-card-header>
-            <mat-card-title>{{ content.title }}</mat-card-title>
-            <mat-card-subtitle>
-              <span *ngIf="content.track">{{ getTrackById(content.track)?.name }}</span>
-              <span *ngIf="content.sessionType"> | {{ content.sessionType }}</span>
-            </mat-card-subtitle>
-          </mat-card-header>
+        <div class="session-card" *ngFor="let content of searchResults">
+          <div class="session-card-header">
+            <h3 class="session-title">{{ content.title }}</h3>
+            <div class="session-meta">
+              <span *ngIf="content.sessionType" class="session-type">{{ content.sessionType }}</span>
+              <span *ngIf="content.track" class="session-track">{{ getTrackById(content.track)?.name }}</span>
+              <span *ngIf="content.sessionDate" class="session-date">{{ content.sessionDate }}</span>
+              <span *ngIf="content.learningLevel" class="learning-level">{{ content.learningLevel }}</span>
+            </div>
+          </div>
           
-          <mat-card-content>
-            <p>{{ content.description }}</p>
+          <div class="session-card-content">
+            <p class="session-description">{{ content.description }}</p>
             
             <!-- Tags -->
             <div class="content-tags">
-              <mat-chip *ngFor="let tag of content.tags">{{ tag }}</mat-chip>
+              <span *ngFor="let tag of content.tags" class="tag-pill">{{ tag }}</span>
             </div>
             
             <!-- AI Summary if available -->
@@ -116,17 +227,17 @@
                 <p>{{ content.aiSummary }}</p>
               </mat-expansion-panel>
             </div>
-          </mat-card-content>
+          </div>
           
-          <mat-card-actions>
+          <div class="session-card-actions">
             <button mat-button color="primary" [routerLink]="['/content', content.id]">
               View Details
             </button>
             <button mat-button (click)="findSimilarDocuments(content.id!)">
               Find Similar
             </button>
-          </mat-card-actions>
-        </mat-card>
+          </div>
+        </div>
         
         <!-- No Results -->
         <div *ngIf="!loading && searchResults.length === 0" class="no-results">

@@ -52,12 +52,90 @@
             <mat-label>Session Type</mat-label>
             <mat-select formControlName="session_type" panelClass="session-select-panel">
               <mat-option *ngIf="sessionTypeOptions.length === 0" disabled>Loading session types...</mat-option>
-              <mat-option *ngFor="let type of sessionTypeOptions" [value]="type">
-                <span class="option-text">{{ type }}</span>
+              <mat-option *ngFor="let type of sessionTypeOptions" [value]="type.id">
+                <span class="option-text">{{ type.name }}</span>
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>event</mat-icon>
             <mat-hint>Select the format of your session</mat-hint>
+          </mat-form-field>
+        </div>
+        
+        <div class="form-row">
+          <!-- Session Date -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Session Date</mat-label>
+            <mat-select formControlName="session_date" panelClass="date-select-panel">
+              <mat-option *ngFor="let date of sessionDateOptions" [value]="date.id">
+                <span class="option-text">{{ date.date }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>calendar_today</mat-icon>
+            <mat-hint>Select the date for your session</mat-hint>
+          </mat-form-field>
+          
+          <!-- Learning Level -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Learning Level</mat-label>
+            <mat-select formControlName="learning_level" panelClass="level-select-panel">
+              <mat-option *ngFor="let level of learningLevelOptions" [value]="level.id">
+                <span class="option-text">{{ level.name }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>school</mat-icon>
+            <mat-hint>Select the learning level</mat-hint>
+          </mat-form-field>
+        </div>
+        
+        <div class="form-row">
+          <!-- Topic -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Topic</mat-label>
+            <mat-select formControlName="topic" panelClass="topic-select-panel">
+              <mat-option *ngFor="let topic of topicOptions" [value]="topic.id">
+                <span class="option-text">{{ topic.name }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>subject</mat-icon>
+            <mat-hint>Select a specific topic</mat-hint>
+          </mat-form-field>
+          
+          <!-- Job Role -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Job Role</mat-label>
+            <mat-select formControlName="job_role" panelClass="role-select-panel">
+              <mat-option *ngFor="let role of jobRoleOptions" [value]="role.id">
+                <span class="option-text">{{ role.name }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>work</mat-icon>
+            <mat-hint>Select target audience job role</mat-hint>
+          </mat-form-field>
+        </div>
+        
+        <div class="form-row">
+          <!-- Area of Interest -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Area of Interest</mat-label>
+            <mat-select formControlName="area_of_interest" panelClass="interest-select-panel">
+              <mat-option *ngFor="let area of areaOfInterestOptions" [value]="area.id">
+                <span class="option-text">{{ area.name }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>interests</mat-icon>
+            <mat-hint>Select relevant area of interest</mat-hint>
+          </mat-form-field>
+          
+          <!-- Industry -->
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Industry</mat-label>
+            <mat-select formControlName="industry" panelClass="industry-select-panel">
+              <mat-option *ngFor="let ind of industryOptions" [value]="ind.id">
+                <span class="option-text">{{ ind.name }}</span>
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>business</mat-icon>
+            <mat-hint>Select relevant industry</mat-hint>
           </mat-form-field>
         </div>
         
@@ -78,58 +156,6 @@
                    (matChipInputTokenEnd)="addTag($event)">
           </mat-chip-grid>
           <mat-hint>Press Enter or comma to add a tag</mat-hint>
-        </mat-form-field>
-      </div>
-      
-      <!-- Presenters Section with improved styling -->
-      <div class="form-section presenters-section">
-        <div class="section-header">
-          <h2>
-            <mat-icon>people</mat-icon>
-            Presenters
-          </h2>
-          <div class="divider"></div>
-        </div>
-        <p class="section-description">Select the presenters for this content</p>
-        
-        <div class="presenters-grid">
-          <div *ngFor="let speaker of availablePresenters" 
-               class="presenter-card-container">
-            <mat-card class="presenter-card" 
-                     [class.selected]="selectedPresenters.includes(speaker.id)"
-                     (click)="togglePresenter(speaker)">
-              <div class="selection-indicator" 
-                   *ngIf="selectedPresenters.includes(speaker.id)">
-                <mat-icon>check_circle</mat-icon>
-              </div>
-              <img mat-card-image [src]="speaker.photoUrl || 'assets/images/avatar-placeholder.png'" 
-                  alt="{{ speaker.name }}" class="presenter-photo">
-              <mat-card-content>
-                <h3 class="presenter-name">{{ speaker.name }}</h3>
-                <p class="presenter-title">{{ speaker.title }}</p>
-                <p class="presenter-company">{{ speaker.company }}</p>
-              </mat-card-content>
-            </mat-card>
-          </div>
-        </div>
-        
-        <mat-form-field appearance="outline" class="full-width custom-presenters">
-          <mat-label>Additional Presenters</mat-label>
-          <mat-chip-grid #presenterChipList aria-label="Additional presenters">
-            <mat-chip-row *ngFor="let presenter of customPresenters" 
-                         (removed)="removePresenter(presenter)"
-                         [color]="'accent'" [selected]="true">
-              {{ presenter }}
-              <button matChipRemove aria-label="Remove presenter">
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </mat-chip-row>
-            <input placeholder="Add a presenter not in the list..."
-                   [matChipInputFor]="presenterChipList"
-                   [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                   (matChipInputTokenEnd)="addPresenter($event)">
-          </mat-chip-grid>
-          <mat-hint>Press Enter or comma to add a presenter not in the list</mat-hint>
         </mat-form-field>
       </div>
       
