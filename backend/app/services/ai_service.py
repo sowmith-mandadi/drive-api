@@ -45,8 +45,9 @@ class AIService:
     def _init_vertex_ai(self):
         """Initialize Vertex AI."""
         try:
+            from vertexai.preview.generative_models import GenerativeModel
+            from vertexai.language_models import TextEmbeddingModel
             import vertexai
-            from vertexai.language_models import TextGenerationModel, TextEmbeddingModel
             
             # Initialize Vertex AI
             project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
@@ -58,18 +59,36 @@ class AIService:
                 # In Cloud Shell, this should work without explicit project
                 vertexai.init(location=location)
             
-            # Initialize models
-            self.generation_model = TextGenerationModel.from_pretrained(
-                os.environ.get('VERTEX_RAG_MODEL', 'gemini-1.5-pro')
-            )
-            self.embedding_model = TextEmbeddingModel.from_pretrained(
-                os.environ.get('TEXT_EMBEDDING_MODEL', 'textembedding-gecko@latest')
-            )
+            # Initialize models - use the correct format for Gemini
+            try:
+                # Use GenerativeModel with gemini-1.5-pro model
+                self.generation_model = GenerativeModel("gemini-1.5-pro")
+                logger.info("Successfully initialized Gemini 1.5 Pro model")
+            except Exception as e:
+                logger.error(f"Error initializing Gemini model: {e}")
+                try:
+                    # Fall back to gemini-1.0-pro if 1.5 is not available
+                    self.generation_model = GenerativeModel("gemini-1.0-pro")
+                    logger.info("Successfully initialized Gemini 1.0 Pro model as fallback")
+                except Exception as e2:
+                    logger.error(f"Error initializing fallback Gemini model: {e2}")
+                    self.dev_mode = True
+                    return
             
+            # Initialize embedding model
+            try:
+                embedding_model_name = os.environ.get('TEXT_EMBEDDING_MODEL', 'textembedding-gecko@latest')
+                self.embedding_model = TextEmbeddingModel.from_pretrained(embedding_model_name)
+                logger.info(f"Successfully initialized embedding model: {embedding_model_name}")
+            except Exception as e:
+                logger.error(f"Error initializing embedding model: {e}")
+                self.dev_mode = True
+                return
+                
             logger.info("Vertex AI initialized successfully")
             
-        except ImportError:
-            logger.warning("vertexai package not available, using mock responses")
+        except ImportError as e:
+            logger.warning(f"Required packages not available: {e}")
             self.dev_mode = True
         except Exception as e:
             logger.error(f"Error initializing Vertex AI: {e}")
@@ -169,8 +188,16 @@ class AIService:
             # Construct prompt with passages
             prompt = self._construct_rag_prompt(question, passages)
             
-            # Call Vertex AI
-            response = self.generation_model.predict(prompt, temperature=0.2, max_output_tokens=1024)
+            # Call Vertex AI with updated API
+            from vertexai.preview.generative_models import GenerationConfig
+            
+            response = self.generation_model.generate_content(
+                prompt,
+                generation_config=GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=1024
+                )
+            )
             
             return {
                 "answer": response.text,
@@ -241,8 +268,16 @@ Question: {question}
 
 Answer:"""
             
-            # Call Vertex AI
-            response = self.generation_model.predict(prompt, temperature=0.2, max_output_tokens=1024)
+            # Call Vertex AI with updated API
+            from vertexai.preview.generative_models import GenerationConfig
+            
+            response = self.generation_model.generate_content(
+                prompt,
+                generation_config=GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=1024
+                )
+            )
             
             return {
                 "answer": response.text,
@@ -298,8 +333,16 @@ Description: {description}
 
 Summary:"""
             
-            # Call Vertex AI
-            response = self.generation_model.predict(prompt, temperature=0.2, max_output_tokens=512)
+            # Call Vertex AI with updated API
+            from vertexai.preview.generative_models import GenerationConfig
+            
+            response = self.generation_model.generate_content(
+                prompt,
+                generation_config=GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=512
+                )
+            )
             
             return response.text
         except Exception as e:
@@ -346,8 +389,16 @@ Description: {description}
 
 Tags:"""
             
-            # Call Vertex AI
-            response = self.generation_model.predict(prompt, temperature=0.2, max_output_tokens=256)
+            # Call Vertex AI with updated API
+            from vertexai.preview.generative_models import GenerationConfig
+            
+            response = self.generation_model.generate_content(
+                prompt,
+                generation_config=GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=256
+                )
+            )
             
             # Parse the response for tags
             text = response.text.strip()
