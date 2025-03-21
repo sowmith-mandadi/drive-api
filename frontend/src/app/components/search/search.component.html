@@ -1,0 +1,148 @@
+<div class="search-container">
+  <div class="search-header">
+    <h1>Search Conference Content</h1>
+    <p>Find presentations, documents, and resources using AI-powered search</p>
+    
+    <form [formGroup]="searchForm" (ngSubmit)="search()">
+      <div class="search-bar">
+        <mat-form-field appearance="outline" class="search-input">
+          <mat-label>Search for content...</mat-label>
+          <input matInput formControlName="query" placeholder="Enter keywords, topics, or questions">
+          <button mat-icon-button matSuffix aria-label="Search" type="submit">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+        
+        <mat-checkbox formControlName="useAi" color="primary" class="ai-toggle">
+          Use AI-powered search
+        </mat-checkbox>
+      </div>
+    </form>
+  </div>
+  
+  <div class="search-content">
+    <div class="filters-panel">
+      <h3>Filters</h3>
+      
+      <div class="filter-section">
+        <h4>Tracks</h4>
+        <mat-selection-list [multiple]="true">
+          <mat-list-option *ngFor="let track of tracks" 
+                          [selected]="selectedTracks.includes(track.id)"
+                          (click)="toggleTrack(track.id)">
+            {{ track.name }}
+          </mat-list-option>
+        </mat-selection-list>
+      </div>
+      
+      <div class="filter-section">
+        <h4>Popular Tags</h4>
+        <div class="tag-chips">
+          <mat-chip-set>
+            <mat-chip *ngFor="let tag of availableTags"
+                    [selected]="selectedTags.includes(tag)"
+                    (click)="toggleTag(tag)">
+              {{ tag }}
+            </mat-chip>
+          </mat-chip-set>
+        </div>
+      </div>
+      
+      <button mat-raised-button color="primary" (click)="clearFilters()" [disabled]="!selectedTracks.length && !selectedTags.length">
+        Clear Filters
+      </button>
+    </div>
+    
+    <div class="results-panel">
+      <!-- AI Answer Section (when using RAG) -->
+      <mat-card *ngIf="isAiSearch && ragResponse" class="ai-answer-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>smart_toy</mat-icon>
+          <mat-card-title>AI Answer</mat-card-title>
+          <mat-card-subtitle>
+            Relevance: {{ ragResponse.relevanceScore | percent }} | 
+            Grounding: {{ ragResponse.groundingScore | percent }}
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ ragResponse.answer }}</p>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- Loading Indicator -->
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Searching content...</p>
+      </div>
+      
+      <!-- Results Count -->
+      <div *ngIf="!loading" class="results-count">
+        <p *ngIf="searchForm.get('query')?.value">
+          {{ totalResults }} results for "{{ searchForm.get('query')?.value }}"
+        </p>
+        <p *ngIf="!searchForm.get('query')?.value">
+          Showing {{ totalResults }} recent items
+        </p>
+      </div>
+      
+      <!-- Results List -->
+      <div class="results-list">
+        <mat-card *ngFor="let content of searchResults" class="content-card">
+          <mat-card-header>
+            <mat-card-title>{{ content.title }}</mat-card-title>
+            <mat-card-subtitle>
+              <span *ngIf="content.track">{{ getTrackById(content.track)?.name }}</span>
+              <span *ngIf="content.sessionType"> | {{ content.sessionType }}</span>
+            </mat-card-subtitle>
+          </mat-card-header>
+          
+          <mat-card-content>
+            <p>{{ content.description }}</p>
+            
+            <!-- Tags -->
+            <div class="content-tags">
+              <mat-chip *ngFor="let tag of content.tags">{{ tag }}</mat-chip>
+            </div>
+            
+            <!-- AI Summary if available -->
+            <div *ngIf="content.aiSummary" class="ai-summary">
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <mat-icon>auto_awesome</mat-icon>
+                    AI Summary
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <p>{{ content.aiSummary }}</p>
+              </mat-expansion-panel>
+            </div>
+          </mat-card-content>
+          
+          <mat-card-actions>
+            <button mat-button color="primary" [routerLink]="['/content', content.id]">
+              View Details
+            </button>
+            <button mat-button (click)="findSimilarDocuments(content.id!)">
+              Find Similar
+            </button>
+          </mat-card-actions>
+        </mat-card>
+        
+        <!-- No Results -->
+        <div *ngIf="!loading && searchResults.length === 0" class="no-results">
+          <mat-icon>search_off</mat-icon>
+          <h3>No results found</h3>
+          <p>Try adjusting your search terms or clearing filters</p>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      <mat-paginator *ngIf="totalResults > 0"
+                    [length]="totalResults"
+                    [pageSize]="pageSize"
+                    [pageSizeOptions]="[5, 10, 25, 50]"
+                    (page)="onPageChange($event)">
+      </mat-paginator>
+    </div>
+  </div>
+</div> 

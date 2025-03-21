@@ -1,0 +1,56 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Credentials and configuration
+credentials.json
+token.pickle
+.env
+env.bak/
+venv.bak/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Google Cloud credentials
+credentials.json
+
+# Angular
+.angular/
+/node_modules/
+/dist/
+/tmp/
+/out-tsc/
+/.sass-cache/
+/connect.lock
+/coverage/
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+
+# Temporary files
+*.tmp 

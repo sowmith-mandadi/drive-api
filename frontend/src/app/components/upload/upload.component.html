@@ -1,0 +1,206 @@
+<div class="upload-container">
+  <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-card-title>Upload Conference Content</mat-card-title>
+      <mat-card-subtitle>Upload presentation files, videos, PDFs, and more</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
+        <!-- Title (Required) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" placeholder="Enter session title" required>
+          <mat-error *ngIf="uploadForm.get('title')?.hasError('required')">
+            Title is required
+          </mat-error>
+        </mat-form-field>
+        
+        <!-- Description -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" placeholder="Enter session description" rows="3"></textarea>
+        </mat-form-field>
+        
+        <!-- Track -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Track</mat-label>
+          <mat-select formControlName="track">
+            <mat-option *ngFor="let track of trackOptions" [value]="track.id">
+              {{ track.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <!-- Session Type -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Session Type</mat-label>
+          <mat-select formControlName="session_type">
+            <mat-option *ngFor="let type of sessionTypeOptions" [value]="type">
+              {{ type }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <!-- Tags -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Tags</mat-label>
+          <mat-chip-grid #tagChipList aria-label="Tags selection">
+            <mat-chip-row *ngFor="let tag of tags" (removed)="removeTag(tag)">
+              {{ tag }}
+              <button matChipRemove aria-label="Remove tag">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip-row>
+            <input placeholder="Add tags..."
+                   [matChipInputFor]="tagChipList"
+                   [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                   (matChipInputTokenEnd)="addTag($event)">
+          </mat-chip-grid>
+          <mat-hint>Press Enter or comma to add a tag</mat-hint>
+        </mat-form-field>
+        
+        <!-- Presenters -->
+        <div class="presenters-section">
+          <h3>Select Presenters</h3>
+          <div class="presenters-grid">
+            <mat-card *ngFor="let speaker of availablePresenters" 
+                     class="presenter-card" 
+                     [class.selected]="selectedPresenters.includes(speaker.id)"
+                     (click)="togglePresenter(speaker)">
+              <img mat-card-image [src]="speaker.photoUrl" alt="{{ speaker.name }}">
+              <mat-card-content>
+                <h4>{{ speaker.name }}</h4>
+                <p class="speaker-title">{{ speaker.title }}</p>
+              </mat-card-content>
+              <mat-icon class="selection-icon" *ngIf="selectedPresenters.includes(speaker.id)">check_circle</mat-icon>
+            </mat-card>
+          </div>
+          
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Additional Presenters</mat-label>
+            <mat-chip-grid #presenterChipList aria-label="Presenters selection">
+              <mat-chip-row *ngFor="let presenter of customPresenters" (removed)="removePresenter(presenter)">
+                {{ presenter }}
+                <button matChipRemove aria-label="Remove presenter">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+              <input placeholder="Add other presenters..."
+                     [matChipInputFor]="presenterChipList"
+                     [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                     (matChipInputTokenEnd)="addPresenter($event)">
+            </mat-chip-grid>
+            <mat-hint>Press Enter or comma to add a presenter not in the list</mat-hint>
+          </mat-form-field>
+        </div>
+        
+        <!-- Upload Methods Tabs -->
+        <mat-tab-group class="upload-tabs">
+          <!-- Local File Upload Tab -->
+          <mat-tab label="Upload Files">
+            <div class="file-upload-section">
+              <div class="file-drop-zone" 
+                   (click)="fileInput.click()"
+                   [class.has-files]="files.length > 0"
+                   (dragover)="onDragOver($event)"
+                   (drop)="onDrop($event)">
+                <input #fileInput type="file" style="display: none" multiple (change)="onFileSelect($event)">
+                <mat-icon>cloud_upload</mat-icon>
+                <h3>Drag & drop files here</h3>
+                <p>or click to browse (max 50 files)</p>
+                
+                <div class="files-preview" *ngIf="files.length > 0">
+                  <h4>{{ files.length }} file(s) selected:</h4>
+                  <div class="file-chip" *ngFor="let file of files">
+                    <span class="file-name">{{ file.name }}</span>
+                    <button mat-icon-button color="warn" (click)="removeFile(file); $event.stopPropagation()">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+          
+          <!-- Google Drive Tab -->
+          <mat-tab label="Google Drive">
+            <div class="drive-upload-section">
+              <button mat-raised-button color="primary" (click)="openDrivePicker()">
+                <mat-icon>cloud</mat-icon>
+                Select from Google Drive
+              </button>
+              
+              <div class="drive-files-preview" *ngIf="driveFiles.length > 0">
+                <h4>{{ driveFiles.length }} Google Drive file(s) selected:</h4>
+                <div class="drive-file-card" *ngFor="let file of driveFiles">
+                  <img [src]="file.thumbnailLink || 'assets/icons/file-generic.png'" alt="Thumbnail">
+                  <div class="drive-file-info">
+                    <span class="drive-file-name">{{ file.name }}</span>
+                    <a [href]="file.webViewLink" target="_blank" class="drive-file-link">View in Drive</a>
+                  </div>
+                  <button mat-icon-button color="warn" (click)="removeDriveFile(file)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+          
+          <!-- URL Links Tab -->
+          <mat-tab label="External Links">
+            <div class="links-section">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Slides URL</mat-label>
+                <input matInput formControlName="slide_url" placeholder="https://slides.example.com/deck">
+                <mat-icon matSuffix>link</mat-icon>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Video URL</mat-label>
+                <input matInput formControlName="video_url" placeholder="https://youtube.com/watch?v=...">
+                <mat-icon matSuffix>videocam</mat-icon>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Additional Resources URL</mat-label>
+                <input matInput formControlName="resources_url" placeholder="https://github.com/example/repo">
+                <mat-icon matSuffix>insert_link</mat-icon>
+              </mat-form-field>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+        
+        <!-- AI Enhancement Options -->
+        <mat-expansion-panel class="ai-options">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>smart_toy</mat-icon>
+              AI Enhancements
+            </mat-panel-title>
+            <mat-panel-description>
+              Let AI help process your content
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          
+          <div class="ai-options-content">
+            <mat-checkbox formControlName="ai_summarize">Generate AI summary of content</mat-checkbox>
+            <mat-checkbox formControlName="ai_tags">Generate tags automatically</mat-checkbox>
+            <mat-checkbox formControlName="ai_index">Index for RAG-based search and discovery</mat-checkbox>
+          </div>
+        </mat-expansion-panel>
+        
+        <!-- Progress Bar -->
+        <mat-progress-bar *ngIf="uploading" [value]="progress" mode="determinate"></mat-progress-bar>
+        
+        <div class="form-actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="uploading || (!hasAnyFiles() && !hasAnyLinks())">
+            <mat-icon>cloud_upload</mat-icon>
+            Upload Content
+          </button>
+          <button mat-button type="button" routerLink="/search">Cancel</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div> 
