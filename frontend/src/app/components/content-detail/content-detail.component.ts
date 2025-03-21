@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ContentService } from '../../services/content.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { RagService } from '../../services/rag.service';
 
 interface ContentFile {
   id: string;
@@ -54,12 +55,18 @@ export class ContentDetailComponent implements OnInit {
   activeTab = 0;
   isLiked = false;
   
+  // RAG Question Answering properties
+  ragQuestion: string = '';
+  ragAnswer: string = '';
+  isAskingQuestion = false;
+  
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private contentService: ContentService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private ragService: RagService
   ) { }
 
   ngOnInit(): void {
@@ -127,6 +134,45 @@ export class ContentDetailComponent implements OnInit {
 
   navigateBack(): void {
     this.router.navigate(['/search']);
+  }
+  
+  // RAG question answering method
+  askQuestion(): void {
+    if (!this.ragQuestion || !this.contentId) return;
+    
+    this.isAskingQuestion = true;
+    this.ragAnswer = '';
+    
+    // For demo purposes, simulate API call
+    setTimeout(() => {
+      this.ragAnswer = `Based on the content you're viewing about "${this.content?.title}", here's what I found:
+      
+The presentation covers key concepts of ${this.content?.tags.join(', ')}. 
+
+The main takeaways include:
+- Best practices for structuring large-scale applications
+- Implementing effective state management with NgRx
+- Performance optimization techniques
+- Testing strategies for maintainable code`;
+      
+      this.isAskingQuestion = false;
+    }, 2000);
+    
+    // In a real implementation, you would call the RAG service like this:
+    /*
+    this.ragService.askQuestion(this.ragQuestion, this.contentId)
+      .subscribe({
+        next: (response) => {
+          this.ragAnswer = response.answer;
+          this.isAskingQuestion = false;
+        },
+        error: (error) => {
+          this.showMessage('Error processing your question. Please try again.');
+          console.error('Error asking question:', error);
+          this.isAskingQuestion = false;
+        }
+      });
+    */
   }
 
   private copyToClipboard(text: string): void {
