@@ -2,6 +2,7 @@
 
 import logging
 import datetime
+import os.path
 from typing import List, Dict, Optional, Any, Union
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -20,6 +21,13 @@ class FirestoreRepository:
     def _initialize_firestore(self):
         """Initialize Firestore client."""
         try:
+            # Check if credentials file exists
+            if not os.path.exists('credentials.json'):
+                logger.warning("Credentials file not found. Running in development mode.")
+                self.db = None
+                self.initialized = False
+                return
+                
             # Check if Firebase is already initialized
             if not firebase_admin._apps:
                 cred = credentials.Certificate('credentials.json')
@@ -30,6 +38,7 @@ class FirestoreRepository:
             logger.info("Firestore initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing Firestore: {e}")
+            logger.warning("Running in development mode with no Firestore connection")
             self.db = None
             self.initialized = False
     
@@ -251,5 +260,33 @@ class FirestoreRepository:
             
             return contents
         except Exception as e:
-            logger.error(f"Error filtering content from Firestore: {e}")
+            logger.error(f"Error finding content by filters: {e}")
+            return []
+    
+    def list_contents(self):
+        """List all content documents.
+        
+        Returns:
+            List[Dict]: List of content documents
+        """
+        try:
+            if not self.initialized:
+                logger.warning("Firestore repository not initialized, returning empty list")
+                return []
+            
+            # Get all documents from the content collection
+            docs = self.db.collection('content').stream()
+            contents = []
+            
+            for doc in docs:
+                content = doc.to_dict()
+                # Ensure ID is included
+                if 'id' not in content:
+                    content['id'] = doc.id
+                contents.append(content)
+            
+            logger.info(f"Retrieved {len(contents)} contents from Firestore")
+            return contents
+        except Exception as e:
+            logger.error(f"Error listing contents: {e}")
             return [] 

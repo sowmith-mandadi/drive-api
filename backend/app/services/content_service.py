@@ -27,8 +27,6 @@ class ContentService:
     
     def __init__(self):
         """Initialize the content service."""
-        # Check for environment variable to force development mode
-        env_dev_mode = os.environ.get("DEV_MODE", "").lower() == "true"
         self.firestore_repo = FirestoreRepository()
         self.storage_repo = StorageRepository()
         self.ai_service = AIService()
@@ -43,32 +41,10 @@ class ContentService:
             logger.error(f"Document processing unavailable: {e}")
             self.document_processing_available = False
         
-        # Development mode flag - either from env var or from repository initialization status
-        self.dev_mode = env_dev_mode or not self.firestore_repo.initialized
+        # Development mode flag
+        self.dev_mode = not self.firestore_repo.initialized
         if self.dev_mode:
             logger.warning("Running ContentService in development mode with mock data")
-            
-            # Initialize with some test data if in dev mode
-            if not MOCK_CONTENT:
-                test_content_id = str(uuid.uuid4())
-                test_content = {
-                    "id": test_content_id,
-                    "metadata": {
-                        "title": "Test Content",
-                        "description": "This is test content created for development mode",
-                        "track": "development",
-                        "tags": ["test", "development", "mock"],
-                        "session_type": "Demo",
-                        "ai_summary": "This is a mock AI summary for test content",
-                        "ai_tags": ["generated", "ai", "test"]
-                    },
-                    "file_urls": {
-                        "test.pdf": "https://storage.googleapis.com/mock-bucket/test.pdf"
-                    },
-                    "created_at": datetime.datetime.now().isoformat(),
-                    "updated_at": datetime.datetime.now().isoformat()
-                }
-                MOCK_CONTENT[test_content_id] = test_content
     
     def process_content(self, files: List[FileStorage], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Process uploaded files and store metadata.

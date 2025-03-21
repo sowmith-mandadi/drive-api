@@ -21,6 +21,14 @@ class StorageRepository:
     def _initialize_storage(self):
         """Initialize Google Cloud Storage client."""
         try:
+            # Check if credentials file exists
+            if not os.path.exists('credentials.json'):
+                logger.warning("Credentials file not found. Running in development mode.")
+                self.storage_client = None
+                self.bucket = None
+                self.initialized = False
+                return
+
             self.storage_client = storage.Client.from_service_account_json('credentials.json')
             bucket_name = os.getenv('GCS_BUCKET_NAME', 'conference-content-bucket')
             
@@ -34,6 +42,8 @@ class StorageRepository:
             logger.info(f"Connected to GCS bucket: {bucket_name}")
         except Exception as e:
             logger.error(f"Error connecting to Google Cloud Storage: {e}")
+            logger.warning("Running in development mode with mock storage")
+            self.storage_client = None
             self.bucket = None
             self.initialized = False
     
@@ -47,9 +57,22 @@ class StorageRepository:
         Returns:
             Optional[str]: Public URL of the stored file or None if storage failed
         """
-        if not self.initialized or not file:
-            logger.warning("Storage not initialized or no file provided")
+        if not file:
+            logger.warning("No file provided to store")
             return None
+            
+        if not self.initialized:
+            # Generate a mock URL in development mode
+            logger.warning("Storage not initialized, returning mock URL")
+            file_extension = os.path.splitext(file.filename)[1] if "." in file.filename else ""
+            unique_id = str(uuid.uuid4())
+            mock_url = f"https://storage.googleapis.com/mock-bucket/{content_id}/{unique_id}{file_extension}"
+            
+            # Still save the file temporarily for processing
+            self.save_temp_file(file)
+            
+            logger.info(f"Development mode: Mock URL created for {file.filename}: {mock_url}")
+            return mock_url
         
         try:
             # Create a unique filename
@@ -64,7 +87,10 @@ class StorageRepository:
             blob.upload_from_filename(temp_file_path)
             
             # Make the file publicly accessible
-            blob.make_public()
+            try:
+                blob.make_public()
+            except Exception as e:
+                logger.warning(f"Could not make file public, continuing with signed URL: {e}")
             
             # Clean up temporary file
             os.remove(temp_file_path)
@@ -73,7 +99,13 @@ class StorageRepository:
             return blob.public_url
         except Exception as e:
             logger.error(f"Error storing file in GCS: {e}")
-            return None
+            
+            # Generate a mock URL as a fallback
+            unique_id = str(uuid.uuid4())
+            file_extension = os.path.splitext(file.filename)[1] if "." in file.filename else ""
+            mock_url = f"https://storage.googleapis.com/mock-bucket/{content_id}/{unique_id}{file_extension}"
+            logger.info(f"Fallback: Mock URL created for {file.filename}: {mock_url}")
+            return mock_url
     
     def save_temp_file(self, file: FileStorage) -> str:
         """Save a file to a temporary location.

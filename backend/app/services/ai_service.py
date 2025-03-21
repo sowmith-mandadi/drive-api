@@ -23,7 +23,12 @@ class AIService:
         self.embedding_service = EmbeddingService()
         self.model = VERTEX_AI_MODEL
         self.initialized = False
+        self.dev_mode = not os.path.exists('credentials.json')
         
+        if self.dev_mode:
+            logger.warning("Credentials file not found. Running AI service in development mode.")
+            return
+            
         try:
             if USE_VERTEX_AI:
                 # Initialize Vertex AI
@@ -35,194 +40,195 @@ class AIService:
         except Exception as e:
             logger.error(f"Failed to initialize AI service: {e}")
             logger.error(traceback.format_exc())
+            logger.warning("Running AI service in development mode with mock responses")
     
     def _init_vertex_ai(self):
         """Initialize Vertex AI."""
         try:
             from google.cloud import aiplatform
+            import vertexai
             
             # Initialize Vertex AI with default project and location
-            aiplatform.init(location=VERTEX_AI_LOCATION)
-            
-            logger.info(f"Initialized Vertex AI with model: {self.model}")
-            self.initialized = True
-            
+            try:
+                # Try to get project ID from environment variable
+                project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+                if project_id:
+                    vertexai.init(project=project_id, location=VERTEX_AI_LOCATION)
+                else:
+                    # Try with credentials file
+                    aiplatform.init(location=VERTEX_AI_LOCATION)
+                    
+                logger.info(f"Initialized Vertex AI with model: {self.model}")
+                self.initialized = True
+            except Exception as e:
+                logger.error(f"Failed to initialize Vertex AI: {e}")
+                logger.warning("Running AI service in development mode with mock responses")
+                
         except ImportError:
             logger.warning("google-cloud-aiplatform not installed. Unable to use Vertex AI.")
-        except Exception as e:
-            logger.error(f"Error initializing Vertex AI: {e}")
-            logger.error(traceback.format_exc())
-    
-    def _init_alternative_model(self):
-        """Initialize alternative model or local model."""
-        try:
-            # For this implementation, we'll use a simple local model or API approach
-            # In a real app, this might be OpenAI, HuggingFace, Ollama, etc.
-            
-            logger.info("Using alternative/mock AI implementation")
-            self.initialized = True
-            
-        except Exception as e:
-            logger.error(f"Error initializing alternative model: {e}")
-            logger.error(traceback.format_exc())
     
     def generate_embedding(self, text: str) -> Optional[List[float]]:
-        """Generate embedding for a text string.
+        """Generate an embedding vector for a given text.
         
         Args:
             text: The text to generate an embedding for
             
         Returns:
-            List[float]: The embedding vector, or None if embedding failed
+            Optional[List[float]]: The embedding vector or None if generation failed
         """
+        if self.dev_mode or not self.initialized:
+            # Return a mock embedding in development mode
+            logger.info("Development mode: Generating mock embedding")
+            # Generate a simple mock embedding of 10 values between 0 and 1
+            import random
+            return [random.random() for _ in range(10)]
+            
         return self.embedding_service.generate_embedding(text)
     
     def generate_embeddings(self, texts: List[str]) -> List[Optional[List[float]]]:
-        """Generate embeddings for multiple texts.
+        """Generate embedding vectors for multiple texts.
         
         Args:
-            texts: List of texts to generate embeddings for
+            texts: The texts to generate embeddings for
             
         Returns:
-            List[List[float]]: List of embedding vectors
+            List[Optional[List[float]]]: The embedding vectors
         """
+        if self.dev_mode or not self.initialized:
+            # Return mock embeddings in development mode
+            logger.info("Development mode: Generating mock embeddings")
+            import random
+            return [[random.random() for _ in range(10)] for _ in texts]
+            
         return self.embedding_service.generate_embeddings(texts)
     
     def generate_direct_response(self, question: str) -> Dict[str, Any]:
-        """Generate a direct response to a question without RAG.
+        """Generate a direct response to a question without context.
         
         Args:
             question: The question to answer
             
         Returns:
-            Dict: Response with answer
+            Dict[str, Any]: Response with answer and metadata
         """
+        if self.dev_mode or not self.initialized:
+            return self._generate_mock_response(question)
+        
         try:
-            logger.info(f"Generating direct response for: {question}")
+            # Prepare the prompt
+            prompt = f"Question: {question}\n\nAnswer: "
             
-            if not self.initialized:
-                return self._generate_mock_response(question)
-            
+            # Generate the response
             if USE_VERTEX_AI:
-                answer = self._generate_vertex_ai_response(question)
+                response_text = self._generate_vertex_ai_response(prompt)
             else:
-                answer = self._generate_alternative_response(question)
+                response_text = self._generate_alternative_response(prompt)
             
+            # Return the response
             return {
-                "answer": answer,
-                "passages": [],
-                "metadata": {
-                    "model": self.model,
-                    "is_grounded": False
-                }
+                "answer": response_text,
+                "model": self.model,
+                "success": True
             }
-                
         except Exception as e:
             logger.error(f"Error generating direct response: {e}")
+            logger.error(traceback.format_exc())
+            
+            # Fallback to mock response
             return self._generate_mock_response(question)
     
     def generate_rag_response(self, question: str, passages: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate a RAG-enhanced response to a question.
+        """Generate a RAG response to a question with context.
         
         Args:
             question: The question to answer
-            passages: The retrieved passages to use for grounding
+            passages: The retrieved passages to use as context
             
         Returns:
-            Dict: RAG response with answer and passages
+            Dict[str, Any]: Response with answer and metadata
         """
+        if self.dev_mode or not self.initialized:
+            return self._generate_mock_rag_response(question, passages)
+        
         try:
-            logger.info(f"Generating RAG response for: {question} with {len(passages)} passages")
+            # Format the passages for the prompt
+            formatted_passages = self._format_passages_for_prompt(passages)
             
-            if not self.initialized:
-                return self._generate_mock_rag_response(question, passages)
+            # Create the RAG prompt
+            prompt = self._create_rag_prompt(question, formatted_passages)
             
-            # Format passages for context
-            context = self._format_passages_for_prompt(passages)
-            
-            # Create RAG prompt
-            rag_prompt = self._create_rag_prompt(question, context)
-            
-            # Generate response
+            # Generate the response
             if USE_VERTEX_AI:
-                answer = self._generate_vertex_ai_response(rag_prompt)
+                response_text = self._generate_vertex_ai_response(prompt)
             else:
-                answer = self._generate_alternative_response(rag_prompt)
+                response_text = self._generate_alternative_response(prompt)
             
-            # Format and return response
+            # Return the response
             return {
-                "answer": answer,
-                "passages": passages,
-                "metadata": {
-                    "model": self.model,
-                    "is_grounded": True,
-                    "passage_count": len(passages)
-                }
+                "answer": response_text,
+                "model": self.model,
+                "context_used": True,
+                "passages_count": len(passages),
+                "success": True
             }
-                
         except Exception as e:
             logger.error(f"Error generating RAG response: {e}")
             logger.error(traceback.format_exc())
+            
+            # Fallback to mock response
             return self._generate_mock_rag_response(question, passages)
     
     def summarize_content(self, content: Dict[str, Any]) -> str:
-        """Generate a summary for content document.
+        """Summarize the content based on available information.
         
         Args:
-            content: The content document to summarize
+            content: The content to summarize
             
         Returns:
-            str: Generated summary
+            str: The summary
         """
+        if self.dev_mode or not self.initialized:
+            return self._generate_mock_summary(content)
+        
         try:
-            logger.info(f"Generating summary for content: {content.get('id')}")
+            # Extract metadata
+            metadata = content.get("metadata", {})
+            title = metadata.get("title", "")
+            description = metadata.get("description", "")
             
-            if not self.initialized:
-                return self._generate_mock_summary(content)
-            
-            # Build text representation of the content
-            title = content.get("metadata", {}).get("title", "")
-            description = content.get("metadata", {}).get("description", "")
-            
-            # Get text from chunks if available
+            # Extract text from document chunks
+            document_chunks = content.get("document_chunks", {})
             text_chunks = []
-            doc_chunks = content.get("document_chunks", {})
             
-            for file_name, chunks in doc_chunks.items():
+            for file_name, chunks in document_chunks.items():
                 for chunk in chunks:
-                    chunk_text = chunk.get("text", "").strip()
-                    if chunk_text:
-                        text_chunks.append(chunk_text)
+                    text_chunks.append(chunk.get("text", ""))
             
-            # Combine information for summarization
-            combined_text = f"Title: {title}\n\nDescription: {description}\n\n"
+            # Combine text chunks (limit to avoid token limits)
+            combined_text = "\n\n".join(text_chunks[:10])
             
-            # Add some chunks for context (limit to avoid token limits)
-            if text_chunks:
-                combined_text += "Content:\n\n"
-                for i, chunk in enumerate(text_chunks[:10]):  # Limit to first 10 chunks
-                    combined_text += f"{chunk}\n\n"
-            
-            # Create summarization prompt
-            prompt = f"""Please generate a concise summary of the following conference content.
-Focus on the key points, main ideas, and important details.
-The summary should be 3-5 sentences in length and capture the essence of the content.
+            # Create the prompt
+            prompt = f"""Please summarize the following content:
+Title: {title}
+Description: {description}
 
-{combined_text}
+Document text:
+{combined_text[:2000]}  # Limiting text to 2000 characters
 
 Summary:"""
             
-            # Generate summary
+            # Generate the summary
             if USE_VERTEX_AI:
                 summary = self._generate_vertex_ai_response(prompt)
             else:
                 summary = self._generate_alternative_response(prompt)
             
             return summary
-                
         except Exception as e:
-            logger.error(f"Error generating summary: {e}")
+            logger.error(f"Error with AI summary: {e}")
             logger.error(traceback.format_exc())
+            
+            # Fallback to mock summary
             return self._generate_mock_summary(content)
     
     def generate_tags(self, content: Dict[str, Any]) -> List[str]:

@@ -54,10 +54,10 @@ def create_app(config_object=None):
         return {"error": "Internal server error"}, 500
     
     # Register blueprints with /api prefix
-    app.register_blueprint(content_bp, url_prefix='/api')
-    app.register_blueprint(rag_bp, url_prefix='/api')
-    app.register_blueprint(health_bp, url_prefix='/api')
-    app.register_blueprint(drive_bp, url_prefix='/api')
+    app.register_blueprint(content_bp)
+    app.register_blueprint(rag_bp)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(drive_bp)
     
     # Create a simple root route
     @app.route('/')

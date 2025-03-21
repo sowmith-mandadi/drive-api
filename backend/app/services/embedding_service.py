@@ -22,7 +22,12 @@ class EmbeddingService:
         self.initialized = False
         self.embedding_model = None
         self.embedding_dim = 768  # Default dimension
+        self.dev_mode = not os.path.exists('credentials.json')
         
+        if self.dev_mode:
+            logger.warning("Credentials file not found. Running embedding service in development mode.")
+            return
+            
         try:
             if USE_VERTEX_AI:
                 # Initialize Vertex AI embedding model if configured
@@ -34,14 +39,23 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Failed to initialize embedding service: {e}")
             logger.error(traceback.format_exc())
+            logger.warning("Running embedding service in development mode with mock embeddings")
     
     def _init_vertex_ai(self):
         """Initialize the Vertex AI embedding model."""
         try:
             from google.cloud import aiplatform
             
-            # Initialize Vertex AI with default project and location
-            aiplatform.init()
+            # Check for project ID
+            project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+            if not project_id:
+                logger.warning("No GOOGLE_CLOUD_PROJECT environment variable found. Embedding service may not initialize properly.")
+            
+            # Initialize Vertex AI with project if available
+            if project_id:
+                aiplatform.init(project=project_id)
+            else:
+                aiplatform.init()
             
             # For Vertex text-embedding models
             if EMBEDDING_MODEL == "text-embedding-gecko":
@@ -49,13 +63,13 @@ class EmbeddingService:
             elif EMBEDDING_MODEL == "text-embedding-gecko-multilingual":
                 self.embedding_dim = 768
             
-            logger.info(f"Initialized Vertex AI embedding service with model: {EMBEDDING_MODEL}")
+            logger.info(f"Initialized Vertex AI embedding model: {EMBEDDING_MODEL}")
             self.initialized = True
             
         except ImportError:
             logger.warning("google-cloud-aiplatform not installed. Unable to use Vertex AI embeddings.")
         except Exception as e:
-            logger.error(f"Error initializing Vertex AI embedding service: {e}")
+            logger.error(f"Error initializing Vertex AI embedding model: {e}")
             logger.error(traceback.format_exc())
     
     def _init_local_model(self):
@@ -80,69 +94,68 @@ class EmbeddingService:
             logger.error(traceback.format_exc())
     
     def generate_embedding(self, text: str) -> Optional[List[float]]:
-        """Generate embedding for a text string.
+        """Generate an embedding vector for a given text.
         
         Args:
             text: The text to generate an embedding for
             
         Returns:
-            List[float]: The embedding vector, or None if embedding failed
+            Optional[List[float]]: The embedding vector or None if generation failed
         """
         if not text or not text.strip():
-            logger.warning("Empty text provided for embedding")
-            return None
+            logger.warning("Empty text provided for embedding generation")
+            return self._generate_mock_embedding("")
+            
+        if self.dev_mode or not self.initialized:
+            # Return a mock embedding in development mode
+            logger.info("Development mode: Generating mock embedding")
+            return self._generate_mock_embedding(text)
             
         try:
-            if not self.initialized:
-                # If service not initialized, return mock embedding
+            # Use appropriate method based on initialization
+            if USE_VERTEX_AI and self.initialized:
+                return self._generate_vertex_ai_embedding(text)
+            elif self.embedding_model and not USE_VERTEX_AI:
+                return self._generate_local_embedding(text)
+            else:
+                logger.warning("No embedding model available, using mock embedding")
                 return self._generate_mock_embedding(text)
                 
-            # Truncate text if too long
-            text = self._preprocess_text(text)
-            
-            if USE_VERTEX_AI:
-                return self._generate_vertex_ai_embedding(text)
-            else:
-                return self._generate_local_embedding(text)
-                
         except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
+            logger.error(f"Error with Vertex AI embedding: {e}")
             logger.error(traceback.format_exc())
             return self._generate_mock_embedding(text)
     
     def generate_embeddings(self, texts: List[str]) -> List[Optional[List[float]]]:
-        """Generate embeddings for multiple texts.
+        """Generate embedding vectors for multiple texts.
         
         Args:
-            texts: List of texts to generate embeddings for
+            texts: The texts to generate embeddings for
             
         Returns:
-            List[List[float]]: List of embedding vectors
+            List[Optional[List[float]]]: The embedding vectors
         """
         if not texts:
+            logger.warning("Empty text list provided for embedding generation")
             return []
             
+        if self.dev_mode or not self.initialized:
+            # Return mock embeddings in development mode
+            logger.info("Development mode: Generating mock embeddings")
+            return [self._generate_mock_embedding(text) for text in texts]
+            
         try:
-            # Filter out empty texts
-            valid_texts = [text for text in texts if text and text.strip()]
-            
-            if not valid_texts:
-                return [None] * len(texts)
-                
-            if not self.initialized:
-                # If service not initialized, return mock embeddings
-                return [self._generate_mock_embedding(text) for text in valid_texts]
-            
-            # Preprocess texts
-            processed_texts = [self._preprocess_text(text) for text in valid_texts]
-            
-            if USE_VERTEX_AI:
-                return self._generate_vertex_ai_embeddings_batch(processed_texts)
+            # Use appropriate method based on initialization
+            if USE_VERTEX_AI and self.initialized:
+                return self._generate_vertex_ai_embeddings_batch(texts)
+            elif self.embedding_model and not USE_VERTEX_AI:
+                return self._generate_local_embeddings_batch(texts)
             else:
-                return self._generate_local_embeddings_batch(processed_texts)
+                logger.warning("No embedding model available, using mock embeddings")
+                return [self._generate_mock_embedding(text) for text in texts]
                 
         except Exception as e:
-            logger.error(f"Error generating batch embeddings: {e}")
+            logger.error(f"Error generating embeddings batch: {e}")
             logger.error(traceback.format_exc())
             return [self._generate_mock_embedding(text) for text in texts]
     
