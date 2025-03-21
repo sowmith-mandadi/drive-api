@@ -6,7 +6,7 @@
 
   <mat-card class="upload-card">
     <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
-      <!-- Main form section -->
+      <!-- Content Information Section -->
       <div class="form-section">
         <div class="section-header">
           <h2>
@@ -16,14 +16,14 @@
           <div class="divider"></div>
         </div>
         
-        <!-- Title (Required) -->
-        <mat-form-field appearance="outline" class="full-width">
+        <!-- Title (Required) - Enhanced with title-field class -->
+        <mat-form-field appearance="outline" class="full-width title-field">
           <mat-label>Title</mat-label>
           <input matInput formControlName="title" placeholder="Enter session title" required>
-          <mat-hint align="end">Required field</mat-hint>
           <mat-error *ngIf="uploadForm.get('title')?.hasError('required')">
             Title is required
           </mat-error>
+          <mat-hint align="end">Required field</mat-hint>
         </mat-form-field>
         
         <!-- Description -->
@@ -33,14 +33,15 @@
           <mat-hint align="end">Brief overview of the content</mat-hint>
         </mat-form-field>
         
+        <!-- Two fields per row for larger screens -->
         <div class="form-row">
           <!-- Track -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Track</mat-label>
-            <mat-select formControlName="track" panelClass="track-select-panel">
+            <mat-select formControlName="track">
               <mat-option *ngIf="trackOptions.length === 0" disabled>Loading tracks...</mat-option>
               <mat-option *ngFor="let track of trackOptions" [value]="track.id">
-                <span class="option-text">{{ track.name }}</span>
+                {{ track.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>category</mat-icon>
@@ -50,10 +51,10 @@
           <!-- Session Type -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Session Type</mat-label>
-            <mat-select formControlName="session_type" panelClass="session-select-panel">
+            <mat-select formControlName="session_type">
               <mat-option *ngIf="sessionTypeOptions.length === 0" disabled>Loading session types...</mat-option>
               <mat-option *ngFor="let type of sessionTypeOptions" [value]="type.id">
-                <span class="option-text">{{ type.name }}</span>
+                {{ type.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>event</mat-icon>
@@ -65,9 +66,9 @@
           <!-- Session Date -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Session Date</mat-label>
-            <mat-select formControlName="session_date" panelClass="date-select-panel">
+            <mat-select formControlName="session_date">
               <mat-option *ngFor="let date of sessionDateOptions" [value]="date.id">
-                <span class="option-text">{{ date.date }}</span>
+                {{ date.date }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>calendar_today</mat-icon>
@@ -77,9 +78,9 @@
           <!-- Learning Level -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Learning Level</mat-label>
-            <mat-select formControlName="learning_level" panelClass="level-select-panel">
+            <mat-select formControlName="learning_level">
               <mat-option *ngFor="let level of learningLevelOptions" [value]="level.id">
-                <span class="option-text">{{ level.name }}</span>
+                {{ level.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>school</mat-icon>
@@ -91,9 +92,9 @@
           <!-- Topic -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Topic</mat-label>
-            <mat-select formControlName="topic" panelClass="topic-select-panel">
+            <mat-select formControlName="topic">
               <mat-option *ngFor="let topic of topicOptions" [value]="topic.id">
-                <span class="option-text">{{ topic.name }}</span>
+                {{ topic.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>subject</mat-icon>
@@ -103,9 +104,9 @@
           <!-- Job Role -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Job Role</mat-label>
-            <mat-select formControlName="job_role" panelClass="role-select-panel">
+            <mat-select formControlName="job_role">
               <mat-option *ngFor="let role of jobRoleOptions" [value]="role.id">
-                <span class="option-text">{{ role.name }}</span>
+                {{ role.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>work</mat-icon>
@@ -117,9 +118,9 @@
           <!-- Area of Interest -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Area of Interest</mat-label>
-            <mat-select formControlName="area_of_interest" panelClass="interest-select-panel">
+            <mat-select formControlName="area_of_interest">
               <mat-option *ngFor="let area of areaOfInterestOptions" [value]="area.id">
-                <span class="option-text">{{ area.name }}</span>
+                {{ area.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>interests</mat-icon>
@@ -129,9 +130,9 @@
           <!-- Industry -->
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Industry</mat-label>
-            <mat-select formControlName="industry" panelClass="industry-select-panel">
+            <mat-select formControlName="industry">
               <mat-option *ngFor="let ind of industryOptions" [value]="ind.id">
-                <span class="option-text">{{ ind.name }}</span>
+                {{ ind.name }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>business</mat-icon>
@@ -139,27 +140,26 @@
           </mat-form-field>
         </div>
         
-        <!-- Tags -->
-        <mat-form-field appearance="outline" class="full-width">
+        <!-- Tags - Enhanced with tags-field class -->
+        <mat-form-field appearance="outline" class="full-width tags-field">
           <mat-label>Tags</mat-label>
           <mat-chip-grid #tagChipList aria-label="Tags selection">
-            <mat-chip-row *ngFor="let tag of tags" (removed)="removeTag(tag)" 
-                         [color]="'primary'" [selected]="true">
+            <mat-chip-row *ngFor="let tag of tags" (removed)="removeTag(tag)">
               {{ tag }}
               <button matChipRemove aria-label="Remove tag">
                 <mat-icon>cancel</mat-icon>
               </button>
             </mat-chip-row>
             <input placeholder="Add tags..."
-                   [matChipInputFor]="tagChipList"
-                   [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                   (matChipInputTokenEnd)="addTag($event)">
+                  [matChipInputFor]="tagChipList"
+                  [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                  (matChipInputTokenEnd)="addTag($event)">
           </mat-chip-grid>
           <mat-hint>Press Enter or comma to add a tag</mat-hint>
         </mat-form-field>
       </div>
       
-      <!-- Content Upload Section -->
+      <!-- Content Files Section -->
       <div class="form-section">
         <div class="section-header">
           <h2>
@@ -171,7 +171,7 @@
         <p class="section-description">Upload files or provide links to external resources</p>
         
         <!-- Upload Methods Tabs -->
-        <mat-tab-group class="upload-tabs" mat-align-tabs="start" animationDuration="300ms">
+        <mat-tab-group class="upload-tabs" mat-align-tabs="start" animationDuration="200ms">
           <!-- Local File Upload Tab -->
           <mat-tab>
             <ng-template mat-tab-label>
@@ -181,10 +181,10 @@
             
             <div class="file-upload-section">
               <div class="file-drop-zone" 
-                   (click)="fileInput.click()"
-                   [class.has-files]="files.length > 0"
-                   (dragover)="onDragOver($event)"
-                   (drop)="onDrop($event)">
+                  (click)="fileInput.click()"
+                  [class.has-files]="files.length > 0"
+                  (dragover)="onDragOver($event)"
+                  (drop)="onDrop($event)">
                 <input #fileInput type="file" style="display: none" multiple (change)="onFileSelect($event)">
                 <mat-icon class="upload-icon">cloud_upload</mat-icon>
                 <h3>Drag & drop files here</h3>
@@ -242,7 +242,7 @@
             </div>
           </mat-tab>
           
-          <!-- URL Links Tab -->
+          <!-- External Links Tab -->
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon class="tab-icon">link</mat-icon>
@@ -252,30 +252,30 @@
             <div class="links-section">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Slides URL</mat-label>
-                <input matInput formControlName="slide_url" placeholder="https://slides.example.com/deck">
+                <input matInput formControlName="slide_url" placeholder="Enter URL for presentation slides">
                 <mat-icon matSuffix>slideshow</mat-icon>
-                <mat-hint>Link to presentation slides</mat-hint>
+                <mat-hint>Google Slides, PowerPoint Online, etc.</mat-hint>
               </mat-form-field>
               
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Video URL</mat-label>
-                <input matInput formControlName="video_url" placeholder="https://youtube.com/watch?v=...">
+                <input matInput formControlName="video_url" placeholder="Enter URL for video content">
                 <mat-icon matSuffix>videocam</mat-icon>
-                <mat-hint>Link to video recording</mat-hint>
+                <mat-hint>YouTube, Vimeo, or other video platforms</mat-hint>
               </mat-form-field>
               
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Additional Resources URL</mat-label>
-                <input matInput formControlName="resources_url" placeholder="https://github.com/example/repo">
-                <mat-icon matSuffix>insert_link</mat-icon>
-                <mat-hint>Link to code repository or other resources</mat-hint>
+                <input matInput formControlName="resources_url" placeholder="Enter URL for additional resources">
+                <mat-icon matSuffix>link</mat-icon>
+                <mat-hint>GitHub, documents, or other resources</mat-hint>
               </mat-form-field>
             </div>
           </mat-tab>
         </mat-tab-group>
       </div>
       
-      <!-- AI Enhancement Options -->
+      <!-- AI Enhancement Section -->
       <div class="form-section">
         <div class="section-header">
           <h2>
@@ -286,92 +286,96 @@
         </div>
         <p class="section-description">Let AI help process your content</p>
         
-        <div class="ai-options-content">
-          <mat-checkbox formControlName="ai_summarize" color="primary">
-            <div class="checkbox-content">
-              <span class="checkbox-label">Generate AI summary</span>
-              <span class="checkbox-description">Create a concise summary of your content</span>
-            </div>
-          </mat-checkbox>
+        <div class="ai-options">
+          <h3>
+            <mat-icon>auto_awesome</mat-icon>
+            Process with AI
+          </h3>
+          <p>Select which AI features you'd like to apply to your content:</p>
           
-          <mat-checkbox formControlName="ai_tags" color="primary">
-            <div class="checkbox-content">
-              <span class="checkbox-label">Generate tags automatically</span>
-              <span class="checkbox-description">Extract relevant keywords from your content</span>
+          <div class="ai-options-grid">
+            <div class="ai-option-item">
+              <mat-checkbox formControlName="ai_summarize" class="ai-option-checkbox">
+                <div class="ai-option-label">Generate AI summary</div>
+              </mat-checkbox>
+              <div class="ai-option-description">Create a concise summary of your content</div>
             </div>
-          </mat-checkbox>
-          
-          <mat-checkbox formControlName="ai_index" color="primary">
-            <div class="checkbox-content">
-              <span class="checkbox-label">Index for RAG-based search</span>
-              <span class="checkbox-description">Make your content searchable with AI-powered retrieval</span>
+            
+            <div class="ai-option-item">
+              <mat-checkbox formControlName="ai_tags" class="ai-option-checkbox">
+                <div class="ai-option-label">Generate tags automatically</div>
+              </mat-checkbox>
+              <div class="ai-option-description">Extract relevant keywords from your content</div>
             </div>
-          </mat-checkbox>
-        </div>
-      </div>
-      
-      <!-- Progress Bar -->
-      <div class="progress-container" *ngIf="uploading">
-        <h3 class="progress-label">Uploading content...</h3>
-        <mat-progress-bar [value]="progress" mode="determinate" color="primary"></mat-progress-bar>
-        <span class="progress-percentage">{{ progress }}%</span>
-      </div>
-      
-      <!-- AI Generated Content -->
-      <div class="ai-content-container" *ngIf="showAiContent && aiGeneratedContent">
-        <div class="section-header">
-          <h2>
-            <mat-icon>smart_toy</mat-icon>
-            AI-Generated Content
-          </h2>
-          <div class="divider"></div>
-        </div>
-        
-        <mat-card class="ai-result-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar>summarize</mat-icon>
-            <mat-card-title>AI-Generated Summary</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p>{{ aiGeneratedContent.summary }}</p>
-          </mat-card-content>
-        </mat-card>
-        
-        <mat-card class="ai-result-card" *ngIf="aiGeneratedContent.tags && aiGeneratedContent.tags.length > 0">
-          <mat-card-header>
-            <mat-icon mat-card-avatar>tag</mat-icon>
-            <mat-card-title>AI-Generated Tags</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="ai-tags-container">
-              <mat-chip-set>
-                <mat-chip *ngFor="let tag of aiGeneratedContent.tags" color="accent">{{ tag }}</mat-chip>
-              </mat-chip-set>
+            
+            <div class="ai-option-item">
+              <mat-checkbox formControlName="ai_index" class="ai-option-checkbox">
+                <div class="ai-option-label">Index for RAG-based search</div>
+              </mat-checkbox>
+              <div class="ai-option-description">Make your content searchable with AI-powered retrieval</div>
             </div>
-            <button mat-button color="primary" (click)="addAiTagsToUserTags()">
-              <mat-icon>add</mat-icon> Add these tags to your content
-            </button>
-          </mat-card-content>
-        </mat-card>
-        
-        <div class="ai-content-actions">
-          <button mat-raised-button color="primary" [routerLink]="['/content', uploadForm.value.contentId]">
-            <mat-icon>visibility</mat-icon> View Full Content
-          </button>
+          </div>
         </div>
       </div>
       
       <!-- Form Actions -->
-      <div class="form-actions" *ngIf="!showAiContent">
-        <button mat-button type="button" routerLink="/search">
+      <div class="form-actions">
+        <button mat-stroked-button type="button" class="cancel-button" routerLink="/search">
           Cancel
         </button>
-        <button mat-raised-button color="primary" class="submit-button" type="submit" 
-                [disabled]="uploading || (!hasAnyFiles() && !hasAnyLinks())">
-          <mat-icon>cloud_upload</mat-icon>
-          Upload Content
+        <button mat-flat-button color="primary" type="submit" 
+                [disabled]="uploadForm.invalid || uploading || (!hasAnyFiles() && !hasAnyLinks())"
+                class="submit-button">
+          <mat-spinner *ngIf="uploading" diameter="20" class="spinner"></mat-spinner>
+          {{ uploading ? 'Uploading...' : 'Upload Content' }}
         </button>
       </div>
+      
+      <!-- Upload Progress Indicator (show when uploading) -->
+      <div class="upload-progress" *ngIf="uploading">
+        <div class="progress-label">
+          <span>Uploading files...</span>
+          <span class="progress-percentage">{{ progress }}%</span>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
+      </div>
     </form>
+  </mat-card>
+  
+  <!-- AI Generated Content Display (shown after upload if AI processing was selected) -->
+  <mat-card class="upload-card ai-generated-content" *ngIf="showAiContent && aiGeneratedContent">
+    <h3>
+      <mat-icon>auto_awesome</mat-icon>
+      AI-Generated Content
+    </h3>
+    
+    <div class="ai-content-section" *ngIf="aiGeneratedContent.summary">
+      <h4>Content Summary</h4>
+      <div class="summary">{{ aiGeneratedContent.summary }}</div>
+    </div>
+    
+    <div class="ai-content-section" *ngIf="aiGeneratedContent.tags && aiGeneratedContent.tags.length > 0">
+      <h4>Suggested Tags</h4>
+      <div class="ai-tags-list">
+        <div class="ai-tag" *ngFor="let tag of aiGeneratedContent.tags">
+          {{ tag }}
+        </div>
+      </div>
+      <button mat-stroked-button class="add-tags-button" (click)="addAiTagsToUserTags()">
+        <mat-icon>add</mat-icon>
+        Add these tags to my content
+      </button>
+    </div>
+    
+    <div class="form-actions">
+      <button mat-stroked-button class="cancel-button" routerLink="/search">
+        Cancel
+      </button>
+      <button mat-flat-button color="primary" class="submit-button" 
+              *ngIf="uploadForm.get('contentId')?.value"
+              [routerLink]="['/content', uploadForm.get('contentId')?.value]">
+        View Content
+      </button>
+    </div>
   </mat-card>
 </div> 
