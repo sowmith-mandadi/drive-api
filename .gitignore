@@ -41,7 +41,8 @@ credentials.json
 
 # Angular
 .angular/
-/node_modules/
+node_modules/
+frontend/node_modules/
 /dist/
 /tmp/
 /out-tsc/
