@@ -48,3 +48,7 @@ backend/__pycache__/
 backend/build/
 backend/dist/
 frontend/dist/
+
+# Test files
+backend/test.txt
+backend/test2.txt
