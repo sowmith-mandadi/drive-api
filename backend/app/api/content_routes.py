@@ -8,7 +8,7 @@ from app.services.content_service import ContentService
 logger = logging.getLogger(__name__)
 
 # Create blueprint
-content_bp = Blueprint('content', __name__)
+content_bp = Blueprint('content', __name__, url_prefix='/api')
 
 # Initialize services
 content_service = ContentService()
@@ -89,6 +89,44 @@ def upload_content():
         return resp
     except Exception as e:
         logger.error(f"Error in upload: {e}")
+        # Return a more user-friendly error response
+        return jsonify({
+            "error": "Upload failed", 
+            "message": str(e),
+            "success": False
+        }), 500
+
+@content_bp.route('/search', methods=['POST', 'OPTIONS'])
+def search_content():
+    """Search for content based on query and filters."""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    try:
+        logger.info("Received search request")
+        data = request.json
+        
+        query = data.get('query', '')
+        filters = data.get('filters', {})
+        page = data.get('page', 1)
+        page_size = data.get('page_size', 10)
+        
+        logger.info(f"Search parameters: query='{query}', filters={filters}, page={page}, page_size={page_size}")
+        
+        # Call the content service to perform the search
+        result = content_service.search_content(query, filters, page, page_size)
+        
+        # Add CORS headers to the response
+        resp = jsonify(result)
+        resp.headers.add('Access-Control-Allow-Origin', '*')
+        return resp
+    except Exception as e:
+        logger.error(f"Error in search: {e}")
         return jsonify({"error": str(e)}), 500
 
 @content_bp.route('/content-by-ids', methods=['POST', 'OPTIONS'])

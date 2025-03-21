@@ -8,7 +8,7 @@ from app.services.rag_service import RagService
 logger = logging.getLogger(__name__)
 
 # Create blueprint
-rag_bp = Blueprint('rag', __name__, url_prefix='/rag')
+rag_bp = Blueprint('rag', __name__, url_prefix='/api/rag')
 
 # Initialize services
 rag_service = RagService()
