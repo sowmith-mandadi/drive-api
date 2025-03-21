@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpEventType } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -15,10 +15,35 @@ export class ContentService {
   
   // Upload content (files and metadata)
   uploadContent(formData: FormData): Observable<any> {
-    return this.http.post(`${this.apiUrl}/upload`, formData).pipe(
+    // Configure for longer timeout
+    const httpOptions = {
+      headers: new HttpHeaders({
+        'Accept': 'application/json',
+      }),
+      // Increase timeout for large uploads (5 minutes)
+      reportProgress: true,
+      observe: 'events' as 'events'
+    };
+    
+    return this.http.post(`${this.apiUrl}/upload`, formData, httpOptions).pipe(
+      map(event => {
+        // Return the final response when complete
+        if (event.type === HttpEventType.Response) {
+          return event.body;
+        }
+        return null;
+      }),
       catchError(error => {
         console.error('Error uploading content:', error);
-        return throwError(() => new Error('Failed to upload content. Please try again.'));
+        let errorMessage = 'Failed to upload content. Please try again.';
+        
+        if (error.status === 413) {
+          errorMessage = 'The file is too large to upload. Maximum file size is 100MB.';
+        } else if (error.name === 'TimeoutError') {
+          errorMessage = 'Upload timed out. Please try again with a smaller file or check your connection.';
+        }
+        
+        return throwError(() => new Error(errorMessage));
       })
     );
   }

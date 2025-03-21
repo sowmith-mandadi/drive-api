@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, finalize } from 'rxjs/operators';
 import { ContentService } from '../../services/content.service';
 import { RagService } from '../../services/rag.service';
 import { ConferenceDataService } from '../../services/conference-data.service';
@@ -22,6 +22,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
 import { PageEvent } from '@angular/material/paginator';
 
+/**
+ * Search component for finding and filtering conference content
+ * Includes both traditional and AI-powered search capabilities
+ */
 @Component({
   selector: 'app-search',
   templateUrl: './search.component.html',
@@ -34,6 +38,14 @@ export class SearchComponent implements OnInit, OnDestroy {
   currentPage: number = 1;
   pageSize: number = 10;
   loading: boolean = false;
+  
+  // Pagination variables
+  totalPages: number = 0;
+  displayedPages: number[] = [];
+  paginationRange: number = 5; // Number of page buttons to show
+  
+  // Advanced filters toggle
+  showAdvancedFilters: boolean = false;
   
   // For filters
   tracks: Track[] = [];
@@ -67,6 +79,9 @@ export class SearchComponent implements OnInit, OnDestroy {
   isAiSearch: boolean = false;
   ragResponse: RagResponse | null = null;
   
+  // Search history
+  searchHistory: string[] = [];
+  
   private subs = new Subscription();
   
   constructor(
@@ -82,66 +97,113 @@ export class SearchComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.createForm();
     this.loadFilters();
+    this.loadSearchHistory();
     
     // Subscribe to query param changes
-    this.route.queryParams.subscribe(params => {
-      if (params['query']) {
-        this.searchForm.get('query')?.setValue(params['query']);
-        this.search();
-      } else {
-        this.loadRecentContent();
-      }
-    });
+    this.subs.add(
+      this.route.queryParams.subscribe(params => {
+        // Handle page parameter
+        if (params['page']) {
+          this.currentPage = parseInt(params['page'], 10);
+        }
+        
+        // Handle page size parameter
+        if (params['pageSize']) {
+          this.pageSize = parseInt(params['pageSize'], 10);
+        }
+        
+        if (params['query']) {
+          this.searchForm.get('query')?.setValue(params['query'], { emitEvent: false });
+          this.search();
+          this.addToSearchHistory(params['query']);
+        } else {
+          this.loadRecentContent();
+        }
+        
+        // Handle AI search toggle
+        if (params['ai'] === 'true') {
+          this.searchForm.get('useAi')?.setValue(true, { emitEvent: false });
+          this.isAiSearch = true;
+        }
+      })
+    );
     
     // Subscribe to search input changes
-    this.searchForm.get('query')?.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap(query => {
+    this.subs.add(
+      this.searchForm.get('query')!.valueChanges
+        .pipe(
+          debounceTime(350), // Reduced from 500ms for more responsive feel
+          distinctUntilChanged()
+        )
+        .subscribe(query => {
           if (query && query.length > 2) {
-            return of(query);
+            this.updateQueryParam(query);
+          } else if (query === '') {
+            // Clear search and load recent content
+            this.updateQueryParam('');
+            this.loadRecentContent();
           }
-          return of(null);
         })
-      )
-      .subscribe(query => {
-        if (query) {
-          this.updateQueryParam(query);
-        }
-      });
+    );
     
     // Subscribe to AI search toggle changes
     this.subs.add(
       this.searchForm.get('useAi')!.valueChanges.subscribe(useAi => {
         this.isAiSearch = useAi;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { ai: useAi },
+          queryParamsHandling: 'merge'
+        });
+        
         if (this.searchForm.get('query')?.value) {
           this.search();
         }
       })
     );
-    
-    // Auto-search on query changes (with debounce)
-    this.subs.add(
-      this.searchForm.get('query')!.valueChanges
-        .pipe(
-          debounceTime(500),
-          distinctUntilChanged()
-        )
-        .subscribe(() => {
-          if (this.searchForm.get('query')?.value?.length > 2 || 
-              !this.searchForm.get('query')?.value) {
-            this.currentPage = 1;
-            this.search();
-          }
-        })
-    );
   }
   
+  /**
+   * Clean up subscriptions on component destruction
+   */
   ngOnDestroy(): void {
     this.subs.unsubscribe();
   }
   
+  /**
+   * Handle keyboard shortcuts for search navigation
+   * @param event Keyboard event
+   */
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    // Only handle if not in input or textarea
+    if (document.activeElement instanceof HTMLInputElement || 
+        document.activeElement instanceof HTMLTextAreaElement) {
+      return;
+    }
+    
+    // Navigate to next/previous page with arrow keys
+    if (event.altKey && event.key === 'ArrowRight') {
+      this.goToNextPage();
+      event.preventDefault();
+    } else if (event.altKey && event.key === 'ArrowLeft') {
+      this.goToPreviousPage();
+      event.preventDefault();
+    }
+    
+    // Focus search box with / key
+    if (event.key === '/' && !(document.activeElement instanceof HTMLInputElement)) {
+      const searchInput = document.querySelector('input[formControlName="query"]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        event.preventDefault();
+      }
+    }
+  }
+  
+  /**
+   * Initialize the search form
+   */
   createForm(): void {
     this.searchForm = this.fb.group({
       query: [''],
@@ -279,24 +341,69 @@ export class SearchComponent implements OnInit, OnDestroy {
     );
   }
   
-  loadRecentContent(): void {
-    this.loading = true;
-    this.contentService.getRecentContent(this.currentPage, this.pageSize).subscribe(
-      response => {
-        this.searchResults = response.content;
-        this.totalResults = response.totalCount;
-        this.loading = false;
-      },
-      error => {
-        console.error('Error loading recent content:', error);
-        this.loading = false;
-        this.snackBar.open('Error loading content. Please try again.', 'Close', {
-          duration: 3000
-        });
-      }
-    );
+  /**
+   * Load recent search history from local storage
+   */
+  loadSearchHistory(): void {
+    const history = localStorage.getItem('searchHistory');
+    if (history) {
+      this.searchHistory = JSON.parse(history);
+    }
   }
   
+  /**
+   * Add search term to history
+   * @param term Search term to add
+   */
+  addToSearchHistory(term: string): void {
+    if (!term || term.trim() === '' || this.searchHistory.includes(term)) {
+      return;
+    }
+    
+    // Add to beginning of array and keep only last 10 searches
+    this.searchHistory.unshift(term);
+    if (this.searchHistory.length > 10) {
+      this.searchHistory = this.searchHistory.slice(0, 10);
+    }
+    
+    localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory));
+  }
+  
+  /**
+   * Clear search history
+   */
+  clearSearchHistory(): void {
+    this.searchHistory = [];
+    localStorage.removeItem('searchHistory');
+  }
+  
+  /**
+   * Load recent content when no search query is present
+   */
+  loadRecentContent(): void {
+    this.loading = true;
+    this.contentService.getRecentContent(this.currentPage, this.pageSize)
+      .pipe(
+        finalize(() => this.loading = false)
+      )
+      .subscribe(
+        response => {
+          this.searchResults = response.content;
+          this.totalResults = response.totalCount;
+          this.updatePagination();
+        },
+        error => {
+          console.error('Error loading recent content:', error);
+          this.snackBar.open('Error loading content. Please try again.', 'Close', {
+            duration: 3000
+          });
+        }
+      );
+  }
+  
+  /**
+   * Perform search based on current parameters
+   */
   search(): void {
     const query = this.searchForm.get('query')?.value;
     const useAi = this.searchForm.get('useAi')?.value;
@@ -309,90 +416,228 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.isAiSearch = useAi;
     
+    // Combine all filters into one object
+    const filters = {
+      tracks: this.selectedTracks,
+      tags: this.selectedTags,
+      sessionDates: this.selectedSessionDates,
+      sessionTypes: this.selectedSessionTypes,
+      learningLevels: this.selectedLearningLevels,
+      topics: this.selectedTopics,
+      jobRoles: this.selectedJobRoles,
+      areasOfInterest: this.selectedAreasOfInterest,
+      industries: this.selectedIndustries
+    };
+    
     if (useAi) {
       // Use RAG for AI-powered search
-      this.searchWithRAG(query);
+      this.searchWithRAG(query, filters);
     } else {
       // Use traditional search
-      this.searchTraditional(query);
+      this.searchTraditional(query, filters);
     }
   }
   
-  searchWithRAG(query: string): void {
-    const filters = {
-      tracks: this.selectedTracks,
-      tags: this.selectedTags
-    };
-    
-    this.ragService.askQuestion(query, undefined, filters).subscribe(
-      response => {
-        this.ragResponse = response;
-        
-        // Get content IDs from passages
-        const contentIds = response.passages
-          .map(passage => passage.source)
-          .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
-        
-        // Get full content details for the IDs
-        if (contentIds.length > 0) {
-          this.contentService.getContentByIds(contentIds).subscribe(
-            contents => {
-              this.searchResults = contents;
-              this.totalResults = contents.length;
-              this.loading = false;
-            },
-            error => {
-              console.error('Error fetching content details:', error);
-              this.loading = false;
-              this.snackBar.open('Error fetching content details. Please try again.', 'Close', {
-                duration: 3000
-              });
-            }
-          );
-        } else {
-          this.searchResults = [];
-          this.totalResults = 0;
-          this.loading = false;
+  /**
+   * Perform AI-powered search using RAG
+   * @param query Search query
+   * @param filters Applied filters
+   */
+  searchWithRAG(query: string, filters: any): void {
+    this.ragService.askQuestion(query, undefined, filters)
+      .pipe(
+        finalize(() => this.loading = false)
+      )
+      .subscribe(
+        response => {
+          this.ragResponse = response;
+          
+          // Get content IDs from passages
+          const contentIds = response.passages
+            .map(passage => passage.source)
+            .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+          
+          // Get full content details for the IDs
+          if (contentIds.length > 0) {
+            this.contentService.getContentByIds(contentIds).subscribe(
+              contents => {
+                this.searchResults = contents;
+                this.totalResults = contents.length;
+                this.updatePagination();
+              },
+              error => {
+                console.error('Error fetching content details:', error);
+                this.snackBar.open('Error fetching content details. Please try again.', 'Close', {
+                  duration: 3000
+                });
+              }
+            );
+          } else {
+            this.searchResults = [];
+            this.totalResults = 0;
+            this.updatePagination();
+          }
+        },
+        error => {
+          console.error('Error performing AI search:', error);
+          this.snackBar.open('Error performing AI search. Please try again or use traditional search.', 'Close', {
+            duration: 3000
+          });
         }
-      },
-      error => {
-        console.error('Error performing AI search:', error);
-        this.loading = false;
-        this.snackBar.open('Error performing AI search. Please try again or use traditional search.', 'Close', {
-          duration: 3000
-        });
-      }
-    );
+      );
   }
   
-  searchTraditional(query: string): void {
-    const filters = {
-      tracks: this.selectedTracks,
-      tags: this.selectedTags
-    };
-    
-    this.contentService.searchContent(query, filters, this.currentPage, this.pageSize).subscribe(
-      response => {
-        this.searchResults = response.content;
-        this.totalResults = response.totalCount;
-        this.loading = false;
-      },
-      error => {
-        console.error('Error searching content:', error);
-        this.loading = false;
-        this.snackBar.open('Error searching content. Please try again.', 'Close', {
-          duration: 3000
-        });
-      }
-    );
+  /**
+   * Perform traditional search
+   * @param query Search query
+   * @param filters Applied filters
+   */
+  searchTraditional(query: string, filters: any): void {
+    this.contentService.searchContent(query, filters, this.currentPage, this.pageSize)
+      .pipe(
+        finalize(() => this.loading = false)
+      )
+      .subscribe(
+        response => {
+          this.searchResults = response.content;
+          this.totalResults = response.totalCount;
+          this.updatePagination();
+        },
+        error => {
+          console.error('Error searching content:', error);
+          this.snackBar.open('Error searching content. Please try again.', 'Close', {
+            duration: 3000
+          });
+        }
+      );
   }
   
+  /**
+   * Update query parameter in URL
+   * @param query Search query
+   */
   updateQueryParam(query: string): void {
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { query },
+      queryParams: { 
+        query,
+        page: this.currentPage,
+        pageSize: this.pageSize
+      },
       queryParamsHandling: 'merge'
     });
+  }
+  
+  /**
+   * Update pagination variables based on search results
+   */
+  updatePagination(): void {
+    this.totalPages = Math.ceil(this.totalResults / this.pageSize);
+    this.updateDisplayedPages();
+  }
+  
+  /**
+   * Update the array of page numbers displayed in pagination
+   */
+  updateDisplayedPages(): void {
+    this.displayedPages = [];
+    
+    if (this.totalPages <= this.paginationRange) {
+      // Show all pages if less than paginationRange
+      for (let i = 1; i <= this.totalPages; i++) {
+        this.displayedPages.push(i);
+      }
+    } else {
+      // Calculate start and end page numbers
+      let startPage = Math.max(1, this.currentPage - Math.floor(this.paginationRange / 2));
+      let endPage = startPage + this.paginationRange - 1;
+      
+      // Adjust if endPage exceeds total
+      if (endPage > this.totalPages) {
+        endPage = this.totalPages;
+        startPage = Math.max(1, endPage - this.paginationRange + 1);
+      }
+      
+      // Add first page and ellipsis if needed
+      if (startPage > 1) {
+        this.displayedPages.push(1);
+        if (startPage > 2) {
+          this.displayedPages.push(-1); // -1 represents ellipsis
+        }
+      }
+      
+      // Add page numbers
+      for (let i = startPage; i <= endPage; i++) {
+        this.displayedPages.push(i);
+      }
+      
+      // Add last page and ellipsis if needed
+      if (endPage < this.totalPages) {
+        if (endPage < this.totalPages - 1) {
+          this.displayedPages.push(-1); // -1 represents ellipsis
+        }
+        this.displayedPages.push(this.totalPages);
+      }
+    }
+  }
+  
+  /**
+   * Handle page change from custom pagination or paginator
+   * @param event Page change event
+   */
+  onPageChange(event: any): void {
+    let pageIndex: number;
+    
+    if (event instanceof PageEvent) {
+      // From Material paginator
+      pageIndex = event.pageIndex + 1;
+      this.pageSize = event.pageSize;
+    } else {
+      // From custom pagination
+      pageIndex = event;
+    }
+    
+    if (pageIndex !== this.currentPage) {
+      this.currentPage = pageIndex;
+      this.updateQueryParam(this.searchForm.get('query')?.value || '');
+      this.search();
+      
+      // Scroll to top of results
+      setTimeout(() => {
+        const resultsElement = document.querySelector('.results-panel');
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }
+  
+  /**
+   * Navigate to specific page
+   * @param page Page number
+   */
+  goToPage(page: number): void {
+    if (page !== -1 && page !== this.currentPage) {
+      this.onPageChange(page);
+    }
+  }
+  
+  /**
+   * Navigate to next page
+   */
+  goToNextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.onPageChange(this.currentPage + 1);
+    }
+  }
+  
+  /**
+   * Navigate to previous page
+   */
+  goToPreviousPage(): void {
+    if (this.currentPage > 1) {
+      this.onPageChange(this.currentPage - 1);
+    }
   }
   
   // Toggle track filter
@@ -509,12 +754,6 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.search();
   }
   
-  onPageChange(event: any): void {
-    this.currentPage = event.pageIndex + 1;
-    this.pageSize = event.pageSize;
-    this.search();
-  }
-  
   getTrackById(trackId: string): Track | undefined {
     return this.tracks.find(track => track.id === trackId);
   }
@@ -569,5 +808,228 @@ export class SearchComponent implements OnInit, OnDestroy {
   
   getIndustryById(industryId: string): Industry | undefined {
     return this.industries.find(industry => industry.id === industryId);
+  }
+  
+  /**
+   * Highlight search terms in text
+   * @param text Text to highlight
+   * @returns HTML with highlighted terms
+   */
+  highlightSearchTerms(text: string): string {
+    if (!text) return '';
+    
+    const searchTerm = this.searchForm.get('query')?.value;
+    if (!searchTerm) return text;
+    
+    // Escape special characters in the search term
+    const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Create a regex to find all instances of the search term (case insensitive)
+    const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+    
+    // Replace all instances with highlighted version
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+  }
+  
+  /**
+   * Toggle advanced filters visibility
+   */
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+  
+  /**
+   * Apply the selected filters
+   */
+  applyFilters(): void {
+    this.currentPage = 1;
+    this.search();
+    this.showAdvancedFilters = false;
+  }
+  
+  /**
+   * Check if any filters are active
+   * @returns True if at least one filter is selected
+   */
+  hasActiveFilters(): boolean {
+    return this.selectedTracks.length > 0 || 
+           this.selectedTags.length > 0 || 
+           this.selectedSessionDates.length > 0 || 
+           this.selectedSessionTypes.length > 0 || 
+           this.selectedLearningLevels.length > 0 || 
+           this.selectedTopics.length > 0 || 
+           this.selectedJobRoles.length > 0 || 
+           this.selectedAreasOfInterest.length > 0 || 
+           this.selectedIndustries.length > 0;
+  }
+  
+  /**
+   * Get the total count of active filters
+   * @returns Number of active filters
+   */
+  getActiveFilterCount(): number {
+    return this.selectedTracks.length + 
+           this.selectedTags.length + 
+           this.selectedSessionDates.length + 
+           this.selectedSessionTypes.length + 
+           this.selectedLearningLevels.length + 
+           this.selectedTopics.length + 
+           this.selectedJobRoles.length + 
+           this.selectedAreasOfInterest.length + 
+           this.selectedIndustries.length;
+  }
+  
+  /**
+   * Get a list of all active filters for display
+   * @returns Array of filter objects with type, id and label
+   */
+  getActiveFiltersList(): Array<{type: string, id: string, label: string}> {
+    const filters: Array<{type: string, id: string, label: string}> = [];
+    
+    // Add tracks
+    this.selectedTracks.forEach(trackId => {
+      const track = this.getTrackById(trackId);
+      if (track) {
+        filters.push({
+          type: 'track',
+          id: trackId,
+          label: `Track: ${track.name}`
+        });
+      }
+    });
+    
+    // Add tags
+    this.selectedTags.forEach(tag => {
+      filters.push({
+        type: 'tag',
+        id: tag,
+        label: `Tag: ${tag}`
+      });
+    });
+    
+    // Add session dates
+    this.selectedSessionDates.forEach(dateId => {
+      const date = this.getSessionDateById(dateId);
+      if (date) {
+        filters.push({
+          type: 'sessionDate',
+          id: dateId,
+          label: `Date: ${date.date}`
+        });
+      }
+    });
+    
+    // Add session types
+    this.selectedSessionTypes.forEach(typeId => {
+      const type = this.getSessionTypeById(typeId);
+      if (type) {
+        filters.push({
+          type: 'sessionType',
+          id: typeId,
+          label: `Type: ${type.name}`
+        });
+      }
+    });
+    
+    // Add learning levels
+    this.selectedLearningLevels.forEach(levelId => {
+      const level = this.getLearningLevelById(levelId);
+      if (level) {
+        filters.push({
+          type: 'learningLevel',
+          id: levelId,
+          label: `Level: ${level.name}`
+        });
+      }
+    });
+    
+    // Add topics
+    this.selectedTopics.forEach(topicId => {
+      const topic = this.getTopicById(topicId);
+      if (topic) {
+        filters.push({
+          type: 'topic',
+          id: topicId,
+          label: `Topic: ${topic.name}`
+        });
+      }
+    });
+    
+    // Add job roles
+    this.selectedJobRoles.forEach(roleId => {
+      const role = this.getJobRoleById(roleId);
+      if (role) {
+        filters.push({
+          type: 'jobRole',
+          id: roleId,
+          label: `Role: ${role.name}`
+        });
+      }
+    });
+    
+    // Add areas of interest
+    this.selectedAreasOfInterest.forEach(areaId => {
+      const area = this.getAreaOfInterestById(areaId);
+      if (area) {
+        filters.push({
+          type: 'areaOfInterest',
+          id: areaId,
+          label: `Interest: ${area.name}`
+        });
+      }
+    });
+    
+    // Add industries
+    this.selectedIndustries.forEach(industryId => {
+      const industry = this.getIndustryById(industryId);
+      if (industry) {
+        filters.push({
+          type: 'industry',
+          id: industryId,
+          label: `Industry: ${industry.name}`
+        });
+      }
+    });
+    
+    return filters;
+  }
+  
+  /**
+   * Remove a filter by its type and id
+   * @param filter Filter object to remove
+   */
+  removeFilter(filter: {type: string, id: string, label: string}): void {
+    switch (filter.type) {
+      case 'track':
+        this.selectedTracks = this.selectedTracks.filter(id => id !== filter.id);
+        break;
+      case 'tag':
+        this.selectedTags = this.selectedTags.filter(tag => tag !== filter.id);
+        break;
+      case 'sessionDate':
+        this.selectedSessionDates = this.selectedSessionDates.filter(id => id !== filter.id);
+        break;
+      case 'sessionType':
+        this.selectedSessionTypes = this.selectedSessionTypes.filter(id => id !== filter.id);
+        break;
+      case 'learningLevel':
+        this.selectedLearningLevels = this.selectedLearningLevels.filter(id => id !== filter.id);
+        break;
+      case 'topic':
+        this.selectedTopics = this.selectedTopics.filter(id => id !== filter.id);
+        break;
+      case 'jobRole':
+        this.selectedJobRoles = this.selectedJobRoles.filter(id => id !== filter.id);
+        break;
+      case 'areaOfInterest':
+        this.selectedAreasOfInterest = this.selectedAreasOfInterest.filter(id => id !== filter.id);
+        break;
+      case 'industry':
+        this.selectedIndustries = this.selectedIndustries.filter(id => id !== filter.id);
+        break;
+    }
+    
+    this.currentPage = 1;
+    this.search();
   }
 } 

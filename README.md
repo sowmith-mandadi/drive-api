@@ -11,6 +11,7 @@ This application provides content management for conference materials with advan
 - Provide RAG-powered answers to questions about the content
 - Find similar documents based on semantic similarity
 - Generate AI summaries and tags for uploaded content
+- Import files directly from Google Drive
 
 ## Project Structure
 
@@ -53,6 +54,7 @@ This application provides content management for conference materials with advan
   - Firestore
   - Cloud Storage
   - Vector Search (optional, for enhanced similarity search)
+  - Google Drive API (for Google Drive integration)
 
 ### Backend Installation
 
@@ -79,6 +81,14 @@ This application provides content management for conference materials with advan
    VERTEX_RAG_MODEL=gemini-1.5-pro
    VECTOR_INDEX_ENDPOINT=your-vector-index-endpoint-id  # Optional
    VECTOR_INDEX_ID=your-vector-index-id  # Optional
+   ```
+
+5. For Google Drive integration, create OAuth credentials:
+   ```
+   # Add the following to your .env file or set as environment variables
+   GOOGLE_OAUTH_CLIENT_ID=your-oauth-client-id
+   GOOGLE_OAUTH_CLIENT_SECRET=your-oauth-client-secret
+   GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/drive/auth/callback
    ```
 
 ### Frontend Installation
@@ -134,12 +144,12 @@ Start the API server:
 python run.py
 ```
 
-The backend will run on http://localhost:3000
+The backend will run on http://localhost:3001
 
 For production deployment, use Gunicorn:
 
 ```
-gunicorn -w 4 -b 0.0.0.0:3000 wsgi:app
+gunicorn -w 4 -b 0.0.0.0:3001 wsgi:app
 ```
 
 ### Starting the Frontend
@@ -156,17 +166,28 @@ The frontend will run on http://localhost:4200 (or another port if 4200 is occup
 
 ### Content Management
 
-- `POST /upload`: Upload conference content with metadata
-- `POST /content-by-ids`: Get multiple content items by their IDs
-- `GET /popular-tags`: Get most popular tags
-- `GET /recent-content`: Get recent content with pagination
+- `POST /api/upload`: Upload conference content with metadata
+- `POST /api/content-by-ids`: Get multiple content items by their IDs
+- `GET /api/popular-tags`: Get most popular tags
+- `GET /api/recent-content`: Get recent content with pagination
+- `POST /api/search`: Search for content with filters
 
 ### RAG Features
 
-- `POST /rag/ask`: Ask a question using RAG
-- `POST /rag/summarize`: Summarize a document using Vertex AI
-- `POST /rag/generate-tags`: Generate tags for a document using Vertex AI
-- `POST /rag/similar`: Find similar documents based on a query or content ID
+- `POST /api/rag/ask`: Ask a question using RAG
+- `POST /api/rag/summarize`: Summarize a document using Vertex AI
+- `POST /api/rag/generate-tags`: Generate tags for a document using Vertex AI
+- `POST /api/rag/similar`: Find similar documents based on a query or content ID
+
+### Google Drive Integration
+
+- `GET /api/drive/files/<file_id>`: Get metadata for a Google Drive file
+- `POST /api/drive/import`: Import files from Google Drive into the system
+
+### System Health
+
+- `GET /api/health`: Basic health check
+- `GET /api/health/info`: Detailed system information
 
 ## Document Processing
 
