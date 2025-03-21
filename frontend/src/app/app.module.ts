@@ -42,6 +42,7 @@ import { ContentService } from './services/content.service';
 import { AuthService } from './services/auth.service';
 import { RagService } from './services/rag.service';
 import { ConferenceDataService } from './services/conference-data.service';
+import { FileTypePipe } from './pipes/file-type.pipe';
 
 // Define routes
 const routes: Routes = [
@@ -60,7 +61,8 @@ const routes: Routes = [
     SearchComponent,
     ContentDetailComponent,
     HeaderComponent,
-    FooterComponent
+    FooterComponent,
+    FileTypePipe
   ],
   imports: [
     BrowserModule,

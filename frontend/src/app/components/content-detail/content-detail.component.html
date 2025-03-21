@@ -84,25 +84,6 @@
           </ng-template>
           
           <div class="tab-content">
-            <!-- Presenters -->
-            <div class="presenters-section">
-              <h2 class="section-title">Presenters</h2>
-              <div class="presenters-container">
-                <mat-card *ngFor="let presenter of content.presenters" class="presenter-card">
-                  <div class="presenter-info">
-                    <img [src]="presenter.photoUrl || 'assets/images/avatar-placeholder.png'" 
-                         [alt]="presenter.name" class="presenter-photo">
-                    <div class="presenter-details">
-                      <h3 class="presenter-name">{{ presenter.name }}</h3>
-                      <p class="presenter-title">{{ presenter.title }}</p>
-                      <p class="presenter-company">{{ presenter.company }}</p>
-                    </div>
-                  </div>
-                  <p *ngIf="presenter.bio" class="presenter-bio">{{ presenter.bio }}</p>
-                </mat-card>
-              </div>
-            </div>
-            
             <!-- Description -->
             <div class="description-section">
               <h2 class="section-title">Description</h2>
@@ -161,21 +142,43 @@
             </div>
             
             <div *ngIf="content.files.length > 0" class="files-list">
-              <mat-card *ngFor="let file of content.files" class="file-card">
+              <mat-card *ngFor="let file of showingAllFiles ? content.files : (content.files | slice:0:3)" class="file-card">
                 <div class="file-preview">
-                  <div [ngSwitch]="file.type" class="file-thumbnail">
-                    <img *ngSwitchCase="'image'" [src]="file.thumbnailUrl || file.url" [alt]="file.name">
-                    <img *ngSwitchCase="'pdf'" [src]="file.thumbnailUrl || 'assets/icons/pdf-icon.png'" alt="PDF Icon">
-                    <mat-icon *ngSwitchCase="'zip'" class="file-icon zip">archive</mat-icon>
-                    <mat-icon *ngSwitchDefault class="file-icon">insert_drive_file</mat-icon>
+                  <div class="file-thumbnail" [ngSwitch]="getFileType(file.name)">
+                    <ng-container *ngSwitchCase="'image'">
+                      <img *ngIf="!file.imageError" [src]="file.thumbnailUrl" alt="{{file.name}}" class="file-image" (error)="handleImageError($event, file)">
+                      <div *ngIf="file.imageError" class="file-icon-container image">
+                        <mat-icon class="file-icon">image</mat-icon>
+                      </div>
+                    </ng-container>
+                    
+                    <div *ngSwitchCase="'pdf'" class="file-icon-container pdf">
+                      <mat-icon class="file-icon">picture_as_pdf</mat-icon>
+                    </div>
+                    
+                    <div *ngSwitchCase="'zip'" class="file-icon-container zip">
+                      <mat-icon class="file-icon">archive</mat-icon>
+                    </div>
+                    <div *ngSwitchCase="'doc'" class="file-icon-container doc">
+                      <mat-icon class="file-icon">description</mat-icon>
+                    </div>
+                    <div *ngSwitchCase="'xls'" class="file-icon-container xls">
+                      <mat-icon class="file-icon">table_chart</mat-icon>
+                    </div>
+                    <div *ngSwitchCase="'ppt'" class="file-icon-container ppt">
+                      <mat-icon class="file-icon">slideshow</mat-icon>
+                    </div>
+                    <div *ngSwitchDefault class="file-icon-container unknown">
+                      <mat-icon class="file-icon">insert_drive_file</mat-icon>
+                    </div>
                   </div>
                 </div>
                 
                 <div class="file-details">
                   <h3 class="file-name">{{ file.name }}</h3>
                   <div class="file-meta">
-                    <span class="file-type">{{ file.type.toUpperCase() }}</span>
-                    <span class="file-size">{{ file.size | number:'1.0-1' }} bytes</span>
+                    <span class="file-type">{{ file.type.includes('/') ? file.type.split('/')[1].toUpperCase() : file.type.toUpperCase() }}</span>
+                    <span class="file-size">{{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB</span>
                     <span class="file-date">Added {{ file.dateAdded | date:'mediumDate' }}</span>
                   </div>
                 </div>
@@ -186,6 +189,13 @@
                   </button>
                 </div>
               </mat-card>
+              
+              <div *ngIf="content.files.length > 3 && !showingAllFiles" class="more-files-message">
+                <button mat-button color="primary" (click)="showAllFiles()">
+                  <mat-icon>add_circle_outline</mat-icon>
+                  View {{ content.files.length - 3 }} more files
+                </button>
+              </div>
             </div>
           </div>
         </mat-tab>

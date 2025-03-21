@@ -388,7 +388,8 @@ export class SearchComponent implements OnInit, OnDestroy {
       )
       .subscribe(
         response => {
-          this.searchResults = response.content;
+          // Transform the response data to ensure proper mapping
+          this.searchResults = this.transformContentResults(response.content);
           this.totalResults = response.totalCount;
           this.updatePagination();
         },
@@ -461,7 +462,8 @@ export class SearchComponent implements OnInit, OnDestroy {
           if (contentIds.length > 0) {
             this.contentService.getContentByIds(contentIds).subscribe(
               contents => {
-                this.searchResults = contents;
+                // Transform the response data to ensure proper mapping
+                this.searchResults = this.transformContentResults(contents);
                 this.totalResults = contents.length;
                 this.updatePagination();
               },
@@ -499,7 +501,8 @@ export class SearchComponent implements OnInit, OnDestroy {
       )
       .subscribe(
         response => {
-          this.searchResults = response.content;
+          // Transform the response data to ensure proper mapping
+          this.searchResults = this.transformContentResults(response.content);
           this.totalResults = response.totalCount;
           this.updatePagination();
         },
@@ -762,7 +765,8 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.ragService.findSimilarDocuments(undefined, contentId).subscribe(
       similarDocs => {
-        this.searchResults = similarDocs;
+        // Transform the response data to ensure proper mapping
+        this.searchResults = this.transformContentResults(similarDocs);
         this.totalResults = similarDocs.length;
         this.loading = false;
         this.searchForm.get('query')?.setValue('');
@@ -1031,5 +1035,30 @@ export class SearchComponent implements OnInit, OnDestroy {
     
     this.currentPage = 1;
     this.search();
+  }
+  
+  /**
+   * Transform content data from backend format to frontend model
+   * @param contentItems The content items from the backend
+   * @returns Properly formatted Content objects
+   */
+  private transformContentResults(contentItems: any[]): Content[] {
+    return contentItems.map(item => {
+      const metadata = item.metadata || {};
+      
+      return {
+        id: item.id,
+        title: metadata.title || "Untitled Content",
+        description: metadata.description || "",
+        track: metadata.track || "",
+        sessionType: metadata.session_type || "",
+        tags: metadata.tags || [],
+        sessionDate: metadata.session_time ? new Date(metadata.session_time).toLocaleDateString() : undefined,
+        learningLevel: metadata.learning_level,
+        presenters: metadata.speakers?.map((speaker: string) => ({ name: speaker })) || [],
+        aiSummary: metadata.ai_summary,
+        aiTags: metadata.ai_tags
+      };
+    });
   }
 } 

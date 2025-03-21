@@ -299,10 +299,18 @@
 
 .file-card {
   display: flex;
-  padding: 16px;
+  padding: 20px;
   align-items: center;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: white;
+  margin-bottom: 4px;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .file-preview {
@@ -310,28 +318,96 @@
 }
 
 .file-thumbnail {
-  width: 64px;
-  height: 64px;
+  width: 70px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
   
-  img {
+  .file-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
   
-  .file-icon {
-    font-size: 32px;
-    color: #5f6368;
+  &.image-error {
+    background-color: #f3f3f3;
+    
+    .file-icon {
+      font-size: 32px;
+      color: #9e9e9e;
+    }
+  }
+  
+  .file-pdf-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  
+  .file-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    
+    &.image {
+      background-color: #e8eaf6;
+      .file-icon {
+        color: #3949ab;
+      }
+    }
+    
+    &.pdf {
+      background-color: #ffebee;
+      .file-icon {
+        color: #d32f2f;
+      }
+    }
     
     &.zip {
-      color: #ff9800;
+      background-color: #fff8e1;
+      .file-icon {
+        color: #ffa000;
+      }
     }
+    
+    &.doc {
+      background-color: #e3f2fd;
+      .file-icon {
+        color: #1976d2;
+      }
+    }
+    
+    &.xls {
+      background-color: #e8f5e9;
+      .file-icon {
+        color: #388e3c;
+      }
+    }
+    
+    &.ppt {
+      background-color: #fff3e0;
+      .file-icon {
+        color: #e64a19;
+      }
+    }
+    
+    &.unknown {
+      background-color: #f5f5f5;
+      .file-icon {
+        color: #757575;
+      }
+    }
+  }
+  
+  .file-icon {
+    font-size: 32px;
   }
 }
 
@@ -342,8 +418,10 @@
 .file-name {
   font-size: 16px;
   font-weight: 500;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   color: #2c3e50;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .file-meta {
@@ -352,21 +430,59 @@
   gap: 16px;
   
   span {
-    font-size: 12px;
+    font-size: 13px;
     color: #5f6368;
+    display: flex;
+    align-items: center;
   }
   
   .file-type {
     font-weight: 500;
-    padding: 2px 6px;
+    padding: 4px 8px;
     background-color: #e3f2fd;
     color: #1976d2;
-    border-radius: 4px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+  }
+  
+  .file-size, .file-date {
+    position: relative;
+    padding-left: 18px;
+    
+    &:before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      opacity: 0.7;
+    }
+  }
+  
+  .file-size:before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 -960 960 960' width='24'%3E%3Cpath d='M520-40q-12 0-21-9t-9-21v-720q0-12 9-21t21-9h360q12 0 21 9t9 21v720q0 12-9 21t-21 9H520Zm80-440q-17 0-28.5-11.5T560-520q0-17 11.5-28.5T600-560q17 0 28.5 11.5T640-520q0 17-11.5 28.5T600-480Zm0-200q-17 0-28.5-11.5T560-720q0-17 11.5-28.5T600-760q17 0 28.5 11.5T640-720q0 17-11.5 28.5T600-680Zm-240 0q-12 0-21-9t-9-21v-190q0-12 9-21t21-9h140q12 0 21 9t9 21v190q0 12-9 21t-21 9H360Zm-220 280q-12 0-21-9t-9-21v-470q0-12 9-21t21-9h140q12 0 21 9t9 21v470q0 12-9 21t-21 9H140Zm590 320q17 0 28.5-11.5T770-100q0-17-11.5-28.5T730-140q-17 0-28.5 11.5T690-100q0 17 11.5 28.5T730-60Zm0-200q17 0 28.5-11.5T770-300q0-17-11.5-28.5T730-340q-17 0-28.5 11.5T690-300q0 17 11.5 28.5T730-260Z' fill='%235f6368'/%3E%3C/svg%3E");
+  }
+  
+  .file-date:before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 -960 960 960' width='24'%3E%3Cpath d='M360-300q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z' fill='%235f6368'/%3E%3C/svg%3E");
   }
 }
 
 .file-actions {
   margin-left: 16px;
+  
+  button {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
 }
 
 .no-files-message {
@@ -530,6 +646,23 @@
     .file-actions {
       margin-left: 0;
       align-self: flex-end;
+    }
+  }
+}
+
+.more-files-message {
+  text-align: center;
+  padding: 16px;
+  margin-top: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #e0e0e0;
+  
+  button {
+    font-size: 14px;
+    
+    mat-icon {
+      margin-right: 8px;
     }
   }
 } 

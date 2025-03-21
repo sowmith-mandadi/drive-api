@@ -13,6 +13,7 @@ interface ContentFile {
   url: string;
   thumbnailUrl?: string;
   dateAdded: string;
+  imageError?: boolean;
 }
 
 interface Presenter {
@@ -54,6 +55,7 @@ export class ContentDetailComponent implements OnInit {
   error = false;
   activeTab = 0;
   isLiked = false;
+  showingAllFiles = false;
   
   // RAG Question Answering properties
   ragQuestion: string = '';
@@ -84,15 +86,116 @@ export class ContentDetailComponent implements OnInit {
     this.isLoading = true;
     this.error = false;
     
-    // For demo purposes, use mock data
-    // In a real implementation, you would call the content service
-    setTimeout(() => {
-      this.content = this.getMockContentDetails(id);
-      this.isLoading = false;
-      
-      // Increment view count (simulated)
-      console.log(`View count incremented for content ${id}`);
-    }, 1500);
+    // In a real implementation with the API
+    this.contentService.getContentById(id).subscribe({
+      next: (content) => {
+        // Transform backend data format to frontend model
+        this.content = this.transformContentDetails(content);
+        this.isLoading = false;
+        
+        // Increment view count (simulated)
+        console.log(`View count incremented for content ${id}`);
+      },
+      error: (err) => {
+        console.error('Error loading content:', err);
+        this.handleError('Could not load the requested content');
+        
+        // Fallback to mock data for demo purposes
+        setTimeout(() => {
+          this.content = this.getMockContentDetails(id);
+          this.isLoading = false;
+          this.error = false;
+        }, 1500);
+      }
+    });
+  }
+  
+  /**
+   * Transform content data from backend format to frontend model
+   */
+  private transformContentDetails(content: any): ContentDetails {
+    // Extract metadata from the content object
+    const metadata = content.metadata || {};
+    
+    // Map the file data
+    const files: ContentFile[] = [];
+    if (content.files && Array.isArray(content.files)) {
+      content.files.forEach((file: any) => {
+        files.push({
+          id: file.id || `file-${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          type: file.type || this.getFileTypeFromName(file.name),
+          size: file.size || 0,
+          url: file.url,
+          thumbnailUrl: file.thumbnailUrl,
+          dateAdded: file.dateAdded || new Date().toISOString(),
+          imageError: false
+        });
+      });
+    }
+    
+    // Map the presenters data
+    const presenters: Presenter[] = [];
+    if (metadata.speakers && Array.isArray(metadata.speakers)) {
+      metadata.speakers.forEach((speaker: any) => {
+        if (typeof speaker === 'string') {
+          // If speaker is just a string, create a basic presenter object
+          presenters.push({
+            id: `presenter-${Math.random().toString(36).substr(2, 9)}`,
+            name: speaker,
+            title: '',
+            company: ''
+          });
+        } else {
+          // If speaker is an object, map its properties
+          presenters.push({
+            id: speaker.id || `presenter-${Math.random().toString(36).substr(2, 9)}`,
+            name: speaker.name,
+            title: speaker.title || '',
+            company: speaker.company || '',
+            bio: speaker.bio,
+            photoUrl: speaker.photoUrl
+          });
+        }
+      });
+    }
+    
+    // Build the content details object
+    return {
+      id: content.id,
+      title: metadata.title || "Untitled Content",
+      description: metadata.description || "",
+      track: metadata.track || "",
+      sessionType: metadata.session_type || "",
+      tags: metadata.tags || [],
+      slideUrl: metadata.slide_url,
+      videoUrl: metadata.video_url,
+      resourcesUrl: metadata.resources_url,
+      dateAdded: content.created_at || new Date().toISOString(),
+      views: metadata.views || 0,
+      likes: metadata.likes || 0,
+      files: files,
+      presenters: presenters,
+      aiSummary: metadata.ai_summary || ""
+    };
+  }
+  
+  /**
+   * Get file type from filename
+   */
+  private getFileTypeFromName(filename: string): string {
+    if (!filename) return 'unknown';
+    
+    const extension = filename.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf': return 'pdf';
+      case 'png': case 'jpg': case 'jpeg': case 'gif': case 'webp': return 'image';
+      case 'zip': case 'rar': case 'tar': case 'gz': return 'zip';
+      case 'doc': case 'docx': return 'doc';
+      case 'xls': case 'xlsx': return 'xls';
+      case 'ppt': case 'pptx': return 'ppt';
+      default: return 'unknown';
+    }
   }
 
   toggleLike(): void {
@@ -130,6 +233,12 @@ export class ContentDetailComponent implements OnInit {
     if (!url) return;
     
     window.open(url, '_blank');
+  }
+
+  // Handle image loading errors
+  handleImageError(event: Event, file: ContentFile): void {
+    console.warn('Image failed to load:', file.thumbnailUrl);
+    file.imageError = true;
   }
 
   navigateBack(): void {
@@ -198,58 +307,130 @@ The main takeaways include:
 
   // Mock data for demonstration
   private getMockContentDetails(id: string): ContentDetails {
-    return {
-      id: id,
-      title: '10 infrastructure innovations to accelerate your AI solutions anywhere',
-      description: 'Up to 90% of organizations are building across cloud environments, from edge to to multiple clouds - and the scale and speed of AI is putting pressure on these architectures. In this spotlight discover how organizations are leveraging decades of our infrastructure expertise to build secure, sovereign AI solutions. Also, learn how industry leaders are using the latest advances in networking, storage, and distributed cloud solutions to accelerate AI solution deployment anywhere.',
-      track: 'Web Development',
-      sessionType: 'Presentation',
-      tags: ['AI', 'Infrastructure', 'On demand session', 'Technical', 'Retrieval augmented generation'],
-      slideUrl: 'https://slides.example.com/angular-architecture',
-      videoUrl: 'https://youtube.com/watch?v=example',
-      resourcesUrl: 'https://github.com/example/angular-architecture',
-      dateAdded: '2025-04-10',
-      views: 423,
-      likes: 87,
+    const mockData: ContentDetails = {
+      id: '12345',
+      title: 'Leveraging Cloud Infrastructure for Enterprise AI Solutions',
+      description: 'This session explores how to build scalable AI infrastructure using cloud services. We cover deployment patterns, optimization techniques, and cost management strategies.',
+      track: 'Cloud Infrastructure',
+      sessionType: 'Technical Presentation',
+      tags: ['AI', 'Cloud', 'Enterprise', 'Infrastructure'],
+      slideUrl: 'https://example.com/slides',
+      videoUrl: 'https://example.com/video',
+      resourcesUrl: 'https://example.com/resources',
+      dateAdded: '2023-03-10',
+      views: 3475,
+      likes: 287,
+      aiSummary: 'This presentation discusses how infrastructure innovations can be effectively leveraged to build and deploy AI solutions at scale. The content emphasizes cloud-native approaches for AI deployment, and highlights techniques for cost optimization while maintaining performance. The primary audience is infrastructure architects and IT decision-makers looking to enhance their AI capabilities.',
       files: [
+        // PDF mock file
         {
-          id: 'f1',
-          name: 'Infrastructure Innovations Slides.pdf',
-          type: 'pdf',
-          size: 2400000, // 2.4 MB
-          url: '/assets/mock/slides.pdf',
-          thumbnailUrl: '/assets/images/content/pdf-thumbnail.jpg',
-          dateAdded: '2025-04-10'
+          id: '456',
+          name: 'Product Specifications.pdf',
+          type: 'application/pdf',
+          size: 3500000, // 3.5 MB
+          dateAdded: '2023-03-15',
+          url: 'https://example.com/files/specs.pdf',
+          thumbnailUrl: 'https://via.placeholder.com/300x200?text=PDF+Document',
+          imageError: false
         },
+        // Infrastructure diagram mock file
         {
-          id: 'f2',
-          name: 'Code Examples.zip',
-          type: 'zip',
-          size: 5800000, // 5.8 MB
-          url: '/assets/mock/code.zip',
-          dateAdded: '2025-04-10'
+          id: '789',
+          name: 'Cloud Architecture Diagram.png',
+          type: 'image/png',
+          size: 2500000, // 2.5 MB
+          dateAdded: '2023-04-05',
+          url: 'https://example.com/files/diagram.png',
+          thumbnailUrl: 'https://via.placeholder.com/300x200?text=Architecture+Diagram',
+          imageError: false
         },
+        // Presentation slides
         {
-          id: 'f3',
-          name: 'Infrastructure Diagram.png',
-          type: 'image',
-          size: 850000, // 850 KB
-          url: '/assets/images/content/architecture-diagram.png',
-          thumbnailUrl: '/assets/images/content/architecture-diagram.png',
-          dateAdded: '2025-04-10'
+          id: '123',
+          name: 'Presentation Slides.pptx',
+          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          size: 2500000, // 2.5 MB
+          dateAdded: '2023-03-20',
+          url: 'https://example.com/files/presentation.pptx',
+          imageError: false
+        },
+        // Document
+        {
+          id: '234',
+          name: 'Research Document.docx',
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          size: 1500000, // 1.5 MB
+          dateAdded: '2023-03-25',
+          url: 'https://example.com/files/document.docx',
+          imageError: false
+        },
+        // Spreadsheet
+        {
+          id: '345',
+          name: 'Data Analysis.xlsx',
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          size: 1800000, // 1.8 MB
+          dateAdded: '2023-04-01',
+          url: 'https://example.com/files/spreadsheet.xlsx',
+          imageError: false
+        },
+        // Zip file
+        {
+          id: '567',
+          name: 'Source Code.zip',
+          type: 'application/zip',
+          size: 5000000, // 5 MB
+          dateAdded: '2023-04-10',
+          url: 'https://example.com/files/source.zip',
+          imageError: false
         }
       ],
-      presenters: [
-        {
-          id: 'p2',
-          name: 'Sarah Chen',
-          title: 'Product Lead',
-          company: 'InnovateTech',
-          bio: 'Sarah Chen is a product lead with over 8 years of experience building enterprise web applications. She specializes in cloud infrastructure and AI solutions deployment.',
-          photoUrl: '/assets/images/presenters/sarah.jpg'
-        }
-      ],
-      aiSummary: 'Up to 90% of organizations are building across cloud environments, from edge to to multiple clouds - and the scale and speed of AI is putting pressure on these architectures. In this spotlight discover how organizations are leveraging decades of our infrastructure expertise to build secure, sovereign AI solutions. Also, learn how industry leaders are using the latest advances in networking, storage, and distributed cloud solutions to accelerate AI solution deployment anywhere.'
+      presenters: []
     };
+    return mockData;
+  }
+
+  /**
+   * Determines file type based on file name extension
+   */
+  getFileType(filename: string): string {
+    if (!filename) return 'unknown';
+    
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    
+    // Image types
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
+      return 'image';
+    }
+    
+    // Document types
+    if (['pdf'].includes(extension)) {
+      return 'pdf';
+    }
+    
+    if (['doc', 'docx'].includes(extension)) {
+      return 'doc';
+    }
+    
+    if (['xls', 'xlsx', 'csv'].includes(extension)) {
+      return 'xls';
+    }
+    
+    if (['ppt', 'pptx'].includes(extension)) {
+      return 'ppt';
+    }
+    
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+      return 'zip';
+    }
+    
+    return 'unknown';
+  }
+  
+  /**
+   * Show all files instead of just the first 3
+   */
+  showAllFiles(): void {
+    this.showingAllFiles = true;
   }
 } 
