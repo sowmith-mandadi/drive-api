@@ -212,18 +212,37 @@
               <div class="search-form">
                 <mat-form-field appearance="outline" class="search-input">
                   <mat-label>Ask a question about this content</mat-label>
-                  <input matInput placeholder="e.g., What are the key points about NgRx?">
+                  <input matInput placeholder="e.g., What are the key points about NgRx?" [(ngModel)]="ragQuestion">
                   <mat-icon matSuffix>question_answer</mat-icon>
                 </mat-form-field>
                 
-                <button mat-raised-button color="primary" class="search-button">
+                <button mat-raised-button color="primary" class="search-button" [disabled]="isAskingQuestion || !ragQuestion" (click)="askQuestion()">
                   <mat-icon>search</mat-icon>
-                  Ask
+                  {{ isAskingQuestion ? 'Processing...' : 'Ask' }}
                 </button>
               </div>
               
-              <!-- Placeholder for search results -->
-              <div class="search-results-placeholder">
+              <!-- Loading indicator -->
+              <div *ngIf="isAskingQuestion" class="rag-loading">
+                <mat-spinner diameter="30"></mat-spinner>
+                <p>Analyzing content to answer your question...</p>
+              </div>
+              
+              <!-- AI Response -->
+              <div *ngIf="ragAnswer" class="rag-answer">
+                <mat-card>
+                  <mat-card-header>
+                    <mat-icon mat-card-avatar>smart_toy</mat-icon>
+                    <mat-card-title>AI Answer</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <p>{{ ragAnswer }}</p>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+              
+              <!-- Placeholder when no question has been asked yet -->
+              <div *ngIf="!ragAnswer && !isAskingQuestion" class="search-results-placeholder">
                 <mat-icon>tips_and_updates</mat-icon>
                 <p>Ask a question to see AI-generated answers based on the content's documents.</p>
               </div>

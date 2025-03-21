@@ -21,7 +21,7 @@
   </div>
   
   <div class="search-content">
-    <div class="filters-panel">
+    <aside class="filters-panel">
       <h3>Filters</h3>
       
       <!-- Session Dates Filter -->
@@ -160,9 +160,9 @@
                          !selectedJobRoles.length && !selectedAreasOfInterest.length && !selectedIndustries.length">
         Clear Filters
       </button>
-    </div>
+    </aside>
     
-    <div class="results-panel">
+    <main class="results-panel">
       <!-- AI Answer Section (when using RAG) -->
       <mat-card *ngIf="isAiSearch && ragResponse" class="ai-answer-card">
         <mat-card-header>
@@ -254,6 +254,6 @@
                     [pageSizeOptions]="[5, 10, 25, 50]"
                     (page)="onPageChange($event)">
       </mat-paginator>
-    </div>
+    </main>
   </div>
 </div> 
