@@ -1,0 +1,42 @@
+{
+  "project": {
+    "name": "drive-api",
+    "description": "Conference Content Management API with RAG capabilities using Google Vertex AI"
+  },
+  "architecture": {
+    "backend": {
+      "language": "Python",
+      "framework": "Flask",
+      "directory": "/backend",
+      "entry_point": "/backend/run.py"
+    },
+    "frontend": {
+      "language": "TypeScript",
+      "framework": "Angular",
+      "directory": "/frontend",
+      "entry_point": "/frontend/src/main.ts"
+    }
+  },
+  "ai_guidelines": {
+    "generation_rules": [
+      "Follow existing patterns in the codebase",
+      "Use type annotations for Python code",
+      "Ensure proper error handling for all API endpoints",
+      "Include tests for all new functionality",
+      "Follow RESTful API design principles",
+      "Use async/await for asynchronous operations"
+    ],
+    "code_style": {
+      "python": "PEP 8",
+      "typescript": "Angular style guide"
+    }
+  },
+  "dependencies": {
+    "preferred_versions": {
+      "python": "3.9+",
+      "flask": "2.0+",
+      "angular": "14.0+",
+      "typescript": "4.7+"
+    }
+  }
+} 
