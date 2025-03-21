@@ -533,4 +533,68 @@ form {
   .file-drop-zone {
     padding: 24px;
   }
+}
+
+// AI Generated Content Styles
+.ai-content-container {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  
+  .ai-result-card {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    
+    mat-card-header {
+      padding-bottom: 8px;
+      
+      mat-icon {
+        color: #5f6368;
+        font-size: 28px;
+        height: 28px;
+        width: 28px;
+      }
+      
+      mat-card-title {
+        margin-top: 4px;
+        color: #202124;
+        font-weight: 500;
+      }
+    }
+    
+    mat-card-content {
+      padding: 0 16px 16px;
+      
+      p {
+        margin-top: 8px;
+        line-height: 1.6;
+        color: #3c4043;
+        white-space: pre-line;
+      }
+    }
+  }
+  
+  .ai-tags-container {
+    margin: 10px 0;
+    
+    mat-chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    mat-chip {
+      font-size: 13px;
+    }
+  }
+  
+  .ai-content-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    
+    button {
+      padding: 0 24px;
+    }
+  }
 } 

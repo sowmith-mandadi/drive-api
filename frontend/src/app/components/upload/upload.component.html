@@ -317,8 +317,52 @@
         <span class="progress-percentage">{{ progress }}%</span>
       </div>
       
+      <!-- AI Generated Content -->
+      <div class="ai-content-container" *ngIf="showAiContent && aiGeneratedContent">
+        <div class="section-header">
+          <h2>
+            <mat-icon>smart_toy</mat-icon>
+            AI-Generated Content
+          </h2>
+          <div class="divider"></div>
+        </div>
+        
+        <mat-card class="ai-result-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>summarize</mat-icon>
+            <mat-card-title>AI-Generated Summary</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ aiGeneratedContent.summary }}</p>
+          </mat-card-content>
+        </mat-card>
+        
+        <mat-card class="ai-result-card" *ngIf="aiGeneratedContent.tags && aiGeneratedContent.tags.length > 0">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>tag</mat-icon>
+            <mat-card-title>AI-Generated Tags</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="ai-tags-container">
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of aiGeneratedContent.tags" color="accent">{{ tag }}</mat-chip>
+              </mat-chip-set>
+            </div>
+            <button mat-button color="primary" (click)="addAiTagsToUserTags()">
+              <mat-icon>add</mat-icon> Add these tags to your content
+            </button>
+          </mat-card-content>
+        </mat-card>
+        
+        <div class="ai-content-actions">
+          <button mat-raised-button color="primary" [routerLink]="['/content', uploadForm.value.contentId]">
+            <mat-icon>visibility</mat-icon> View Full Content
+          </button>
+        </div>
+      </div>
+      
       <!-- Form Actions -->
-      <div class="form-actions">
+      <div class="form-actions" *ngIf="!showAiContent">
         <button mat-button type="button" routerLink="/search">
           Cancel
         </button>

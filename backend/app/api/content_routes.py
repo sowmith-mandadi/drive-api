@@ -62,6 +62,26 @@ def upload_content():
         # Process the content
         result = content_service.process_content(files, metadata)
         
+        # If AI content was generated, include it in the response
+        if 'content_id' in result:
+            content_id = result['content_id']
+            content = content_service.get_content_by_id(content_id)
+            
+            if content and 'metadata' in content:
+                ai_content = {}
+                
+                # Check for AI summary
+                if 'ai_summary' in content['metadata']:
+                    ai_content['summary'] = content['metadata']['ai_summary']
+                    
+                # Check for AI tags
+                if 'ai_tags' in content['metadata']:
+                    ai_content['tags'] = content['metadata']['ai_tags']
+                
+                # Add AI content to result if available
+                if ai_content:
+                    result['aiContent'] = ai_content
+        
         # Add CORS headers to the response
         logger.info("Upload successful, returning response")
         resp = jsonify(result)
@@ -71,9 +91,17 @@ def upload_content():
         logger.error(f"Error in upload: {e}")
         return jsonify({"error": str(e)}), 500
 
-@content_bp.route('/content-by-ids', methods=['POST'])
+@content_bp.route('/content-by-ids', methods=['POST', 'OPTIONS'])
 def get_content_by_ids():
     """Get multiple content items by their IDs."""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
     try:
         data = request.json
         content_ids = data.get('ids', [])
@@ -83,34 +111,59 @@ def get_content_by_ids():
         
         contents = content_service.get_content_by_ids(content_ids)
         
-        return jsonify(contents)
+        # Add CORS headers to the response
+        resp = jsonify(contents)
+        resp.headers.add('Access-Control-Allow-Origin', '*')
+        return resp
     except Exception as e:
         logger.error(f"Error fetching content by IDs: {e}")
         return jsonify({"error": str(e)}), 500
 
-@content_bp.route('/popular-tags', methods=['GET'])
+@content_bp.route('/popular-tags', methods=['GET', 'OPTIONS'])
 def get_popular_tags():
     """Get most popular tags."""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
     try:
         limit = int(request.args.get('limit', 20))
         
         tags = content_service.get_popular_tags(limit)
         
-        return jsonify(tags)
+        # Add CORS headers to the response
+        resp = jsonify(tags)
+        resp.headers.add('Access-Control-Allow-Origin', '*')
+        return resp
     except Exception as e:
         logger.error(f"Error fetching popular tags: {e}")
         return jsonify({"error": str(e)}), 500
 
-@content_bp.route('/recent-content', methods=['GET'])
+@content_bp.route('/recent-content', methods=['GET', 'OPTIONS'])
 def get_recent_content():
     """Get recent content with pagination."""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
     try:
         page = int(request.args.get('page', 1))
         page_size = int(request.args.get('page_size', 10))
         
         result = content_service.get_recent_content(page, page_size)
         
-        return jsonify(result)
+        # Add CORS headers to the response
+        resp = jsonify(result)
+        resp.headers.add('Access-Control-Allow-Origin', '*')
+        return resp
     except Exception as e:
         logger.error(f"Error fetching recent content: {e}")
         return jsonify({"error": str(e)}), 500 

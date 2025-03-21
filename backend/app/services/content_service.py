@@ -278,16 +278,37 @@ class ContentService:
         Returns:
             List[Dict]: List of content items
         """
-        if self.dev_mode:
-            # Use mock data in dev mode
-            results = []
-            for content_id in content_ids:
-                if content_id in MOCK_CONTENT:
-                    results.append(MOCK_CONTENT[content_id])
-            logger.info(f"[DEV MODE] Retrieved {len(results)} content items")
-            return results
+        try:
+            if self.dev_mode:
+                # Return mock content
+                return [MOCK_CONTENT.get(content_id, {}) for content_id in content_ids]
+            
+            # Get content from Firestore
+            contents = [self.firestore_repo.get_content(content_id) for content_id in content_ids]
+            return [content for content in contents if content]
+        except Exception as e:
+            logger.error(f"Error getting content by IDs: {e}")
+            return []
+
+    def get_content_by_id(self, content_id: str) -> Optional[Dict[str, Any]]:
+        """Get a single content item by its ID.
         
-        return self.firestore_repo.get_contents_by_ids(content_ids)
+        Args:
+            content_id: Content ID
+            
+        Returns:
+            Dict: Content item or None if not found
+        """
+        try:
+            if self.dev_mode:
+                # Return mock content
+                return MOCK_CONTENT.get(content_id)
+            
+            # Get content from Firestore
+            return self.firestore_repo.get_content(content_id)
+        except Exception as e:
+            logger.error(f"Error getting content by ID: {e}")
+            return None
     
     def get_recent_content(self, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
         """Get recent content with pagination.

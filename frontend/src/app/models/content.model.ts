@@ -92,6 +92,10 @@ export interface UploadResponse {
   success: boolean;
   contentId?: string;
   error?: string;
+  aiContent?: {
+    summary?: string;
+    tags?: string[];
+  };
 }
 
 export interface RagResponse {

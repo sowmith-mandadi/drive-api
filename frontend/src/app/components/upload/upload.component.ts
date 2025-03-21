@@ -24,6 +24,7 @@ import { UploadService } from '../../services/upload.service';
 import { NotificationService } from '../../services/notification.service';
 import { Subscription, Observable } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
+import { MatDialog } from '@angular/material/dialog';
 
 interface DriveFile {
   id: string;
@@ -32,6 +33,11 @@ interface DriveFile {
   webViewLink: string;
   iconLink?: string;
   thumbnailLink?: string;
+}
+
+interface AiGeneratedContent {
+  summary: string;
+  tags: string[];
 }
 
 @Component({
@@ -58,6 +64,10 @@ export class UploadComponent implements OnInit, OnDestroy {
   uploading: boolean = false;
   progress: number = 0;
   
+  // New properties for displaying AI-generated content
+  aiGeneratedContent: AiGeneratedContent | null = null;
+  showAiContent: boolean = false;
+  
   private subs = new Subscription();
   
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -71,7 +81,8 @@ export class UploadComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
     private router: Router,
     private uploadService: UploadService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private dialog: MatDialog
   ) { }
   
   ngOnInit(): void {
@@ -108,7 +119,8 @@ export class UploadComponent implements OnInit, OnDestroy {
       resources_url: [''],
       ai_summarize: [true],
       ai_tags: [true],
-      ai_index: [false]
+      ai_index: [false],
+      contentId: [null]
     });
   }
   
@@ -259,6 +271,16 @@ export class UploadComponent implements OnInit, OnDestroy {
     }
   }
   
+  // Add AI-generated tags to user tags
+  addAiTagsToUserTags(): void {
+    if (this.aiGeneratedContent && this.aiGeneratedContent.tags) {
+      // Filter out tags that are already in user tags
+      const newTags = this.aiGeneratedContent.tags.filter(tag => !this.tags.includes(tag));
+      this.tags = [...this.tags, ...newTags];
+      this.showMessage(`Added ${newTags.length} AI-generated tags`);
+    }
+  }
+  
   // File handling
   onFileSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -364,6 +386,10 @@ export class UploadComponent implements OnInit, OnDestroy {
     
     this.uploading = true;
     
+    // Clear any previous AI-generated content
+    this.aiGeneratedContent = null;
+    this.showAiContent = false;
+    
     // Prepare form data
     const formValue = this.uploadForm.value;
     const metadata = {
@@ -428,7 +454,20 @@ export class UploadComponent implements OnInit, OnDestroy {
           this.showMessage('Content uploaded successfully!');
           
           if (result && result.contentId) {
-            this.router.navigate(['/content', result.contentId]);
+            // Check if AI content was generated
+            if ((formValue.ai_summarize || formValue.ai_tags) && result.aiContent) {
+              this.aiGeneratedContent = {
+                summary: result.aiContent.summary || 'No summary available',
+                tags: result.aiContent.tags || []
+              };
+              this.showAiContent = true;
+              
+              // Store the contentId for later navigation
+              this.uploadForm.patchValue({ contentId: result.contentId });
+            } else {
+              // Navigate to content view page if no AI content to display
+              this.router.navigate(['/content', result.contentId]);
+            }
           } else {
             this.router.navigate(['/search']);
           }
