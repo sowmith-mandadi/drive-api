@@ -27,6 +27,8 @@ class ContentService:
     
     def __init__(self):
         """Initialize the content service."""
+        # Check for environment variable to force development mode
+        env_dev_mode = os.environ.get("DEV_MODE", "").lower() == "true"
         self.firestore_repo = FirestoreRepository()
         self.storage_repo = StorageRepository()
         self.ai_service = AIService()
@@ -41,10 +43,32 @@ class ContentService:
             logger.error(f"Document processing unavailable: {e}")
             self.document_processing_available = False
         
-        # Development mode flag
-        self.dev_mode = not self.firestore_repo.initialized
+        # Development mode flag - either from env var or from repository initialization status
+        self.dev_mode = env_dev_mode or not self.firestore_repo.initialized
         if self.dev_mode:
             logger.warning("Running ContentService in development mode with mock data")
+            
+            # Initialize with some test data if in dev mode
+            if not MOCK_CONTENT:
+                test_content_id = str(uuid.uuid4())
+                test_content = {
+                    "id": test_content_id,
+                    "metadata": {
+                        "title": "Test Content",
+                        "description": "This is test content created for development mode",
+                        "track": "development",
+                        "tags": ["test", "development", "mock"],
+                        "session_type": "Demo",
+                        "ai_summary": "This is a mock AI summary for test content",
+                        "ai_tags": ["generated", "ai", "test"]
+                    },
+                    "file_urls": {
+                        "test.pdf": "https://storage.googleapis.com/mock-bucket/test.pdf"
+                    },
+                    "created_at": datetime.datetime.now().isoformat(),
+                    "updated_at": datetime.datetime.now().isoformat()
+                }
+                MOCK_CONTENT[test_content_id] = test_content
     
     def process_content(self, files: List[FileStorage], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Process uploaded files and store metadata.
@@ -346,42 +370,243 @@ class ContentService:
         return self.firestore_repo.get_recent_content(page, page_size)
     
     def get_popular_tags(self, limit: int = 20) -> List[str]:
-        """Get most popular tags.
+        """Get the most popular tags.
         
         Args:
-            limit: Maximum number of tags to return
+            limit: Maximum number of tags to return.
             
         Returns:
-            List[str]: List of popular tags
+            List of tag strings.
         """
-        if self.dev_mode:
-            # Use mock data in dev mode
-            all_tags = []
-            for content in MOCK_CONTENT.values():
-                metadata = content.get('metadata', {})
-                tags = metadata.get('tags', [])
-                all_tags.extend(tags if isinstance(tags, list) else [])
+        try:
+            if self.dev_mode:
+                # In development mode, return mock tags
+                return ["ai-ml", "web-development", "cloud", "security", 
+                        "mobile", "devops", "data-science", "design"]
             
-            # Count frequencies
+            # Fetch all content metadata
+            contents = self.firestore_repo.list_contents()
+            
+            # Count tag frequencies
             tag_counts = {}
-            for tag in all_tags:
-                if tag in tag_counts:
-                    tag_counts[tag] += 1
-                else:
-                    tag_counts[tag] = 1
-            
-            # Sort by frequency and limit
-            popular_tags = sorted(tag_counts.keys(), key=lambda x: tag_counts[x], reverse=True)[:limit]
-            
-            # If no tags, provide some sample tags
-            if not popular_tags:
-                popular_tags = ["Development", "AI", "Machine Learning", "Web", "Mobile", 
-                               "Cloud", "DevOps", "Security", "Data Science", "Blockchain"]
+            for content in contents:
+                metadata = content.get("metadata", {})
+                tags = metadata.get("tags", [])
                 
-            logger.info(f"[DEV MODE] Retrieved {len(popular_tags)} popular tags")
-            return popular_tags
+                # Combine explicit tags with AI-generated tags if available
+                ai_tags = metadata.get("ai_tags", [])
+                all_tags = tags + ai_tags
+                
+                for tag in all_tags:
+                    if tag in tag_counts:
+                        tag_counts[tag] += 1
+                    else:
+                        tag_counts[tag] = 1
             
-        return self.firestore_repo.get_popular_tags(limit)
+            # Sort tags by frequency
+            sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+            
+            # Return the most frequent tags
+            return [tag for tag, count in sorted_tags[:limit]]
+        except Exception as e:
+            logger.error(f"Error getting popular tags: {e}")
+            return []
+    
+    def search_content(self, query: str, filters: Dict[str, Any], page: int = 1, page_size: int = 10) -> Dict[str, Any]:
+        """Search for content based on a query string and filters.
+        
+        Args:
+            query: Search query string.
+            filters: Dictionary of filters to apply.
+            page: Page number for pagination.
+            page_size: Number of items per page.
+            
+        Returns:
+            Dictionary with content items and pagination info.
+        """
+        try:
+            logger.info(f"Searching content with query: '{query}', filters: {filters}")
+            
+            if self.dev_mode:
+                # In development mode, return mock search results
+                all_content = list(MOCK_CONTENT.values())
+                filtered_content = self._apply_filters(all_content, filters)
+                
+                # Apply text search if query is provided
+                if query:
+                    searched_content = []
+                    query = query.lower()
+                    for item in filtered_content:
+                        metadata = item.get("metadata", {})
+                        text = (
+                            metadata.get("title", "").lower() + " " +
+                            metadata.get("description", "").lower() + " " +
+                            " ".join(metadata.get("tags", [])).lower() + " " +
+                            metadata.get("track", "").lower() + " " +
+                            metadata.get("session_type", "").lower()
+                        )
+                        if query in text:
+                            searched_content.append(item)
+                else:
+                    searched_content = filtered_content
+                
+                # Sort by creation date (newest first)
+                searched_content.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+                
+                # Apply pagination
+                start_idx = (page - 1) * page_size
+                end_idx = start_idx + page_size
+                paginated_content = searched_content[start_idx:end_idx]
+                
+                return {
+                    "content": paginated_content,
+                    "page": page,
+                    "pageSize": page_size,
+                    "totalCount": len(searched_content)
+                }
+            
+            # For production, use Firestore repository
+            try:
+                all_content = self.firestore_repo.list_contents()
+            except AttributeError:
+                # Fallback if list_contents is not implemented
+                logger.warning("list_contents method not found in FirestoreRepository, using empty list")
+                all_content = []
+            
+            # Apply filters
+            filtered_content = self._apply_filters(all_content, filters)
+            
+            # Apply text search if query is provided
+            if query and len(query.strip()) > 0:
+                if self.embedding_service.initialized:
+                    # Use vector search if available
+                    try:
+                        content_ids = self.embedding_service.search(query, limit=100)
+                        # Filter results to only include those that passed the filters
+                        filtered_ids = [item["id"] for item in filtered_content]
+                        vector_filtered_content = []
+                        
+                        for content_id in content_ids:
+                            if content_id in filtered_ids:
+                                # Find the item in the filtered content
+                                for item in filtered_content:
+                                    if item["id"] == content_id:
+                                        vector_filtered_content.append(item)
+                                        break
+                    
+                        searched_content = vector_filtered_content
+                    except Exception as e:
+                        logger.error(f"Vector search failed, falling back to text search: {e}")
+                        searched_content = self._text_search(filtered_content, query)
+                else:
+                    # Fall back to simple text search
+                    searched_content = self._text_search(filtered_content, query)
+            else:
+                searched_content = filtered_content
+            
+            # Sort by creation date (newest first)
+            searched_content.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+            
+            # Apply pagination
+            total_count = len(searched_content)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paginated_content = searched_content[start_idx:end_idx]
+            
+            return {
+                "content": paginated_content,
+                "page": page,
+                "pageSize": page_size,
+                "totalCount": total_count
+            }
+        except Exception as e:
+            logger.error(f"Error searching content: {e}")
+            return {
+                "content": [],
+                "page": page,
+                "pageSize": page_size,
+                "totalCount": 0,
+                "error": str(e)
+            }
+    
+    def _apply_filters(self, content_list: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Apply filters to a list of content items.
+        
+        Args:
+            content_list: List of content items.
+            filters: Dictionary of filters to apply.
+            
+        Returns:
+            Filtered list of content items.
+        """
+        if not filters:
+            return content_list
+            
+        filtered_content = []
+        
+        for item in content_list:
+            metadata = item.get("metadata", {})
+            include_item = True
+            
+            # Check each filter
+            for filter_key, filter_value in filters.items():
+                if not filter_value:  # Skip empty filters
+                    continue
+                    
+                if filter_key == "tags" and isinstance(filter_value, list) and filter_value:
+                    # For tags, check if any of the item's tags match any of the filter tags
+                    item_tags = metadata.get("tags", [])
+                    ai_tags = metadata.get("ai_tags", [])
+                    all_tags = item_tags + ai_tags
+                    if not any(tag in all_tags for tag in filter_value):
+                        include_item = False
+                        break
+                elif filter_key in metadata:
+                    # For other filters, check for exact match
+                    if metadata[filter_key] != filter_value:
+                        include_item = False
+                        break
+            
+            if include_item:
+                filtered_content.append(item)
+                
+        return filtered_content
+    
+    def _text_search(self, content_list: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
+        """Perform simple text search on content items.
+        
+        Args:
+            content_list: List of content items.
+            query: Search query string.
+            
+        Returns:
+            List of content items matching the query.
+        """
+        if not query:
+            return content_list
+            
+        query = query.lower()
+        results = []
+        
+        for item in content_list:
+            metadata = item.get("metadata", {})
+            
+            # Create a searchable text from metadata fields
+            searchable_text = (
+                metadata.get("title", "").lower() + " " +
+                metadata.get("description", "").lower() + " " +
+                " ".join(metadata.get("tags", [])).lower() + " " +
+                " ".join(metadata.get("ai_tags", [])).lower() + " " +
+                metadata.get("track", "").lower() + " " +
+                metadata.get("session_type", "").lower() + " " +
+                " ".join(metadata.get("presenters", [])).lower()
+            )
+            
+            # Check for query match
+            if query in searchable_text:
+                results.append(item)
+                
+        return results
     
     def process_drive_content(self, drive_service, file_ids: List[str], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Process Google Drive files and store metadata.
