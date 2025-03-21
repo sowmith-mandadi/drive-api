@@ -191,17 +191,28 @@ class EmbeddingService:
         try:
             from google.cloud import aiplatform
             
-            # Using Vertex AI Prediction for embeddings
-            endpoint = aiplatform.Endpoint(
-                endpoint_name=f"projects/{os.environ.get('GOOGLE_CLOUD_PROJECT')}/locations/us-central1/publishers/google/models/{EMBEDDING_MODEL}"
-            )
+            # Get project ID and region
+            project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+            location = os.environ.get("GCP_LOCATION", "us-central1")
             
-            response = endpoint.predict(instances=[{"content": text}])
+            if not project_id:
+                logger.warning("No GOOGLE_CLOUD_PROJECT environment variable found")
             
-            # Extract embeddings from response
-            embeddings = response.predictions[0]["embeddings"]["values"]
+            # Using Vertex AI TextEmbedding model
+            # Format: projects/{project}/locations/{location}/publishers/google/models/{model}
+            model_name = EMBEDDING_MODEL
             
-            return embeddings
+            if project_id:
+                endpoint = aiplatform.TextEmbeddingModel.from_pretrained(model_name)
+                response = endpoint.get_embeddings([text])
+                
+                # Extract embeddings from response
+                if response and len(response) > 0:
+                    embeddings = response[0].values
+                    return embeddings
+            else:
+                logger.warning("Cannot generate embedding without project ID")
+                return self._generate_mock_embedding(text)
             
         except Exception as e:
             logger.error(f"Error with Vertex AI embedding: {e}")
@@ -219,21 +230,29 @@ class EmbeddingService:
         try:
             from google.cloud import aiplatform
             
-            # Using Vertex AI Prediction for embeddings
-            endpoint = aiplatform.Endpoint(
-                endpoint_name=f"projects/{os.environ.get('GOOGLE_CLOUD_PROJECT')}/locations/us-central1/publishers/google/models/{EMBEDDING_MODEL}"
-            )
+            # Get project ID and region
+            project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+            location = os.environ.get("GCP_LOCATION", "us-central1")
             
-            instances = [{"content": text} for text in texts]
-            response = endpoint.predict(instances=instances)
+            if not project_id:
+                logger.warning("No GOOGLE_CLOUD_PROJECT environment variable found")
             
-            # Extract embeddings from response
-            batch_embeddings = []
-            for prediction in response.predictions:
-                embedding = prediction["embeddings"]["values"]
-                batch_embeddings.append(embedding)
+            # Using Vertex AI TextEmbedding model
+            model_name = EMBEDDING_MODEL
             
-            return batch_embeddings
+            if project_id:
+                endpoint = aiplatform.TextEmbeddingModel.from_pretrained(model_name)
+                response = endpoint.get_embeddings(texts)
+                
+                # Extract embeddings from response
+                batch_embeddings = []
+                for embedding in response:
+                    batch_embeddings.append(embedding.values)
+                
+                return batch_embeddings
+            else:
+                logger.warning("Cannot generate embedding without project ID")
+                return [self._generate_mock_embedding(text) for text in texts]
             
         except Exception as e:
             logger.error(f"Error with Vertex AI batch embedding: {e}")
@@ -377,13 +396,17 @@ class EmbeddingService:
                 # Extract embedding from candidate if it's a dict
                 if isinstance(candidate, dict):
                     embedding = candidate.get("embedding")
+                    if not embedding:
+                        logger.warning(f"No embedding found in candidate at index {i}")
+                        continue
+                        
+                    # Extract metadata and ensure id is included
                     metadata = {k: v for k, v in candidate.items() if k != "embedding"}
+                    if 'id' not in metadata and 'id' in candidate:
+                        metadata['id'] = candidate['id']
                 else:
                     embedding = candidate
                     metadata = {"index": i}
-                
-                if not embedding:
-                    continue
                 
                 # Calculate similarity
                 similarity = self.cosine_similarity(query_embedding, embedding)
@@ -397,11 +420,15 @@ class EmbeddingService:
             # Sort by similarity (descending)
             results.sort(key=lambda x: x["similarity"], reverse=True)
             
+            # Log number of results found
+            logger.info(f"Found {len(results)} similarity results, returning top {min(top_k, len(results))}")
+            
             # Return top k results
             return results[:top_k]
             
         except Exception as e:
             logger.error(f"Error finding most similar embeddings: {e}")
+            logger.error(traceback.format_exc())
             return []
     
     def search(self, query: str, limit: int = 100) -> List[str]:
@@ -428,7 +455,8 @@ class EmbeddingService:
                 # Fall back to local similarity search
                 from app.repository.firestore_repo import FirestoreRepository
                 repo = FirestoreRepository()
-                all_content = repo.get_all_content()
+                # Use list_contents instead of get_content
+                all_content = repo.list_contents()
                 
                 # Get embeddings for all content if available
                 content_with_embeddings = []
@@ -446,7 +474,7 @@ class EmbeddingService:
                         content_with_embeddings, 
                         top_k=limit
                     )
-                    return [result['id'] for result in similar_results]
+                    return [result['metadata']['id'] for result in similar_results]
                 else:
                     logger.warning("No content with embeddings found")
                     return []

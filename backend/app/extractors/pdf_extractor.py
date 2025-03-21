@@ -24,8 +24,12 @@ class PdfExtractor:
             self.pdf_lib = "PyPDF2"
             logger.info("Using PyPDF2 library for PDF extraction")
             return
-        except ImportError:
-            logger.warning("PyPDF2 not available, trying alternative libraries...")
+        except ImportError as e:
+            logger.warning(f"PyPDF2 not available: {e}")
+            logger.warning("Trying alternative libraries...")
+        except Exception as e:
+            logger.warning(f"Error importing PyPDF2: {e}")
+            logger.warning("Trying alternative libraries...")
         
         # Try to import pypdf
         try:
@@ -33,10 +37,30 @@ class PdfExtractor:
             self.pdf_lib = "pypdf"
             logger.info("Using pypdf library for PDF extraction")
             return
-        except ImportError:
-            logger.warning("pypdf not available.")
+        except ImportError as e:
+            logger.warning(f"pypdf not available: {e}")
+        except Exception as e:
+            logger.warning(f"Error importing pypdf: {e}")
         
-        logger.error("No PDF extraction library available")
+        # Log more details about the environment
+        import sys
+        logger.error(f"No PDF extraction library available. Python version: {sys.version}")
+        logger.error(f"Python path: {sys.executable}")
+        logger.error(f"Path: {sys.path}")
+        
+        # Try to install pypdf at runtime if in development environment
+        try:
+            import subprocess
+            logger.warning("Attempting to install PyPDF2 at runtime...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "PyPDF2==3.0.1"])
+            import PyPDF2
+            self.pdf_lib = "PyPDF2"
+            logger.info("Successfully installed and imported PyPDF2")
+            return
+        except Exception as e:
+            logger.error(f"Failed to install PyPDF2 at runtime: {e}")
+        
+        logger.error("No PDF extraction library available after all attempts")
     
     def extract_text(self, file_path: str) -> List[Dict[str, Any]]:
         """Extract text from a PDF file.
