@@ -79,14 +79,34 @@ class PdfExtractor:
                 logger.error(f"PDF file does not exist: {file_path}")
                 return []
                 
-            if os.path.getsize(file_path) == 0:
-                logger.error(f"PDF file is empty: {file_path}")
+            file_size = os.path.getsize(file_path)
+            if file_size == 0:
+                logger.error(f"PDF file is empty (0 bytes): {file_path}")
                 return []
+            
+            # Additional check for very small files that might not be valid PDFs
+            if file_size < 100:  # Typically, even the smallest valid PDF is >100 bytes
+                logger.warning(f"PDF file may be too small to be valid ({file_size} bytes): {file_path}")
+                # Continue processing, but log the warning
+            
+            # Log file size for debugging
+            logger.info(f"PDF file size: {file_size} bytes")
             
             # If no PDF library is available, return empty result
             if self.pdf_lib is None:
                 logger.error("No PDF library available for text extraction")
                 return []
+            
+            # Try to verify PDF header
+            try:
+                with open(file_path, 'rb') as f:
+                    header = f.read(5)
+                    if header != b'%PDF-':
+                        logger.error(f"File does not appear to be a valid PDF (header check failed): {file_path}")
+                        return []
+            except Exception as e:
+                logger.error(f"Error checking PDF header: {e}")
+                # Continue processing despite header check failure
             
             # Extract text based on available library
             if self.pdf_lib == "PyPDF2":
@@ -108,39 +128,43 @@ class PdfExtractor:
             
             # Open the PDF file
             with open(file_path, 'rb') as file:
-                # Create a PDF reader object
-                pdf = PyPDF2.PdfReader(file)
-                
-                # Get the number of pages
-                num_pages = len(pdf.pages)
-                
-                if num_pages == 0:
-                    logger.warning(f"PDF has no pages: {file_path}")
+                try:
+                    # Create a PDF reader object with error handling
+                    pdf = PyPDF2.PdfReader(file, strict=False)
+                    
+                    # Get the number of pages
+                    num_pages = len(pdf.pages)
+                    
+                    if num_pages == 0:
+                        logger.warning(f"PDF has no pages: {file_path}")
+                        return []
+                    
+                    logger.info(f"PDF has {num_pages} pages")
+                    
+                    # Extract text from each page
+                    chunks = []
+                    for i in range(num_pages):
+                        try:
+                            # Get the page
+                            page = pdf.pages[i]
+                            
+                            # Extract text
+                            text = page.extract_text()
+                            
+                            if text and text.strip():
+                                # Add chunk
+                                chunks.append({
+                                    "text": text,
+                                    "page": i + 1
+                                })
+                        except Exception as e:
+                            logger.error(f"Error extracting text from page {i+1}: {e}")
+                            continue
+                    
+                    return chunks
+                except Exception as e:
+                    logger.error(f"Error creating PyPDF2 reader: {e}")
                     return []
-                
-                logger.info(f"PDF has {num_pages} pages")
-                
-                # Extract text from each page
-                chunks = []
-                for i in range(num_pages):
-                    try:
-                        # Get the page
-                        page = pdf.pages[i]
-                        
-                        # Extract text
-                        text = page.extract_text()
-                        
-                        if text and text.strip():
-                            # Add chunk
-                            chunks.append({
-                                "text": text,
-                                "page": i + 1
-                            })
-                    except Exception as e:
-                        logger.error(f"Error extracting text from page {i+1}: {e}")
-                        continue
-                
-                return chunks
         except Exception as e:
             logger.error(f"Error with PyPDF2 extraction: {e}")
             return []
@@ -152,39 +176,43 @@ class PdfExtractor:
             
             # Open the PDF file
             with open(file_path, 'rb') as file:
-                # Create a PDF reader object
-                pdf = PdfReader(file)
-                
-                # Get the number of pages
-                num_pages = len(pdf.pages)
-                
-                if num_pages == 0:
-                    logger.warning(f"PDF has no pages: {file_path}")
+                try:
+                    # Create a PDF reader object with error handling
+                    pdf = PdfReader(file, strict=False)
+                    
+                    # Get the number of pages
+                    num_pages = len(pdf.pages)
+                    
+                    if num_pages == 0:
+                        logger.warning(f"PDF has no pages: {file_path}")
+                        return []
+                    
+                    logger.info(f"PDF has {num_pages} pages")
+                    
+                    # Extract text from each page
+                    chunks = []
+                    for i in range(num_pages):
+                        try:
+                            # Get the page
+                            page = pdf.pages[i]
+                            
+                            # Extract text
+                            text = page.extract_text()
+                            
+                            if text and text.strip():
+                                # Add chunk
+                                chunks.append({
+                                    "text": text,
+                                    "page": i + 1
+                                })
+                        except Exception as e:
+                            logger.error(f"Error extracting text from page {i+1}: {e}")
+                            continue
+                    
+                    return chunks
+                except Exception as e:
+                    logger.error(f"Error creating pypdf reader: {e}")
                     return []
-                
-                logger.info(f"PDF has {num_pages} pages")
-                
-                # Extract text from each page
-                chunks = []
-                for i in range(num_pages):
-                    try:
-                        # Get the page
-                        page = pdf.pages[i]
-                        
-                        # Extract text
-                        text = page.extract_text()
-                        
-                        if text and text.strip():
-                            # Add chunk
-                            chunks.append({
-                                "text": text,
-                                "page": i + 1
-                            })
-                    except Exception as e:
-                        logger.error(f"Error extracting text from page {i+1}: {e}")
-                        continue
-                
-                return chunks
         except Exception as e:
             logger.error(f"Error with pypdf extraction: {e}")
             return [] 

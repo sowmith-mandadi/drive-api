@@ -20,18 +20,26 @@ export class ContentService {
       headers: new HttpHeaders({
         'Accept': 'application/json',
       }),
-      // Increase timeout for large uploads (5 minutes)
       reportProgress: true,
       observe: 'events' as 'events'
     };
     
     return this.http.post(`${this.apiUrl}/upload`, formData, httpOptions).pipe(
       map(event => {
-        // Return the final response when complete
-        if (event.type === HttpEventType.Response) {
-          return event.body;
+        switch (event.type) {
+          case HttpEventType.UploadProgress:
+            // Calculate and return upload progress
+            const progress = Math.round(100 * (event.loaded / (event.total || event.loaded)));
+            return { type: 'progress', progress: progress };
+          
+          case HttpEventType.Response:
+            // Return the final response when complete
+            return { type: 'complete', body: event.body };
+            
+          default:
+            // Return other events as-is
+            return { type: 'other', event: event };
         }
-        return null;
       }),
       catchError(error => {
         console.error('Error uploading content:', error);
@@ -41,6 +49,8 @@ export class ContentService {
           errorMessage = 'The file is too large to upload. Maximum file size is 100MB.';
         } else if (error.name === 'TimeoutError') {
           errorMessage = 'Upload timed out. Please try again with a smaller file or check your connection.';
+        } else if (error.status === 0) {
+          errorMessage = 'Connection lost or request cancelled. Please check your network connection and try again.';
         }
         
         return throwError(() => new Error(errorMessage));

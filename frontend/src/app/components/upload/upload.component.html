@@ -342,10 +342,22 @@
     </form>
   </mat-card>
   
-  <!-- AI Generated Content Display (shown after upload if AI processing was selected) -->
-  <mat-card class="upload-card ai-generated-content" *ngIf="showAiContent && aiGeneratedContent">
+  <!-- Progress indicator during upload -->
+  <mat-card class="upload-progress-card" *ngIf="uploading">
+    <mat-card-content>
+      <h3>Uploading Content...</h3>
+      <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
+      <p class="progress-percentage">{{ progress }}%</p>
+      <button mat-stroked-button color="warn" class="cancel-upload-button" (click)="cancelUpload()">
+        <mat-icon>cancel</mat-icon>
+        Cancel Upload
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- AI Content card - will be shown after upload if AI content is generated -->
+  <mat-card class="ai-content-card" *ngIf="showAiContent && aiGeneratedContent">
     <h3>
-      <mat-icon>auto_awesome</mat-icon>
       AI-Generated Content
     </h3>
     
@@ -368,8 +380,9 @@
     </div>
     
     <div class="form-actions">
-      <button mat-stroked-button class="cancel-button" routerLink="/search">
-        Cancel
+      <button mat-stroked-button class="search-button" (click)="goToSearch()">
+        <mat-icon>search</mat-icon>
+        Go to Search
       </button>
       <button mat-flat-button color="primary" class="submit-button" 
               *ngIf="uploadForm.get('contentId')?.value"

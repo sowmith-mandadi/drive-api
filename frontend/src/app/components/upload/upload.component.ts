@@ -23,7 +23,7 @@ import {
 import { UploadService } from '../../services/upload.service';
 import { NotificationService } from '../../services/notification.service';
 import { Subscription, Observable } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { switchMap, catchError, map } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 
 interface DriveFile {
@@ -358,9 +358,7 @@ export class UploadComponent implements OnInit, OnDestroy {
   
   // Helper to show messages
   private showMessage(message: string): void {
-    this.snackBar.open(message, 'Close', {
-      duration: 3000
-    });
+    this.notificationService.showMessage(message);
   }
   
   // Form submission
@@ -375,12 +373,12 @@ export class UploadComponent implements OnInit, OnDestroy {
   
   onSubmit(): void {
     if (this.uploadForm.invalid) {
-      this.showMessage('Please fill out all required fields');
+      this.notificationService.showError('Please fill out all required fields');
       return;
     }
     
     if (!this.hasAnyFiles() && !this.hasAnyLinks()) {
-      this.showMessage('Please upload at least one file or provide a link');
+      this.notificationService.showError('Please upload at least one file or provide a link');
       return;
     }
     
@@ -392,7 +390,7 @@ export class UploadComponent implements OnInit, OnDestroy {
     
     // Prepare form data
     const formValue = this.uploadForm.value;
-    const metadata = {
+    const metadata: Record<string, any> = {
       title: formValue.title,
       description: formValue.description,
       track: formValue.track,
@@ -413,29 +411,85 @@ export class UploadComponent implements OnInit, OnDestroy {
     };
     
     // Decide whether to use local files, Drive files, or both
-    let uploadObservable: Observable<UploadResponse>;
+    let uploadObservable: Observable<any> = of({ success: false, error: 'No upload method selected' });
     
     if (this.files.length > 0 && this.driveFiles.length > 0) {
       // Handle both local files and Drive files
-      uploadObservable = this.uploadService.uploadFiles(this.files, metadata).pipe(
-        switchMap((result: UploadResponse) => {
-          if (result.success && result.contentId) {
-            // If local files uploaded successfully, also upload Drive files
-            return this.uploadService.uploadDriveFiles(
-              this.driveFiles.map(f => f.id),
-              { ...metadata, contentId: result.contentId }
-            );
+      // First handle local file upload with the updated service
+      if (this.files.length > 0) {
+        const formData = new FormData();
+        
+        // Append files
+        this.files.forEach(file => {
+          formData.append('files', file);
+        });
+        
+        // Append metadata
+        Object.keys(metadata).forEach(key => {
+          if (metadata[key] !== null && metadata[key] !== undefined) {
+            if (Array.isArray(metadata[key])) {
+              formData.append(key, JSON.stringify(metadata[key]));
+            } else {
+              formData.append(key, String(metadata[key]));
+            }
           }
-          return of(result);
-        }),
-        catchError(error => {
-          console.error('Error in upload pipeline:', error);
-          return of({ success: false, error: error.message } as UploadResponse);
-        })
-      );
+        });
+        
+        uploadObservable = this.contentService.uploadContent(formData).pipe(
+          switchMap((result: any) => {
+            if (result.type === 'progress') {
+              this.progress = result.progress;
+              return of(null);
+            } else if (result.type === 'complete' && result.body && result.body.success && result.body.contentId) {
+              // If local files uploaded successfully, also upload Drive files
+              this.notificationService.showSuccess('Files uploaded successfully');
+              
+              if (this.driveFiles.length > 0) {
+                return this.uploadService.uploadDriveFiles(
+                  this.driveFiles.map(f => f.id),
+                  { ...metadata, contentId: result.body.contentId }
+                ).pipe(
+                  map(driveResult => {
+                    // Combine the results
+                    return {
+                      ...result.body,
+                      driveFilesUploaded: driveResult.success
+                    };
+                  })
+                );
+              }
+              return of(result.body);
+            }
+            return of(null);
+          }),
+          catchError(error => {
+            console.error('Error in upload pipeline:', error);
+            this.notificationService.showError(`Upload failed: ${error.message || 'Unknown error'}`);
+            return of({ success: false, error: error.message });
+          })
+        );
+      }
     } else if (this.files.length > 0) {
-      // Only local files
-      uploadObservable = this.uploadService.uploadFiles(this.files, metadata);
+      // Only local files - use the improved content service
+      const formData = new FormData();
+      
+      // Append files
+      this.files.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      // Append metadata
+      Object.keys(metadata).forEach(key => {
+        if (metadata[key] !== null && metadata[key] !== undefined) {
+          if (Array.isArray(metadata[key])) {
+            formData.append(key, JSON.stringify(metadata[key]));
+          } else {
+            formData.append(key, String(metadata[key]));
+          }
+        }
+      });
+      
+      uploadObservable = this.contentService.uploadContent(formData);
     } else if (this.driveFiles.length > 0) {
       // Only Drive files
       uploadObservable = this.uploadService.uploadDriveFiles(
@@ -449,35 +503,78 @@ export class UploadComponent implements OnInit, OnDestroy {
     
     this.subs.add(
       uploadObservable.subscribe(
-        (result: UploadResponse) => {
-          this.uploading = false;
-          this.showMessage('Content uploaded successfully!');
+        (result: any) => {
+          // Check if this is a progress event
+          if (result && result.type === 'progress') {
+            this.progress = result.progress;
+            return;  // Don't complete the upload on progress events
+          }
           
-          if (result && result.contentId) {
-            // Check if AI content was generated
-            if ((formValue.ai_summarize || formValue.ai_tags) && result.aiContent) {
-              this.aiGeneratedContent = {
-                summary: result.aiContent.summary || 'No summary available',
-                tags: result.aiContent.tags || []
-              };
-              this.showAiContent = true;
-              
-              // Store the contentId for later navigation
-              this.uploadForm.patchValue({ contentId: result.contentId });
+          // Get the final result
+          const finalResult = result && result.type === 'complete' ? result.body : result;
+          
+          // Skip null results (from progress events)
+          if (finalResult === null) {
+            return;
+          }
+          
+          this.uploading = false;
+          this.progress = 0;
+          
+          if (finalResult && finalResult.success) {
+            this.notificationService.showSuccess('Content uploaded successfully!');
+            
+            if (finalResult.contentId) {
+              // Check if AI content was generated
+              if ((formValue.ai_summarize || formValue.ai_tags) && finalResult.aiContent) {
+                this.aiGeneratedContent = {
+                  summary: finalResult.aiContent.summary || 'No summary available',
+                  tags: finalResult.aiContent.tags || []
+                };
+                this.showAiContent = true;
+                
+                // Show toast messages for AI-generated content
+                if (formValue.ai_summarize && finalResult.aiContent.summary) {
+                  this.notificationService.showSuccess('AI summary generated successfully');
+                }
+                
+                if (formValue.ai_tags && finalResult.aiContent.tags && finalResult.aiContent.tags.length > 0) {
+                  this.notificationService.showSuccess(`${finalResult.aiContent.tags.length} AI tags generated`);
+                }
+                
+                // Store the contentId for later navigation
+                this.uploadForm.patchValue({ contentId: finalResult.contentId });
+              } else {
+                // Navigate to content view page if no AI content to display
+                this.router.navigate(['/content', finalResult.contentId]);
+              }
             } else {
-              // Navigate to content view page if no AI content to display
-              this.router.navigate(['/content', result.contentId]);
+              this.router.navigate(['/search']);
             }
           } else {
-            this.router.navigate(['/search']);
+            this.notificationService.showError(`Upload failed: ${finalResult && finalResult.error ? finalResult.error : 'Unknown error'}`);
           }
         },
         (error: any) => {
           this.uploading = false;
+          this.progress = 0;
           console.error('Upload error:', error);
-          this.showMessage(`Upload failed: ${error.message || 'Unknown error'}`);
+          this.notificationService.showError(`Upload failed: ${error.message || 'Unknown error'}`);
         }
       )
     );
+  }
+
+  // Add a method to navigate to search page
+  goToSearch(): void {
+    this.router.navigate(['/search']);
+  }
+
+  // Add a method to manually handle upload cancellation
+  cancelUpload(): void {
+    // Implement cancellation logic here if needed
+    this.uploading = false;
+    this.progress = 0;
+    this.notificationService.showMessage('Upload cancelled');
   }
 } 
