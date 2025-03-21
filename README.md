@@ -1,6 +1,6 @@
-# Conference Content Management API with RAG
+# Conference Content Management API with Google Drive Integration
 
-This application provides content management for conference materials with advanced Retrieval-Augmented Generation (RAG) capabilities using Google Vertex AI. It consists of a Flask backend API and an Angular frontend.
+This application provides content management for conference materials with advanced Retrieval-Augmented Generation (RAG) capabilities using Google Vertex AI. It consists of a Flask backend API and an Angular frontend, with seamless Google Drive integration for importing and managing conference content.
 
 ## Features
 
@@ -11,7 +11,8 @@ This application provides content management for conference materials with advan
 - Provide RAG-powered answers to questions about the content
 - Find similar documents based on semantic similarity
 - Generate AI summaries and tags for uploaded content
-- Import files directly from Google Drive
+- Import files directly from Google Drive with OAuth authentication
+- Advanced search capabilities across all conference materials
 
 ## Project Structure
 
@@ -20,6 +21,7 @@ This application provides content management for conference materials with advan
 ├── backend/              # Flask backend API
 │   ├── app/              # Main application
 │   │   ├── api/          # API routes and controllers
+│   │   ├── drive/        # Google Drive integration modules
 │   │   ├── extractors/   # Document extraction modules (PDF, PPTX)
 │   │   ├── models/       # Data models
 │   │   ├── repository/   # Data access layer
@@ -103,6 +105,24 @@ This application provides content management for conference materials with advan
    npm install
    ```
 
+### Google Drive Integration Setup
+
+To enable Google Drive integration:
+
+1. Create a Google Cloud project and enable the Google Drive API
+2. Create OAuth 2.0 credentials in the Google Cloud Console
+3. Add the required scopes for Google Drive access:
+   - `https://www.googleapis.com/auth/drive.readonly`
+   - `https://www.googleapis.com/auth/drive.metadata.readonly`
+4. Configure your OAuth consent screen with appropriate information
+5. Add your authentication credentials to the `.env` file:
+   ```
+   # Google Drive OAuth Configuration
+   GOOGLE_OAUTH_CLIENT_ID=your-oauth-client-id
+   GOOGLE_OAUTH_CLIENT_SECRET=your-oauth-client-secret
+   GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/drive/auth/callback
+   ```
+
 ### Vector Search Setup (Optional)
 
 For enhanced similarity search capabilities, set up a Vector Search Index in Google Cloud:
@@ -181,8 +201,12 @@ The frontend will run on http://localhost:4200 (or another port if 4200 is occup
 
 ### Google Drive Integration
 
+- `GET /api/drive/auth`: Start OAuth flow for Google Drive access
+- `GET /api/drive/auth/callback`: OAuth callback endpoint
+- `GET /api/drive/files`: List files from authenticated user's Google Drive
 - `GET /api/drive/files/<file_id>`: Get metadata for a Google Drive file
 - `POST /api/drive/import`: Import files from Google Drive into the system
+- `GET /api/drive/folders`: List folders from authenticated user's Google Drive
 
 ### System Health
 
@@ -207,4 +231,13 @@ The application can run in development mode without a complete GCP setup. In thi
 
 ## License
 
-[Your License] 
+[Your License]
+
+## Security Considerations
+
+The application implements the following security measures:
+- OAuth 2.0 for secure Google Drive integration
+- Secure storage of sensitive credentials
+- HTTPS for all API communication
+- Input validation for all endpoints
+- Rate limiting for API requests 
