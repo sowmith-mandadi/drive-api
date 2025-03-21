@@ -13,6 +13,10 @@ __pycache__/
 venv/
 env/
 ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
 
 # Angular
 .angular/
@@ -26,5 +30,21 @@ npm-debug.log
 yarn-error.log
 .eslintcache
 
-# Credentials
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Credentials and sensitive data
 credentials.json
+client_credentials.json
+*_key.json
+backend/test_results_*.log
+backend/__pycache__/
+
+# Build artifacts
+backend/build/
+backend/dist/
+frontend/dist/
