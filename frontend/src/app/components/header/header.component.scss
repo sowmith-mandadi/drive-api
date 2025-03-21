@@ -3,7 +3,10 @@
   justify-content: space-between;
   align-items: center;
   height: 64px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: white !important;
+  color: var(--google-dark-text) !important;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3);
+  padding: 0 24px;
   
   .logo-container {
     display: flex;
@@ -13,19 +16,42 @@
       margin-left: 8px;
       font-size: 20px;
       font-weight: 500;
+      font-family: var(--google-font);
+      color: var(--google-dark-text);
     }
   }
   
   .nav-links {
     display: flex;
-    gap: 8px;
+    gap: 16px;
     
     button {
       display: flex;
       align-items: center;
+      font-weight: 500;
+      color: var(--google-grey-text);
+      border-radius: 4px;
+      padding: 0 16px;
+      height: 36px;
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: rgba(60, 64, 67, 0.08);
+      }
       
       mat-icon {
-        margin-right: 4px;
+        margin-right: 8px;
+        font-size: 20px;
+        height: 20px;
+        width: 20px;
+      }
+    }
+    
+    .active-link {
+      color: var(--google-blue);
+      
+      mat-icon {
+        color: var(--google-blue);
       }
     }
   }
@@ -39,15 +65,42 @@
     align-items: center;
     
     .user-name {
-      margin-right: 8px;
+      margin-right: 12px;
       font-size: 14px;
+      font-weight: 500;
+      color: var(--google-grey-text);
+    }
+    
+    button.mat-raised-button {
+      background-color: var(--google-blue);
+      color: white;
+      font-family: var(--google-font);
+      font-weight: 500;
+      border-radius: 4px;
+      padding: 0 24px;
+      height: 36px;
+      text-transform: none;
+      box-shadow: none;
+      
+      &:hover {
+        background-color: var(--google-blue-hover);
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+      }
     }
   }
 }
 
 @media (max-width: 768px) {
+  .header-toolbar {
+    padding: 0 16px;
+  }
+  
   .nav-links button span {
     display: none;
+  }
+  
+  .nav-links {
+    gap: 8px;
   }
   
   .user-name {
