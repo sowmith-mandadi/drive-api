@@ -178,6 +178,27 @@
       </mat-card-header>
       <mat-card-content>
         <p>{{ ragResponse.answer }}</p>
+        
+        <!-- Source Passages -->
+        <div class="source-passages">
+          <h4>Sources</h4>
+          <div *ngFor="let passage of ragResponse.passages" class="source-passage">
+            <p [innerHTML]="highlightSearchTerms(passage.text)"></p>
+            <div class="source-meta">
+              <span class="source-title">{{ passage.metadata?.title }}</span>
+              <span *ngIf="passage.metadata?.position_type === 'slide'" class="source-position">
+                (Slide {{ passage.metadata?.position }})
+              </span>
+              <a *ngIf="passage.metadata?.slide_url" 
+                 [href]="passage.metadata?.slide_url || ''" 
+                 target="_blank" 
+                 class="slide-link">
+                <mat-icon>slideshow</mat-icon>
+                View Slide
+              </a>
+            </div>
+          </div>
+        </div>
       </mat-card-content>
     </mat-card>
     

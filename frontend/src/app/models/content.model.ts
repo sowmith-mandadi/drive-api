@@ -110,4 +110,15 @@ export interface RagPassage {
   text: string;
   source: string;
   score: number;
+  metadata?: {
+    content_id: string;
+    file_name: string;
+    chunk_id: number;
+    title: string;
+    position_type: string;
+    position: number;
+    slide_id?: string;
+    presentation_id?: string;
+    slide_url?: string;
+  };
 } 

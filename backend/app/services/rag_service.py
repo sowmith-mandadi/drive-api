@@ -132,18 +132,29 @@ class RagService:
                                             # Create passage text with context
                                             passage_text = f"From: {title}{chunk_position}\n\n{chunk_text}"
                                             
+                                            # Create passage metadata
+                                            passage_metadata = {
+                                                "content_id": content_id,
+                                                "file_name": file_name,
+                                                "chunk_id": chunk_id,
+                                                "title": title,
+                                                "position_type": "page" if "page" in chunk else "slide" if "slide" in chunk else "unknown",
+                                                "position": chunk.get("page", chunk.get("slide", 0))
+                                            }
+                                            
+                                            # Add slide-specific metadata for Google Slides
+                                            if chunk.get("file_type") == "application/vnd.google-apps.presentation":
+                                                passage_metadata.update({
+                                                    "slide_id": chunk.get("slide_id", ""),
+                                                    "presentation_id": chunk.get("presentation_id", ""),
+                                                    "slide_url": chunk.get("slide_url", "")
+                                                })
+                                            
                                             # Add to passages
                                             passages.append({
                                                 "text": passage_text,
                                                 "id": f"{content_id}_{chunk_id}",
-                                                "metadata": {
-                                                    "content_id": content_id,
-                                                    "file_name": file_name,
-                                                    "chunk_id": chunk_id,
-                                                    "title": title,
-                                                    "position_type": "page" if "page" in chunk else "slide" if "slide" in chunk else "unknown",
-                                                    "position": chunk.get("page", chunk.get("slide", 0))
-                                                }
+                                                "metadata": passage_metadata
                                             })
             except Exception as e:
                 logger.error(f"Error using vector search for RAG: {e}")

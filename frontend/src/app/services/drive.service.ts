@@ -39,7 +39,9 @@ export class DriveService {
       this.tokenClient = (window as any).google?.accounts.oauth2.initTokenClient({
         client_id: environment.google.clientId,
         scope: environment.google.scopes.join(' '),
-        callback: () => {}
+        callback: () => {},
+        ux_mode: 'redirect',
+        redirect_uri: environment.google.redirectUri
       });
     };
     document.body.appendChild(gsisScript);
@@ -48,10 +50,12 @@ export class DriveService {
   /**
    * Initialize Google API client
    */
-  private initGapiClient(): void {
-    this.gapi.client.init({
+  private async initGapiClient(): Promise<void> {
+    await this.gapi.client.init({
       apiKey: environment.google.apiKey,
-      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+      clientId: environment.google.clientId,
+      scope: environment.google.scopes.join(' ')
     });
   }
   
@@ -161,5 +165,29 @@ export class DriveService {
         return of({ success: false, error: 'Failed to import files from Google Drive' });
       })
     );
+  }
+
+  /**
+   * Handle the authorization code from Google OAuth callback
+   * @param code The authorization code from Google
+   */
+  handleAuthCode(code: string): Observable<void> {
+    return new Observable<void>(observer => {
+      if (!this.tokenClient) {
+        observer.error(new Error('Token client not initialized'));
+        return;
+      }
+
+      // Exchange the code for tokens
+      this.tokenClient.requestAccessToken({
+        code,
+        grant_type: 'authorization_code'
+      }).then(() => {
+        observer.next();
+        observer.complete();
+      }).catch((error: Error) => {
+        observer.error(error);
+      });
+    });
   }
 } 

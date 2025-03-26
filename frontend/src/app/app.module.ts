@@ -36,6 +36,7 @@ import { UploadComponent } from './components/upload/upload.component';
 import { SearchComponent } from './components/search/search.component';
 import { HomeComponent } from './components/home/home.component';
 import { ContentDetailComponent } from './components/content-detail/content-detail.component';
+import { DriveCallbackComponent } from './components/drive-callback/drive-callback.component';
 
 // Services
 import { ContentService } from './services/content.service';
@@ -50,6 +51,7 @@ const routes: Routes = [
   { path: 'upload', component: UploadComponent },
   { path: 'search', component: SearchComponent },
   { path: 'content/:id', component: ContentDetailComponent },
+  { path: 'drive-callback', component: DriveCallbackComponent },
   { path: '**', redirectTo: '' }
 ];
 
@@ -62,7 +64,8 @@ const routes: Routes = [
     ContentDetailComponent,
     HeaderComponent,
     FooterComponent,
-    FileTypePipe
+    FileTypePipe,
+    DriveCallbackComponent
   ],
   imports: [
     BrowserModule,
