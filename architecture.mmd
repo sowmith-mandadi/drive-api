@@ -1,0 +1,104 @@
+graph TB
+    %% Styling
+    classDef frontend fill:#dd0031,stroke:#dd0031,color:white
+    classDef backend fill:#2c3e50,stroke:#2c3e50,color:white
+    classDef cloud fill:#4285f4,stroke:#4285f4,color:white
+    classDef database fill:#34a853,stroke:#34a853,color:white
+    classDef security fill:#ea4335,stroke:#ea4335,color:white
+
+    %% Frontend Layer
+    subgraph Frontend["Angular Frontend"]
+        direction TB
+        Search[("🔍 Search Component")]
+        Content[("📄 Content Detail")]
+        Upload[("⬆️ Upload Component")]
+        
+        class Search,Content,Upload frontend
+    end
+
+    %% Backend Layer
+    subgraph Backend["Flask Backend"]
+        direction TB
+        API[("🔌 REST API")]
+        RAG[("🧠 RAG Service")]
+        Drive[("🚗 Drive Service")]
+        
+        class API,RAG,Drive backend
+    end
+
+    %% Cloud Services Layer
+    subgraph Cloud["Google Cloud Platform"]
+        direction TB
+        Vertex[("🤖 Vertex AI")]
+        Firestore[("🗄️ Firestore")]
+        Storage[("💾 Cloud Storage")]
+        Vector[("🔍 Vector Search")]
+        GDrive[("📁 Google Drive")]
+        
+        class Vertex,Storage,GDrive cloud
+        class Firestore database
+        class Vector cloud
+    end
+
+    %% Security Layer
+    subgraph Security["Security Layer"]
+        direction LR
+        OAuth[("🔒 OAuth 2.0")]
+        HTTPS[("🛡️ HTTPS")]
+        Rate[("⚡ Rate Limiting")]
+        
+        class OAuth,HTTPS,Rate security
+    end
+
+    %% Environment Layer
+    subgraph Environments["Environments"]
+        direction LR
+        subgraph Dev["Development"]
+            Local[("💻 Local API")]
+            Mock[("📊 Mock Data")]
+        end
+        subgraph Prod["Production"]
+            Gunicorn[("🚀 Gunicorn")]
+            CloudDB[("☁️ Cloud DB")]
+        end
+    end
+
+    %% Connections
+    Search --> API
+    Content --> API
+    Upload --> API
+    
+    API --> Firestore
+    API --> Storage
+    RAG --> Vertex
+    RAG --> Vector
+    Drive --> GDrive
+    
+    %% Security Connections
+    API -.-> OAuth
+    API -.-> HTTPS
+    API -.-> Rate
+    
+    %% Environment Connections
+    Dev --> Local
+    Dev --> Mock
+    Prod --> Gunicorn
+    Prod --> CloudDB
+
+    %% Legend
+    subgraph Legend["Legend"]
+        direction LR
+        L1[("Frontend")]:::frontend
+        L2[("Backend")]:::backend
+        L3[("Cloud")]:::cloud
+        L4[("Database")]:::database
+        L5[("Security")]:::security
+    end
+
+    %% Styling
+    style Frontend fill:#dd0031,stroke:#dd0031,color:white
+    style Backend fill:#2c3e50,stroke:#2c3e50,color:white
+    style Cloud fill:#4285f4,stroke:#4285f4,color:white
+    style Security fill:#ea4335,stroke:#ea4335,color:white
+    style Environments fill:#f8f9fa,stroke:#dee2e6
+    style Legend fill:#f8f9fa,stroke:#dee2e6 

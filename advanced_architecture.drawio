@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-03-26T21:00:00.000Z" agent="Mozilla/5.0" version="21.1.9" type="device">
+  <diagram name="System Overview" id="system-overview">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Client Layer -->
+        <mxCell id="client-layer" value="Client Layer" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1020" height="160" as="geometry" />
+        </mxCell>
+        
+        <!-- Web Browser -->
+        <mxCell id="browser" value="Web Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Angular Components -->
+        <mxCell id="angular" value="Angular Components" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="240" y="60" width="760" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Angular Components Details -->
+        <mxCell id="search-comp" value="Search&#xa;Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="260" y="90" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="content-comp" value="Content&#xa;Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="380" y="90" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="upload-comp" value="Upload&#xa;Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="500" y="90" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="services" value="Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="620" y="90" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="state" value="State&#xa;Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="800" y="90" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- API Layer -->
+        <mxCell id="api-layer" value="API Layer" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="1020" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- API Gateway -->
+        <mxCell id="api-gateway" value="API Gateway&#xa;(Flask)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="80" y="240" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- API Endpoints -->
+        <mxCell id="endpoints" value="API Endpoints" style="swimlane;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="240" y="240" width="760" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="content-api" value="/content/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="260" y="260" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rag-api" value="/rag/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="380" y="260" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="drive-api" value="/drive/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="500" y="260" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Service Layer -->
+        <mxCell id="service-layer" value="Service Layer" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="1020" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- Services -->
+        <mxCell id="content-service" value="Content Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="80" y="380" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rag-service" value="RAG Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="260" y="380" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="drive-service" value="Drive Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="440" y="380" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="auth-service" value="Auth Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="620" y="380" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Layer -->
+        <mxCell id="data-layer" value="Data Layer" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1020" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Stores -->
+        <mxCell id="firestore-db" value="Firestore&#xa;(Document Store)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cloud-storage" value="Cloud Storage&#xa;(Files)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="240" y="520" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="vector-store" value="Vector Store&#xa;(Embeddings)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="400" y="520" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- AI Services -->
+        <mxCell id="ai-layer" value="AI Services" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="1020" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="vertex-ai" value="Vertex AI&#xa;(LLM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="80" y="660" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="embedding" value="Text Embedding&#xa;API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="260" y="660" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Flow Arrows -->
+        <!-- Client to API -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="browser" target="api-gateway">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- API to Services -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="content-api" target="content-service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="rag-api" target="rag-service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Services to Data -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="content-service" target="firestore-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="rag-service" target="vector-store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Services to AI -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="rag-service" target="vertex-ai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  
+  <diagram name="RAG Flow" id="rag-flow">
+    <!-- Add RAG-specific flow diagram here -->
+  </diagram>
+  
+  <diagram name="Content Processing" id="content-processing">
+    <!-- Add content processing flow diagram here -->
+  </diagram>
+  
+  <diagram name="Authentication Flow" id="auth-flow">
+    <!-- Add authentication flow diagram here -->
+  </diagram>
+</mxfile> 

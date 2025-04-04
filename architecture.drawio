@@ -1,0 +1,75 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.813.782 Safari/537.36" version="26.1.3">
+  <diagram name="Page-1" id="architecture">
+    <mxGraphModel dx="77022" dy="41319" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frontend" value="Angular Frontend" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="-18377" y="-4360" width="200" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="search" value="🔍 Search Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" parent="frontend" vertex="1">
+          <mxGeometry x="20" y="40" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="content" value="📄 Content Detail" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" parent="frontend" vertex="1">
+          <mxGeometry x="20" y="90" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="upload" value="⬆️ Upload Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" parent="frontend" vertex="1">
+          <mxGeometry x="20" y="140" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="backend" value="Flask Backend" style="swimlane;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="-18377" y="-4150" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="🔌 REST API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18357" y="-4110" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rag" value="🧠 RAG Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18357" y="-4060" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="drive" value="🚗 Drive Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18357" y="-4010" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="cloud" value="Google Cloud Platform" style="swimlane;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="-18607" y="-4300" width="210" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="vertex" value="🤖 Vertex AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18587" y="-4270" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="firestore" value="🗄️ Firestore" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18587" y="-4220" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="storage" value="💾 Cloud Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18587" y="-4170" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="vector" value="🔍 Vector Search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18587" y="-4120" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="gdrive" value="📁 Google Drive" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18587" y="-4070" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="security" value="Security Layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="-18107" y="-4330" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="oauth" value="🔒 OAuth 2.0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18087" y="-4290" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="https" value="🛡️ HTTPS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18087" y="-4240" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rate" value="⚡ Rate Limiting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" parent="1" vertex="1">
+          <mxGeometry x="-18087" y="-4190" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="conn1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="search" target="api" edge="1" />
+        <mxCell id="conn2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="content" target="api" edge="1" />
+        <mxCell id="conn3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="upload" target="api" edge="1" />
+        <mxCell id="conn4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="firestore" edge="1" />
+        <mxCell id="conn5" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="storage" edge="1" />
+        <mxCell id="conn6" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="rag" target="vertex" edge="1" />
+        <mxCell id="conn7" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="rag" target="vector" edge="1" />
+        <mxCell id="conn8" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="drive" target="gdrive" edge="1" />
+        <mxCell id="conn9" value="" style="endArrow=classic;html=1;rounded=0;dashed=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" parent="1" source="api" target="oauth" edge="1" />
+        <mxCell id="conn10" value="" style="endArrow=classic;html=1;rounded=0;dashed=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" parent="1" source="api" target="https" edge="1" />
+        <mxCell id="conn11" value="" style="endArrow=classic;html=1;rounded=0;dashed=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" parent="1" source="api" target="rate" edge="1" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

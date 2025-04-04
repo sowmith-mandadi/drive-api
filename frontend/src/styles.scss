@@ -1,213 +1,47 @@
 /* You can add global styles to this file, and also import other style files */
-@import "./app/styles/google-next.scss";
 
-/* Import Angular Material theming */
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
+@use '@angular/material' as mat;
 
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Product+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined');
-
-/* Global CSS Variables */
-:root {
-  --google-blue: #{$google-blue};
-  --google-blue-hover: #{$google-blue-hover};
-  --google-blue-light: #{$google-blue-light};
-  --google-red: #{$google-red};
-  --google-red-light: #{$google-red-light};
-  --google-green: #{$google-green};
-  --google-green-light: #{$google-green-light};
-  --google-yellow: #{$google-yellow};
-  --google-yellow-light: #{$google-yellow-light};
-  --google-grey: #{$google-grey};
-  --google-grey-light: #{$google-grey-light};
-  --google-dark-text: #{$google-dark-text};
-  --google-grey-text: #{$google-grey-text};
-  --google-grey-border: #{$google-grey-border};
-  --google-font: #{$google-font-family};
-}
-
-/* Reset and Base Styles */
-* {
-  box-sizing: border-box;
+html, body { 
+  height: 100%; 
   margin: 0;
-  padding: 0;
 }
 
-html, body {
-  height: 100%;
-  font-family: var(--google-font);
-  font-size: 16px;
-  color: var(--google-dark-text);
+body { 
+  font-family: Roboto, "Helvetica Neue", sans-serif; 
   background-color: #f8f9fa;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--google-font);
-  font-weight: 500;
-  color: var(--google-dark-text);
-  margin-bottom: 16px;
+// Global utility classes
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
-h1 {
-  font-size: 24px;
+.text-center {
+  text-align: center;
 }
 
-h2 {
-  font-size: 20px;
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.mt-5 { margin-top: 3rem; }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mb-5 { margin-bottom: 3rem; }
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
 }
 
-h3 {
-  font-size: 18px;
-}
-
-p {
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-
-a {
-  color: var(--google-blue);
-  text-decoration: none;
-  
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-/* Angular Material Overrides */
-.mat-mdc-button.mat-primary {
-  --mdc-filled-button-container-color: var(--google-blue);
-  --mdc-filled-button-label-text-color: white;
-}
-
-.mat-mdc-button.mat-primary:hover {
-  --mdc-filled-button-container-color: var(--google-blue-hover);
-}
-
-.mat-mdc-tab.mat-mdc-tab-active .mdc-tab__text-label {
-  color: var(--google-blue);
-}
-
-.mat-mdc-tab-header {
-  border-bottom: 1px solid #eee;
-}
-
-.mat-mdc-tab-group.mat-primary .mat-mdc-tab-header-pagination-chevron,
-.mat-mdc-tab-group.mat-primary .mat-mdc-focus-indicator::before,
-.mat-mdc-tab-nav-bar.mat-primary .mat-mdc-tab-header-pagination-chevron,
-.mat-mdc-tab-nav-bar.mat-primary .mat-mdc-focus-indicator::before {
-  border-color: var(--google-blue);
-}
-
-.mat-mdc-card {
-  border-radius: 8px;
-  box-shadow: $shadow-sm !important;
-}
-
-/* Custom Chip styles */
-.google-chip {
-  @include google-chip;
-}
-
-/* Custom Badge styles */
-.google-badge {
-  @include google-badge;
-}
-
-/* Custom Container styles */
-.google-container {
-  @include google-container;
-}
-
-/* Toast/Snackbar Styles */
-.mat-mdc-snack-bar-container {
-  --mdc-snackbar-container-color: white;
-  --mdc-snackbar-supporting-text-color: var(--google-dark-text);
-  
-  &.success-snackbar {
-    --mdc-snackbar-supporting-text-color: var(--google-green);
-  }
-  
-  &.error-snackbar {
-    --mdc-snackbar-supporting-text-color: var(--google-red);
-  }
-}
-
-/* Custom Form Styles */
-.google-form {
-  .mat-mdc-form-field {
-    @include google-form-field;
-  }
-  
-  .mat-mdc-form-field {
-    width: 100%;
-    margin-bottom: 16px;
-  }
-  
-  .mat-mdc-form-field-infix {
-    width: auto;
-  }
-  
-  .google-form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 24px;
-    
-    .cancel-button {
-      @include google-secondary-button;
-    }
-    
-    .submit-button {
-      @include google-primary-button;
-    }
-  }
-}
-
-/* Loading Spinner */
-.google-spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-top: 3px solid var(--google-blue);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Table Styles */
-.google-table {
-  width: 100%;
-  border-collapse: collapse;
-  
-  th {
-    text-align: left;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--google-grey-border);
-    color: var(--google-grey-text);
-    font-weight: 500;
-    font-size: 14px;
-  }
-  
-  td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--google-grey-border);
-    font-size: 14px;
-  }
-  
-  tr:last-child td {
-    border-bottom: none;
-  }
-  
-  tr:hover {
-    background-color: var(--google-grey-light);
-  }
-} 
+.p-1 { padding: 0.25rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 1rem; }
+.p-4 { padding: 1.5rem; }
+.p-5 { padding: 3rem; }

@@ -1,0 +1,68 @@
+.home-container {
+  padding: 2rem 0;
+}
+
+.hero-section {
+  margin-bottom: 3rem;
+  
+  mat-card {
+    padding: 2rem;
+  }
+  
+  mat-card-title {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  mat-card-subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  mat-card-content {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  mat-card-actions {
+    button {
+      margin-right: 1rem;
+    }
+  }
+}
+
+.features-section {
+  h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 2rem;
+  }
+  
+  .feature-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    
+    mat-card {
+      height: 100%;
+    }
+    
+    mat-icon {
+      font-size: 2rem;
+      height: 2rem;
+      width: 2rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    mat-card-title {
+      font-size: 1.5rem;
+    }
+    
+    mat-card-subtitle {
+      font-size: 1rem;
+    }
+  }
+}

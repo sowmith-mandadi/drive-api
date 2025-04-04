@@ -1,121 +1,59 @@
-# Conference CMS Frontend
+# Frontend
 
-This is the Angular-based frontend for the Conference Content Management System. It provides a modern, responsive interface for searching, viewing, and managing conference content with AI-powered features.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.6.
 
-## Features
+## Development server
 
-- **AI-powered content search**: Find relevant conference materials using semantic search
-- **Content detail views**: View presentations, speakers, and associated materials
-- **Filterable search**: Filter content by session type, date, learning level, topics, and more
-- **RAG Question Answering**: Ask questions about content and get AI-generated answers
-- **Responsive design**: Works on desktop, tablet, and mobile devices
+To start a local development server, run:
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 14+ and npm
-- Angular CLI 13+
-
-### Installation
-
-1. Install dependencies:
-   ```
-   npm install
-   ```
-
-2. Set up environment files:
-
-   Create or update `src/environments/environment.ts` for development:
-   ```typescript
-   export const environment = {
-     production: false,
-     apiBaseUrl: 'http://localhost:3001/api'
-   };
-   ```
-
-   And `src/environments/environment.prod.ts` for production:
-   ```typescript
-   export const environment = {
-     production: true,
-     apiBaseUrl: '/api'
-   };
-   ```
-
-### Development Server
-
-Run the development server:
-
-```
-npm start
+```bash
+ng serve
 ```
 
-This command uses the proxy configuration in `proxy.conf.json` to forward API requests to the backend server. The application will be available at `http://localhost:4200/`.
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-### Building for Production
+## Code scaffolding
 
-Build the application for production:
+Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
-```
-npm run build
-```
-
-The build artifacts will be stored in the `dist/` directory.
-
-## Project Structure
-
-```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── components/      # UI components
-│   │   ├── services/        # API services
-│   │   ├── models/          # Data models
-│   │   ├── pipes/           # Custom pipes
-│   │   └── directives/      # Custom directives
-│   ├── assets/              # Static assets
-│   └── environments/        # Environment configurations
-├── angular.json             # Angular CLI configuration
-├── package.json             # Dependencies and scripts
-└── proxy.conf.json          # Development proxy configuration
+```bash
+ng generate component component-name
 ```
 
-## Key Components
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
 
-- **Search Component**: Allows users to search for content with various filters
-- **Content Detail Component**: Displays detailed view of conference content with files and presenters
-- **Upload Component**: Provides interface for uploading new content
-- **Header/Footer Components**: Consistent navigation and branding throughout the app
+```bash
+ng generate --help
+```
 
-## Services
+## Building
 
-- **ContentService**: Handles API calls for content retrieval and management
-- **RAGService**: Provides Retrieval-Augmented Generation capabilities
-- **ConferenceDataService**: Manages conference-specific data like tracks and session types
+To build the project run:
 
-## Development Guidelines
+```bash
+ng build
+```
 
-### Styling
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-The application uses Angular Material components with custom styling to maintain a consistent look and feel. Custom styles are defined in component-specific SCSS files.
+## Running unit tests
 
-### State Management
+To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
 
-For simple state, we use Angular services with RxJS observables. For more complex state, we implement a service-based approach with behavior subjects.
+```bash
+ng test
+```
 
-### API Communication
+## Running end-to-end tests
 
-All API calls are encapsulated in services. API responses are mapped to strongly typed models defined in the `models` directory.
+For end-to-end (e2e) testing, run:
 
-## Contributing
+```bash
+ng e2e
+```
 
-1. Create a new branch for your feature or bug fix
-2. Make your changes following the project's code style
-3. Write or update tests as necessary
-4. Submit a pull request with a clear description of the changes
+Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
-## Deployment
+## Additional Resources
 
-The frontend can be deployed as static files to any web server. In production, it's recommended to configure the server to forward API requests to the backend service.
-
-For deployment with the backend, build the frontend and move the output from `dist/frontend` to the backend's static files directory. 
+For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

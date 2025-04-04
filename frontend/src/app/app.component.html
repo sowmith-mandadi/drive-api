@@ -1,5 +1,24 @@
-<app-header></app-header>
-<div class="main-content">
-  <router-outlet></router-outlet>
+<div class="app-container">
+  <header class="app-header">
+    <mat-toolbar color="primary">
+      <button mat-icon-button aria-label="Menu button">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span>Conference CMS</span>
+      <span class="header-spacer"></span>
+      <button mat-icon-button aria-label="User account">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    </mat-toolbar>
+  </header>
+
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p>&copy; 2024 Conference CMS</p>
+    </div>
+  </footer>
 </div>
-<app-footer></app-footer> 

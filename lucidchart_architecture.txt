@@ -1,0 +1,240 @@
+# Lucidchart Architecture Code
+
+## System Architecture
+
+```lucidchart
+# Style Definitions
+style default {
+    font: Arial
+    fontSize: 12
+    fontColor: #333333
+    fillColor: #ffffff
+    strokeColor: #333333
+    strokeWidth: 1
+}
+
+style cloud {
+    fillColor: #4285f4
+    fontColor: #ffffff
+    strokeColor: #4285f4
+}
+
+style frontend {
+    fillColor: #dd0031
+    fontColor: #ffffff
+    strokeColor: #dd0031
+}
+
+style backend {
+    fillColor: #2c3e50
+    fontColor: #ffffff
+    strokeColor: #2c3e50
+}
+
+style database {
+    fillColor: #34a853
+    fontColor: #ffffff
+    strokeColor: #34a853
+}
+
+# Frontend Layer
+container frontend {
+    title: "Angular Frontend"
+    style: frontend
+    icon: "angular"
+    
+    component search {
+        title: "Search Component"
+        icon: "search"
+        style: frontend
+    }
+    
+    component content {
+        title: "Content Detail"
+        icon: "document"
+        style: frontend
+    }
+    
+    component upload {
+        title: "Upload Component"
+        icon: "upload"
+        style: frontend
+    }
+}
+
+# Backend Layer
+container backend {
+    title: "Flask Backend"
+    style: backend
+    icon: "python"
+    
+    component api {
+        title: "REST API"
+        icon: "api"
+        style: backend
+    }
+    
+    component rag {
+        title: "RAG Service"
+        icon: "brain"
+        style: backend
+    }
+    
+    component drive {
+        title: "Drive Service"
+        icon: "drive"
+        style: backend
+    }
+}
+
+# Cloud Services Layer
+container cloud {
+    title: "Google Cloud Platform"
+    style: cloud
+    icon: "google-cloud"
+    
+    service vertex {
+        title: "Vertex AI"
+        icon: "vertex-ai"
+        style: cloud
+    }
+    
+    service firestore {
+        title: "Firestore"
+        icon: "firestore"
+        style: database
+    }
+    
+    service storage {
+        title: "Cloud Storage"
+        icon: "cloud-storage"
+        style: cloud
+    }
+    
+    service vector {
+        title: "Vector Search"
+        icon: "vector-search"
+        style: cloud
+    }
+    
+    service drive {
+        title: "Google Drive"
+        icon: "google-drive"
+        style: cloud
+    }
+}
+
+# Connections
+frontend.search --> backend.api
+frontend.content --> backend.api
+frontend.upload --> backend.api
+
+backend.api --> cloud.firestore
+backend.api --> cloud.storage
+backend.rag --> cloud.vertex
+backend.rag --> cloud.vector
+backend.drive --> cloud.drive
+
+# Security Layer
+container security {
+    title: "Security Layer"
+    style: backend
+    
+    component oauth {
+        title: "OAuth 2.0"
+        icon: "lock"
+    }
+    
+    component https {
+        title: "HTTPS"
+        icon: "shield"
+    }
+    
+    component rate {
+        title: "Rate Limiting"
+        icon: "speed"
+    }
+}
+
+# Development Environment
+container dev {
+    title: "Development"
+    style: frontend
+    
+    component local {
+        title: "Local API"
+        icon: "server"
+    }
+    
+    component mock {
+        title: "Mock Data"
+        icon: "database"
+    }
+}
+
+# Production Environment
+container prod {
+    title: "Production"
+    style: backend
+    
+    component gunicorn {
+        title: "Gunicorn"
+        icon: "server"
+    }
+    
+    component cloud_db {
+        title: "Cloud DB"
+        icon: "database"
+    }
+}
+
+# Legend
+legend {
+    title: "Architecture Components"
+    items: [
+        {icon: "angular", label: "Frontend Components"},
+        {icon: "python", label: "Backend Services"},
+        {icon: "google-cloud", label: "Cloud Services"},
+        {icon: "database", label: "Databases"},
+        {icon: "lock", label: "Security"}
+    ]
+}
+```
+
+## Additional Styling Notes
+
+1. Use these icon sets in Lucidchart:
+   - Google Cloud Platform icons
+   - Database icons
+   - API icons
+   - Security icons
+   - Development icons
+
+2. Color Scheme:
+   - Frontend: Angular Red (#dd0031)
+   - Backend: Dark Blue (#2c3e50)
+   - Cloud: Google Blue (#4285f4)
+   - Database: Google Green (#34a853)
+
+3. Layout Tips:
+   - Place Frontend at the top
+   - Backend in the middle
+   - Cloud services at the bottom
+   - Use curved arrows for better visual flow
+   - Group related services together
+   - Use containers to show logical grouping
+
+4. Additional Visual Elements:
+   - Add dotted lines for optional connections
+   - Use different arrow styles for different types of relationships
+   - Include small icons next to connection lines to show data flow
+   - Use shadows to create depth
+   - Add gradient fills to containers
+
+5. Technical Details to Include:
+   - API endpoints on connection lines
+   - Data flow directions
+   - Service dependencies
+   - Security protocols
+   - Environment configurations
+</rewritten_file> 

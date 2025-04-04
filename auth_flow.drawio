@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-03-26T21:00:00.000Z" agent="Mozilla/5.0" version="21.1.9" type="device">
+  <diagram name="Authentication Flow" id="auth-flow">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Client Side -->
+        <mxCell id="client" value="Client Side" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="600" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="browser" value="Web Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="login" value="Login Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dd0031;strokeColor=#dd0031;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- API Gateway -->
+        <mxCell id="api" value="API Gateway" style="swimlane;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="280" y="40" width="200" height="600" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="auth-check" value="Auth Check" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="token-validate" value="Token Validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2c3e50;strokeColor=#2c3e50;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="300" y="160" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- OAuth Flow -->
+        <mxCell id="oauth" value="OAuth Flow" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="520" y="40" width="200" height="600" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="google-auth" value="Google OAuth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="540" y="80" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="consent" value="User Consent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="540" y="160" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="token-exchange" value="Token Exchange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea4335;strokeColor=#ea4335;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="540" y="240" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Security Layer -->
+        <mxCell id="security" value="Security Layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="760" y="40" width="200" height="600" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="rate-limit" value="Rate Limiting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="jwt" value="JWT Generation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="780" y="160" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="session" value="Session Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="780" y="240" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Storage -->
+        <mxCell id="storage" value="Storage" style="swimlane;whiteSpace=wrap;html=1;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="40" y="680" width="920" height="120" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="token-store" value="Token Store" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="60" y="720" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="session-store" value="Session Store" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4285f4;strokeColor=#4285f4;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="280" y="720" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="user-store" value="User Store" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#34a853;strokeColor=#34a853;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="500" y="720" width="160" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Flow Arrows -->
+        <!-- Login Flow -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="login" target="auth-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="auth-check" target="google-auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- OAuth Flow -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="google-auth" target="consent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="consent" target="token-exchange">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Security Flow -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="token-exchange" target="jwt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="jwt" target="session">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Storage Flow -->
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="token-exchange" target="token-store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="session" target="session-store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile> 
