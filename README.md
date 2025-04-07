@@ -158,6 +158,10 @@ For enhanced similarity search capabilities, set up a Vector Search Index in Goo
 
 ### Starting the Backend API
 
+You can run the API server in two ways:
+
+#### 1. Traditional Flask Backend
+
 Start the API server:
 
 ```
@@ -171,6 +175,24 @@ For production deployment, use Gunicorn:
 ```
 gunicorn -w 4 -b 0.0.0.0:3001 wsgi:app
 ```
+
+#### 2. FastAPI Backend (Latest Version)
+
+Run the FastAPI version of the backend:
+
+```
+python run_api.py
+```
+
+By default, this will run the minimal API server. To run the full FastAPI server:
+
+```
+python run_api.py --type server
+```
+
+The FastAPI backend will run on http://localhost:8000
+
+API documentation is available at http://localhost:8000/docs
 
 ### Starting the Frontend
 
