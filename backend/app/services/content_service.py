@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class ContentService:
     """Service for content management."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the content service."""
         self.repository = ContentRepository()
         self.upload_dir = os.path.join(os.getcwd(), "uploads")
@@ -217,8 +217,11 @@ class ContentService:
 
         # Get content with pagination
         content_items = self.repository.get_all(
-            limit=page_size, offset=offset, order_by="created_at"
+            limit=page_size, offset=offset
         )
+        
+        # Sort by created_at (most recent first)
+        content_items.sort(key=lambda x: x.created_at, reverse=True)
 
         # Get total count (for pagination)
         total_count = len(self.repository.get_all())  # This is inefficient but works for now

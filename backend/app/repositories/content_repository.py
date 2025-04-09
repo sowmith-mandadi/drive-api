@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ContentRepository:
     """Repository for content-related database operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the content repository."""
         self.firestore = FirestoreClient()
         self.collection = settings.FIRESTORE_COLLECTION_CONTENT
@@ -89,9 +89,7 @@ class ContentRepository:
 
             # Create in Firestore
             success = self.firestore.create_document(
-                self.collection,
-                content_id or "",  # Ensure we pass a string
-                content_dict
+                self.collection, content_id or "", content_dict  # Ensure we pass a string
             )
 
             if not success:
@@ -123,17 +121,20 @@ class ContentRepository:
                 return None
 
             # Prepare update data
-            update_dict = {}
+            update_dict: Dict[str, Any] = {}
 
             if update_data.title is not None:
                 update_dict["title"] = update_data.title
             if update_data.description is not None:
                 update_dict["description"] = update_data.description
             if update_data.tags is not None:
+                # Ensure tags is a list of strings
                 update_dict["tags"] = update_data.tags
             if update_data.metadata is not None:
+                # Ensure metadata is a dictionary
                 update_dict["metadata"] = update_data.metadata
             if update_data.used is not None:
+                # Ensure used is a boolean
                 update_dict["used"] = update_data.used
 
             # Add updated timestamp
@@ -198,8 +199,8 @@ class ContentRepository:
                     else:
                         firestore_filters.append((key, "==", value))
 
-            # Search fields
-            search_fields = ["title", "description", "extracted_text", "tags"]
+            # Search fields as a list of strings
+            search_fields: List[str] = ["title", "description", "extracted_text", "tags"]
 
             # Get matching documents
             docs = self.firestore.search_documents(
@@ -230,9 +231,16 @@ class ContentRepository:
 
                         # Handle tags
                         elif key == "tags":
-                            if not all(tag in content.tags for tag in value):
-                                include = False
-                                break
+                            # Ensure value is treated as a list for tag comparison
+                            if isinstance(value, list):
+                                if not all(tag in content.tags for tag in value):
+                                    include = False
+                                    break
+                            else:
+                                # Handle single tag case
+                                if value not in content.tags:
+                                    include = False
+                                    break
 
                     if include:
                         filtered_contents.append(content)

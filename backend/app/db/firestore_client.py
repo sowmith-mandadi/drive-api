@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class FirestoreClient:
     """Client for Google Firestore database operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Firestore client."""
         try:
             # Check if credentials file path is provided
@@ -57,7 +57,10 @@ class FirestoreClient:
             doc = doc_ref.get()
 
             if doc.exists:
-                return doc.to_dict()
+                # Explicitly cast the dictionary to Dict[str, Any]
+                doc_dict: Dict[str, Any] = doc.to_dict() or {}
+                doc_dict["id"] = doc.id  # Add document ID to the data
+                return doc_dict
             return None
         except Exception as e:
             logger.error(f"Error getting document {document_id} from {collection}: {str(e)}")
