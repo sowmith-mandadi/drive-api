@@ -129,6 +129,42 @@ The API provides the following endpoints:
 - `POST /api/rag/{content_id}/tags`: Generate tags for content
 - `GET /api/rag/{content_id}/similar`: Find similar content
 
+## Developer Tools
+
+The project includes several tools to maintain code quality and provide a better developer experience:
+
+### API Documentation
+
+We use OpenAPI extensions for detailed API documentation. The API documentation is available at:
+
+- `/api/docs` - Custom Swagger UI for exploring the API
+
+### Code Quality Tools
+
+The following tools are configured for code quality:
+
+- **Black**: Code formatter that ensures a consistent code style
+- **Flake8**: Linter that checks for style and potential bugs
+- **isort**: Sorts and organizes import statements
+- **mypy**: Static type checker for Python
+
+### Pre-commit Hooks
+
+The project uses pre-commit hooks to ensure code quality. To set up:
+
+1. Install pre-commit: `pip install pre-commit`
+2. Install hooks: `pre-commit install`
+
+The pre-commit configuration will automatically check your code for:
+- Formatting issues
+- Linting errors
+- Type checking issues
+- Trailing whitespace and other common issues
+
+### Logging
+
+The application uses structured logging with `structlog` to generate JSON logs that are easily parsable by log analysis tools.
+
 ## Development
 
 ### Project Structure

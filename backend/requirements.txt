@@ -14,4 +14,13 @@ python-dotenv==1.0.0
 PyPDF2==3.0.1
 python-pptx==0.6.21
 pytest==7.4.2
-pytest-asyncio==0.21.1 
+pytest-asyncio==0.21.1
+# Linting and formatting
+flake8==6.1.0
+black==23.12.0
+mypy==1.8.0
+isort==5.13.2
+# Logging
+structlog==23.2.0
+# Pre-commit
+pre-commit==3.5.0 
