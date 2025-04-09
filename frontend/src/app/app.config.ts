@@ -1,26 +1,29 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
 import { provideStore } from '@ngrx/store';
-import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { provideEffects } from '@ngrx/effects';
 import { environment } from '../environments/environment';
 
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }), 
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withInterceptorsFromDi()),
+    importProvidersFrom(HttpClientModule),
+    importProvidersFrom(ReactiveFormsModule),
     provideStore(),
-    provideEffects(),
     provideStoreDevtools({
       maxAge: 25,
-      logOnly: environment.production,
-      connectInZone: true
-    })
+      logOnly: false,
+      autoPause: true,
+      trace: false,
+      traceLimit: 75,
+    }),
+    provideEffects()
   ]
 };

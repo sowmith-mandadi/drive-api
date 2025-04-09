@@ -1,0 +1,41 @@
+.dynamic-content-form {
+  .error-message {
+    margin-bottom: 1rem;
+  }
+  
+  .content-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .form-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .full-width {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .boolean-field-container {
+    margin-bottom: 1.5rem;
+    
+    .field-hint {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      color: rgba(0, 0, 0, 0.54);
+      margin-left: 1.5rem;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    
+    button {
+      min-width: 100px;
+    }
+  }
+} 

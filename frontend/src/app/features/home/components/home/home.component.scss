@@ -1,11 +1,15 @@
 .home-container {
-  padding: 2rem 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
 .hero-section {
   margin-bottom: 3rem;
   
   mat-card {
+    background-color: #1e1e1e;
+    color: white;
     padding: 2rem;
   }
   
@@ -15,16 +19,17 @@
   }
   
   mat-card-subtitle {
+    color: #b0b0b0;
     font-size: 1.2rem;
-    margin-bottom: 1.5rem;
   }
   
   mat-card-content {
     font-size: 1.1rem;
-    margin-bottom: 1.5rem;
+    margin: 1.5rem 0;
   }
   
   mat-card-actions {
+    padding: 0;
     button {
       margin-right: 1rem;
     }
@@ -32,6 +37,8 @@
 }
 
 .features-section {
+  margin-bottom: 3rem;
+  
   h2 {
     text-align: center;
     font-size: 1.8rem;
@@ -40,11 +47,13 @@
   
   .feature-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1.5rem;
     
     mat-card {
       height: 100%;
+      display: flex;
+      flex-direction: column;
     }
     
     mat-icon {
@@ -55,14 +64,45 @@
   }
 }
 
-@media (max-width: 768px) {
-  .hero-section {
-    mat-card-title {
-      font-size: 1.5rem;
+.content-section, .tracks-section {
+  margin-bottom: 3rem;
+  
+  h2 {
+    font-size: 1.8rem;
+    margin-bottom: 2rem;
+  }
+  
+  .content-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .content-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    
+    mat-card-content {
+      flex-grow: 1;
     }
     
-    mat-card-subtitle {
-      font-size: 1rem;
+    .content-meta {
+      margin-top: 1rem;
     }
   }
 }
+
+.track-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .feature-cards, .content-cards, .track-content {
+    grid-template-columns: 1fr;
+  }
+}
+

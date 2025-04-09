@@ -1,0 +1,179 @@
+<div class="bulk-upload-container">
+  <div class="header">
+    <button mat-icon-button routerLink="/content-management">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Bulk Upload Content</h1>
+  </div>
+
+  <mat-stepper [linear]="true" #stepper>
+    <!-- Step 1: Select Files -->
+    <mat-step label="Select Files" state="files">
+      <div class="step-content">
+        <div class="upload-area" [class.has-files]="uploadItems().length > 0">
+          <div class="upload-instructions" *ngIf="uploadItems().length === 0">
+            <mat-icon>cloud_upload</mat-icon>
+            <h2>Drag and drop files here</h2>
+            <p>or</p>
+            <button mat-raised-button color="primary" (click)="fileInput.click()">
+              Browse Files
+            </button>
+            <input #fileInput type="file" style="display:none" multiple (change)="onFilesSelected($event)">
+          </div>
+
+          <div class="files-list" *ngIf="uploadItems().length > 0">
+            <div class="files-header">
+              <h3>Selected Files ({{ uploadItems().length }})</h3>
+              <button mat-stroked-button color="primary" (click)="fileInput.click()">
+                <mat-icon>add</mat-icon>
+                Add More Files
+              </button>
+              <input #fileInput type="file" style="display:none" multiple (change)="onFilesSelected($event)">
+            </div>
+
+            <mat-card *ngFor="let item of uploadItems()" class="file-item">
+              <div class="file-icon">
+                <mat-icon>{{ getFileIcon(item.fileType) }}</mat-icon>
+              </div>
+              <div class="file-info">
+                <div class="file-name">{{ item.fileName }}</div>
+                <div class="file-meta">{{ formatFileSize(item.fileSize) }} • {{ item.fileType }}</div>
+              </div>
+              <button mat-icon-button color="warn" (click)="removeFile(item.id)" [disabled]="isUploading()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-card>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperNext [disabled]="uploadItems().length === 0">Next</button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- Step 2: Add Metadata -->
+    <mat-step label="Add Metadata" state="metadata">
+      <div class="step-content">
+        <form [formGroup]="metadataForm">
+          <div class="metadata-form">
+            <h3>Common Metadata</h3>
+            <p>Add metadata that applies to all selected files or customize per file</p>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Track</mat-label>
+                <mat-select formControlName="track">
+                  <mat-option *ngFor="let track of availableTracks" [value]="track">
+                    {{ track }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="metadataForm.get('track')?.invalid">Track is required</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Content Type</mat-label>
+                <mat-select formControlName="type">
+                  <mat-option *ngFor="let type of availableTypes" [value]="type">
+                    {{ type }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="metadataForm.get('type')?.invalid">Content type is required</mat-error>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Tags (comma separated)</mat-label>
+              <input matInput formControlName="tags" placeholder="angular, web development, typescript">
+            </mat-form-field>
+
+            <mat-card class="metadata-option">
+              <mat-card-content>
+                <div class="metadata-toggle">
+                  <div>
+                    <h4>Apply metadata to all files</h4>
+                    <p>Toggle off to customize metadata for each file individually</p>
+                  </div>
+                  <mat-slide-toggle formControlName="applyToAll" color="primary"></mat-slide-toggle>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Individual file metadata would go here if applyToAll is false -->
+          </div>
+        </form>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-button matStepperNext [disabled]="!metadataForm.valid">Next</button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- Step 3: Upload -->
+    <mat-step label="Upload" state="upload">
+      <div class="step-content">
+        <div class="upload-summary">
+          <h3>Ready to Upload</h3>
+          <p>You are about to upload {{ uploadItems().length }} files</p>
+
+          <div class="upload-status" *ngIf="isUploading() || isComplete()">
+            <h4>Upload Progress</h4>
+            
+            <div class="progress-summary" *ngIf="isComplete()">
+              <div class="summary-item success">
+                <mat-icon>check_circle</mat-icon>
+                <span>{{ successes() }} Successful</span>
+              </div>
+              <div class="summary-item error" *ngIf="errors() > 0">
+                <mat-icon>error</mat-icon>
+                <span>{{ errors() }} Failed</span>
+              </div>
+            </div>
+
+            <div class="file-progress-list">
+              <div *ngFor="let item of uploadItems()" class="file-progress-item">
+                <div class="file-info">
+                  <mat-icon>{{ getFileIcon(item.fileType) }}</mat-icon>
+                  <span class="file-name">{{ item.fileName }}</span>
+                </div>
+                
+                <div class="progress-indicator">
+                  <mat-progress-bar 
+                    [mode]="item.status === 'pending' ? 'determinate' : 'determinate'" 
+                    [value]="item.progress"
+                    [color]="item.status === 'error' ? 'warn' : 'primary'">
+                  </mat-progress-bar>
+                  
+                  <div class="status-icon">
+                    <mat-icon *ngIf="item.status === 'success'" class="success-icon">check_circle</mat-icon>
+                    <mat-icon *ngIf="item.status === 'error'" class="error-icon" 
+                              [matTooltip]="item.errorMessage">error</mat-icon>
+                    <span *ngIf="item.status === 'uploading'">{{ item.progress.toFixed(0) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious [disabled]="isUploading()">Back</button>
+          <button mat-raised-button color="primary" (click)="uploadFiles()" 
+                  [disabled]="isUploading() || isComplete()">
+            <mat-icon>cloud_upload</mat-icon>
+            Start Upload
+          </button>
+          <button mat-raised-button color="accent" routerLink="/content-management" *ngIf="isComplete()">
+            <mat-icon>done</mat-icon>
+            Finish
+          </button>
+          <button mat-button color="warn" (click)="resetUpload()" 
+                  [disabled]="isUploading()" *ngIf="isComplete()">
+            Upload More Files
+          </button>
+        </div>
+      </div>
+    </mat-step>
+  </mat-stepper>
+</div> 

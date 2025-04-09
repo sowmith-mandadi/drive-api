@@ -9,8 +9,8 @@
         <p>A comprehensive knowledge management tool for conference content with AI-powered features.</p>
       </mat-card-content>
       <mat-card-actions>
-        <button mat-raised-button color="primary">Get Started</button>
-        <button mat-button>Learn More</button>
+        <button mat-raised-button color="primary" routerLink="/search">Search Content</button>
+        <button mat-button routerLink="/content-management">Manage Content</button>
       </mat-card-actions>
     </mat-card>
   </section>
@@ -48,5 +48,58 @@
         </mat-card-content>
       </mat-card>
     </div>
+  </section>
+
+  <!-- Recent Content Section -->
+  <section class="content-section">
+    <h2>Recent Content</h2>
+    <div class="content-cards">
+      <mat-card *ngFor="let content of recentContent()" class="content-card">
+        <mat-card-header>
+          <mat-card-title>{{ content.title }}</mat-card-title>
+          <mat-card-subtitle>{{ content.date | date:'mediumDate' }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ content.description }}</p>
+          <div class="content-meta">
+            <mat-chip-set>
+              <mat-chip>{{ content.track }}</mat-chip>
+              <mat-chip>{{ content.type }}</mat-chip>
+            </mat-chip-set>
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button [routerLink]="['/content', content.id]">View Details</button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </section>
+
+  <!-- Content by Track Section -->
+  <section class="tracks-section">
+    <h2>Explore by Track</h2>
+    <mat-tab-group>
+      <mat-tab *ngFor="let track of tracks()" [label]="track">
+        <div class="track-content">
+          <mat-card *ngFor="let content of contentByTrack()[track]" class="content-card">
+            <mat-card-header>
+              <mat-card-title>{{ content.title }}</mat-card-title>
+              <mat-card-subtitle>{{ content.date | date:'mediumDate' }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p>{{ content.description }}</p>
+              <div class="content-meta">
+                <mat-chip-set>
+                  <mat-chip>{{ content.type }}</mat-chip>
+                </mat-chip-set>
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-button [routerLink]="['/content', content.id]">View Details</button>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   </section>
 </div>

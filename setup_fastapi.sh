@@ -8,25 +8,24 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # Create virtual environment if it doesn't exist
-if [ ! -d "backend/fast_venv" ]; then
+if [ ! -d "backend/venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv backend/fast_venv
+    python3 -m venv backend/venv
 fi
 
 # Activate virtual environment
-source backend/fast_venv/bin/activate
+source backend/venv/bin/activate
 
 # Install requirements
 echo "Installing FastAPI dependencies..."
 pip install fastapi uvicorn starlette
 
 # Install additional dependencies from requirements.txt
-if [ -f "backend/fast_backend/requirements.txt" ]; then
+if [ -f "backend/requirements.txt" ]; then
     echo "Installing additional dependencies from requirements.txt..."
-    pip install -r backend/fast_backend/requirements.txt
+    pip install -r backend/requirements.txt
 fi
 
 echo "FastAPI setup complete!"
-echo "To run the FastAPI server, use: python run_api.py"
-echo "For the full server version, use: python run_api.py --type server"
+echo "To run the FastAPI server, use: cd backend && python main.py"
 echo "API documentation will be available at: http://localhost:8000/docs" 

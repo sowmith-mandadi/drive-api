@@ -1,15 +1,68 @@
 <div class="app-container">
   <header class="app-header">
     <mat-toolbar color="primary">
-      <button mat-icon-button aria-label="Menu button">
+      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu button">
         <mat-icon>menu</mat-icon>
       </button>
-      <span>Conference CMS</span>
+      <span class="app-title" routerLink="/">Conference CMS</span>
+      
       <span class="header-spacer"></span>
+      
+      <div class="nav-links">
+        <a mat-button routerLink="/">
+          <mat-icon>home</mat-icon>
+          Home
+        </a>
+        <a mat-button routerLink="/search">
+          <mat-icon>search</mat-icon>
+          Search
+        </a>
+        <a mat-button routerLink="/content-library">
+          <mat-icon>library_books</mat-icon>
+          Library
+        </a>
+        <a mat-button routerLink="/content-management">
+          <mat-icon>dashboard</mat-icon>
+          Management
+        </a>
+      </div>
+
       <button mat-icon-button aria-label="User account">
         <mat-icon>account_circle</mat-icon>
       </button>
     </mat-toolbar>
+
+    <mat-menu #menu="matMenu">
+      <a mat-menu-item routerLink="/">
+        <mat-icon>home</mat-icon>
+        <span>Home</span>
+      </a>
+      <a mat-menu-item routerLink="/search">
+        <mat-icon>search</mat-icon>
+        <span>Search</span>
+      </a>
+      <a mat-menu-item routerLink="/content-library">
+        <mat-icon>library_books</mat-icon>
+        <span>Content Library</span>
+      </a>
+      <a mat-menu-item routerLink="/content-management">
+        <mat-icon>dashboard</mat-icon>
+        <span>Content Management</span>
+      </a>
+      <mat-divider></mat-divider>
+      <a mat-menu-item routerLink="/content-management/conferences">
+        <mat-icon>event</mat-icon>
+        <span>Conferences</span>
+      </a>
+      <a mat-menu-item routerLink="/content-management/upload">
+        <mat-icon>upload_file</mat-icon>
+        <span>Upload Content</span>
+      </a>
+      <a mat-menu-item routerLink="/content-management/bulk-upload">
+        <mat-icon>drive_folder_upload</mat-icon>
+        <span>Bulk Upload</span>
+      </a>
+    </mat-menu>
   </header>
 
   <main class="app-content">
@@ -18,7 +71,7 @@
 
   <footer class="app-footer">
     <div class="footer-content">
-      <p>&copy; 2024 Conference CMS</p>
+      <p>&copy; 2025 Conference CMS | Powered by Angular 19</p>
     </div>
   </footer>
 </div>

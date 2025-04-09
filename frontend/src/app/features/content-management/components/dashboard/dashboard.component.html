@@ -1,0 +1,225 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Content Management Dashboard</h1>
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" routerLink="/content-management/upload">
+        <mat-icon>upload_file</mat-icon>
+        Single Upload
+      </button>
+      <button mat-raised-button color="accent" routerLink="/content-management/bulk-upload">
+        <mat-icon>drive_folder_upload</mat-icon>
+        Bulk Upload
+      </button>
+    </div>
+  </div>
+
+  <mat-tab-group animationDuration="0ms">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon matBadge="{{ pendingReview().length }}" [matBadgeHidden]="pendingReview().length === 0" matBadgeColor="warn">rate_review</mat-icon>
+        Pending Review
+      </ng-template>
+      
+      <div class="content-list" *ngIf="pendingReview().length > 0">
+        <mat-card *ngFor="let item of pendingReview()" class="content-item">
+          <div class="card-highlight" [ngClass]="getHighlightClass(item.track)"></div>
+          <mat-card-header>
+            <mat-card-title>{{ item.title }}</mat-card-title>
+            <mat-card-subtitle>
+              <span class="author">By {{ item.author }}</span>
+              <span class="date">Last modified: {{ item.dateModified | date:'mediumDate' }}</span>
+            </mat-card-subtitle>
+            <div class="status-badge" [ngClass]="getStatusClass(item.status)">
+              {{ getStatusText(item.status) }}
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ item.description }}</p>
+            <div class="content-meta">
+              <mat-chip-set>
+                <mat-chip>{{ item.track }}</mat-chip>
+                <mat-chip>{{ item.type }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button color="primary" [routerLink]="['/content-management/review', item.id]">
+              <mat-icon>visibility</mat-icon>
+              Review
+            </button>
+            <button mat-button color="accent" [routerLink]="['/content-management/edit', item.id]">
+              <mat-icon>edit</mat-icon>
+              Edit
+            </button>
+            <button mat-button color="warn">
+              <mat-icon>delete</mat-icon>
+              Delete
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      
+      <div class="empty-state" *ngIf="pendingReview().length === 0">
+        <mat-icon>check_circle</mat-icon>
+        <h3>No content pending review</h3>
+        <p>All content has been reviewed. Great job!</p>
+      </div>
+    </mat-tab>
+    
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon matBadge="{{ drafts().length }}" [matBadgeHidden]="drafts().length === 0" matBadgeColor="accent">edit_note</mat-icon>
+        Drafts
+      </ng-template>
+      
+      <div class="content-list" *ngIf="drafts().length > 0">
+        <mat-card *ngFor="let item of drafts()" class="content-item">
+          <div class="card-highlight" [ngClass]="getHighlightClass(item.track)"></div>
+          <mat-card-header>
+            <mat-card-title>{{ item.title }}</mat-card-title>
+            <mat-card-subtitle>
+              <span class="author">By {{ item.author }}</span>
+              <span class="date">Last modified: {{ item.dateModified | date:'mediumDate' }}</span>
+            </mat-card-subtitle>
+            <div class="status-badge" [ngClass]="getStatusClass(item.status)">
+              {{ getStatusText(item.status) }}
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ item.description }}</p>
+            <div class="content-meta">
+              <mat-chip-set>
+                <mat-chip>{{ item.track }}</mat-chip>
+                <mat-chip>{{ item.type }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button color="primary" [routerLink]="['/content-management/content', item.id]">
+              <mat-icon>visibility</mat-icon>
+              View
+            </button>
+            <button mat-button color="accent" [routerLink]="['/content-management/edit', item.id]">
+              <mat-icon>edit</mat-icon>
+              Edit
+            </button>
+            <button mat-button color="warn">
+              <mat-icon>delete</mat-icon>
+              Delete
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      
+      <div class="empty-state" *ngIf="drafts().length === 0">
+        <mat-icon>edit_note</mat-icon>
+        <h3>No drafts available</h3>
+        <p>You don't have any drafts at the moment.</p>
+      </div>
+    </mat-tab>
+    
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>public</mat-icon>
+        Published
+      </ng-template>
+      
+      <div class="content-list" *ngIf="published().length > 0">
+        <mat-card *ngFor="let item of published()" class="content-item">
+          <div class="card-highlight" [ngClass]="getHighlightClass(item.track)"></div>
+          <mat-card-header>
+            <mat-card-title>{{ item.title }}</mat-card-title>
+            <mat-card-subtitle>
+              <span class="author">By {{ item.author }}</span>
+              <span class="date">Published: {{ item.dateModified | date:'mediumDate' }}</span>
+            </mat-card-subtitle>
+            <div class="status-badge" [ngClass]="getStatusClass(item.status)">
+              {{ getStatusText(item.status) }}
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ item.description }}</p>
+            <div class="content-meta">
+              <mat-chip-set>
+                <mat-chip>{{ item.track }}</mat-chip>
+                <mat-chip>{{ item.type }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button color="primary" [routerLink]="['/content', item.id]">
+              <mat-icon>visibility</mat-icon>
+              View
+            </button>
+            <button mat-button color="accent" [routerLink]="['/content-management/edit', item.id]">
+              <mat-icon>edit</mat-icon>
+              Edit
+            </button>
+            <button mat-button>
+              <mat-icon>archive</mat-icon>
+              Archive
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      
+      <div class="empty-state" *ngIf="published().length === 0">
+        <mat-icon>info</mat-icon>
+        <h3>No published content</h3>
+        <p>You haven't published any content yet.</p>
+      </div>
+    </mat-tab>
+    
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>archive</mat-icon>
+        Archived
+      </ng-template>
+      
+      <div class="content-list" *ngIf="archived().length > 0">
+        <mat-card *ngFor="let item of archived()" class="content-item">
+          <div class="card-highlight" [ngClass]="getHighlightClass(item.track)"></div>
+          <mat-card-header>
+            <mat-card-title>{{ item.title }}</mat-card-title>
+            <mat-card-subtitle>
+              <span class="author">By {{ item.author }}</span>
+              <span class="date">Archived: {{ item.dateModified | date:'mediumDate' }}</span>
+            </mat-card-subtitle>
+            <div class="status-badge" [ngClass]="getStatusClass(item.status)">
+              {{ getStatusText(item.status) }}
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ item.description }}</p>
+            <div class="content-meta">
+              <mat-chip-set>
+                <mat-chip>{{ item.track }}</mat-chip>
+                <mat-chip>{{ item.type }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button color="primary" [routerLink]="['/content', item.id]">
+              <mat-icon>visibility</mat-icon>
+              View
+            </button>
+            <button mat-button color="accent">
+              <mat-icon>restore</mat-icon>
+              Restore
+            </button>
+            <button mat-button color="warn">
+              <mat-icon>delete_forever</mat-icon>
+              Delete
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+      
+      <div class="empty-state" *ngIf="archived().length === 0">
+        <mat-icon>inventory_2</mat-icon>
+        <h3>No archived content</h3>
+        <p>You don't have any archived content at the moment.</p>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div> 

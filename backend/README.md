@@ -1,107 +1,214 @@
-# Conference Content Management API
+# Conference CMS FastAPI Backend
 
-A Flask-based API for conference content management with RAG capabilities using Google Vertex AI.
-
-## Project Structure
-
-```
-drive-api/
-├── app/                    # Main application code
-│   ├── api/                # API routes and blueprints
-│   │   ├── content_routes.py
-│   │   ├── health_routes.py
-│   │   └── rag_routes.py
-│   ├── extractors/         # Document text extractors
-│   ├── models/             # Data models
-│   ├── repository/         # Data access layer
-│   │   ├── firestore_repo.py
-│   │   ├── storage_repo.py
-│   │   └── vector_repo.py
-│   ├── services/           # Business logic layer
-│   │   ├── ai_service.py
-│   │   ├── content_service.py
-│   │   ├── embedding_service.py
-│   │   └── rag_service.py
-│   └── utils/              # Utility functions
-├── config/                 # Configuration
-│   ├── environments/       # Environment-specific configurations
-│   └── settings.py
-├── scripts/                # Utility scripts
-│   └── test_api.py
-├── tests/                  # Test suite
-├── run.py                  # Development entry point
-└── wsgi.py                 # Production entry point
-```
+This is the FastAPI implementation of the Conference Content Management System API. It provides endpoints for managing conference materials with Google Drive integration and RAG capabilities.
 
 ## Features
 
-- Content upload and management
-- RAG (Retrieval-Augmented Generation) for answering questions about content
-- Document processing and embedding
-- Vector search for finding similar content
-- AI-generated summaries and tags
+- Google Drive integration for importing files
+- Document text extraction with page/slide tracking
+- RAG capabilities using Vertex AI
+- Vector search for similarity matching
+- Content management and tagging
+- Google OAuth authentication
+- Firestore database integration
 
-## Requirements
+## Getting Started
 
-See `requirements.txt` in the root directory for all dependencies.
+### Prerequisites
 
-## Setup
+- Python 3.9+
+- Google Cloud account with Drive API enabled
+- Google OAuth credentials
+- Docker and Docker Compose (optional, for local development with Firestore emulator)
 
-1. Ensure you have Python 3.9+ installed
-2. Install dependencies:
+### Installation
+
+1. Clone the repository
+2. Navigate to the FastAPI backend directory:
+   ```bash
+   cd backend/fastapi_backend
    ```
-   pip install -r ../requirements.txt
+3. Run the setup script:
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
    ```
-3. Set up the necessary environment variables (see .env.example in the root directory)
-4. Place your Google Cloud `credentials.json` file in the root directory
+4. Update the `.env` file with your credentials and settings
 
-## Running the API
+### Configuration
 
-### Development
+Create a `.env` file with the following settings:
 
-Run the API with hot reloading for development:
+```
+# API Settings
+PORT=8000
 
-```bash
-cd drive-api
-python run.py
+# Google API Settings
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/callback
+
+# Frontend URL
+FRONTEND_URL=http://localhost:4200
+
+# Firestore Settings
+FIRESTORE_PROJECT_ID=conference-cms
+FIRESTORE_EMULATOR_HOST=localhost:8080
+
+# Session Settings
+SESSION_SECRET_KEY=your-secret-key
+
+# RAG Settings
+VERTEX_AI_PROJECT=your-project-id
+VERTEX_AI_LOCATION=us-central1
+VERTEX_MODEL_ID=text-bison
 ```
 
-The API will be available at http://localhost:3000 by default.
+### Running the API
 
-### Production
+#### Local Development
 
-For production deployment, use Gunicorn with the WSGI entry point:
+1. Activate the virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+2. Start the development server:
+   ```bash
+   uvicorn main:app --reload
+   ```
+3. The API will be available at http://localhost:8000
+4. Access the interactive documentation at http://localhost:8000/docs
+
+#### Using Docker Compose (with Firestore Emulator)
 
 ```bash
-cd drive-api
-gunicorn --bind 0.0.0.0:$PORT wsgi:app
+docker-compose up
 ```
 
-## Testing
+This will start both the FastAPI application and a Firestore emulator for local development.
 
-Run the API test script to validate all endpoints:
+### Authentication
 
-```bash
-cd drive-api
-python scripts/test_api.py
-```
+The API uses Google OAuth for authentication. Follow these steps to authenticate:
+
+1. Visit `/api/auth/login` in your browser
+2. You will be redirected to Google's consent screen
+3. After authentication, you will be redirected back to the application
+4. Check authentication status at `/api/auth/status`
 
 ## API Documentation
 
-### Health Check
+The API provides the following endpoints:
 
-- `GET /health` - Check API health
+### Authentication
 
-### Content Endpoints
+- `GET /api/auth/login`: Initiate OAuth login flow
+- `GET /api/auth/callback`: Handle OAuth callback
+- `GET /api/auth/logout`: Log out
+- `GET /api/auth/status`: Check authentication status
 
-- `GET /recent-content` - Get recent content with pagination
-- `POST /content-by-ids` - Get content items by IDs
-- `GET /popular-tags` - Get most popular tags
-- `POST /upload` - Upload new content with files
+### Drive Integration
 
-### RAG Endpoints
+- `GET /api/drive/files`: List files from Google Drive
+- `GET /api/drive/files/{file_id}`: Get metadata for a specific Drive file
+- `POST /api/drive/import`: Import files from Google Drive
 
-- `POST /rag/ask` - Ask a question using RAG
-- `POST /rag/summarize` - Generate an AI summary for content
-- `POST /rag/generate-tags` - Generate AI tags for content
-- `POST /rag/similar` - Find similar content items 
+### Content Management
+
+- `GET /api/content/`: List all content with pagination
+- `GET /api/content/{content_id}`: Get content by ID
+- `POST /api/content/`: Create new content with optional file upload
+- `PUT /api/content/{content_id}`: Update existing content
+- `DELETE /api/content/{content_id}`: Delete content
+- `POST /api/content/search`: Search for content
+
+### RAG Capabilities
+
+- `POST /api/rag/ask`: Ask a question about content
+- `POST /api/rag/{content_id}/summarize`: Generate a summary of content
+- `POST /api/rag/{content_id}/tags`: Generate tags for content
+- `GET /api/rag/{content_id}/similar`: Find similar content
+
+## Development
+
+### Project Structure
+
+```
+backend/fastapi_backend/
+├── app/
+│   ├── api/
+│   │   └── endpoints/
+│   │       ├── auth.py         # Authentication endpoints
+│   │       ├── content.py      # Content management endpoints
+│   │       ├── drive.py        # Drive integration endpoints
+│   │       └── rag.py          # RAG endpoints
+│   ├── core/
+│   │   ├── auth.py             # Authentication utilities
+│   │   └── config.py           # Application settings
+│   ├── db/
+│   │   └── firestore_client.py # Firestore client
+│   ├── models/
+│   │   └── content.py          # Pydantic models
+│   ├── repositories/
+│   │   └── content_repository.py # Data access layer
+│   ├── services/
+│   │   ├── content_service.py  # Content service
+│   │   ├── drive_service.py    # Drive integration service
+│   │   ├── extraction_service.py # Text extraction service
+│   │   └── rag_service.py      # RAG service
+│   └── utils/                  # Utility functions
+├── tests/                      # Unit and integration tests
+├── .env                        # Environment variables
+├── docker-compose.yml          # Docker Compose configuration
+├── Dockerfile                  # Docker configuration
+├── main.py                     # Application entry point
+├── requirements.txt            # Dependencies
+└── setup.sh                    # Setup script
+```
+
+### Testing
+
+Run tests with pytest:
+
+```bash
+pytest
+```
+
+## Deployment
+
+### Google Cloud Run
+
+1. Build the Docker image:
+   ```bash
+   gcloud builds submit --tag gcr.io/your-project-id/conference-cms-api
+   ```
+
+2. Deploy to Cloud Run:
+   ```bash
+   gcloud run deploy conference-cms-api \
+     --image gcr.io/your-project-id/conference-cms-api \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated
+   ```
+
+### Environment Variables for Production
+
+Make sure to set these environment variables in your production environment:
+
+- `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
+- `GOOGLE_REDIRECT_URI`: OAuth callback URL
+- `FRONTEND_URL`: URL of your frontend application
+- `FIRESTORE_PROJECT_ID`: GCP project ID for Firestore
+- `SESSION_SECRET_KEY`: Secret key for session encryption
+- `VERTEX_AI_PROJECT`: GCP project ID for Vertex AI
+- `VERTEX_AI_LOCATION`: Region for Vertex AI
+- `VERTEX_MODEL_ID`: Model ID for RAG
+
+## Contributing
+
+1. Create a feature branch from main
+2. Make your changes
+3. Write tests for your changes
+4. Submit a pull request 

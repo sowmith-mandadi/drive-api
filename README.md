@@ -1,6 +1,6 @@
 # Conference Content Management API with Google Drive Integration
 
-This application provides content management for conference materials with advanced Retrieval-Augmented Generation (RAG) capabilities using Google Vertex AI. It consists of a Flask backend API and an Angular frontend, with seamless Google Drive integration for importing and managing conference content.
+This application provides content management for conference materials with advanced Retrieval-Augmented Generation (RAG) capabilities using Google Vertex AI. It consists of a FastAPI backend API and an Angular frontend, with seamless Google Drive integration for importing and managing conference content.
 
 ## Features
 
@@ -18,17 +18,21 @@ This application provides content management for conference materials with advan
 
 ```
 /
-├── backend/              # Flask backend API
+├── backend/              # FastAPI backend API
 │   ├── app/              # Main application
 │   │   ├── api/          # API routes and controllers
-│   │   ├── drive/        # Google Drive integration modules
-│   │   ├── extractors/   # Document extraction modules (PDF, PPTX)
+│   │   ├── core/         # Core configuration and utilities
+│   │   ├── db/           # Database clients
 │   │   ├── models/       # Data models
-│   │   ├── repository/   # Data access layer
-│   │   └── services/     # Business logic services
-│   ├── config/           # Configuration files
-│   ├── scripts/          # Utility scripts
-│   └── tests/            # Test suite
+│   │   ├── repositories/ # Data access layer
+│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── services/     # Business logic services
+│   │   └── utils/        # Utility functions
+│   ├── tests/            # Test suite
+│   ├── Dockerfile        # Docker configuration
+│   ├── docker-compose.yml # Docker Compose configuration
+│   ├── main.py           # Application entry point
+│   └── requirements.txt  # Python dependencies
 ├── frontend/             # Angular frontend
 │   ├── src/              # Angular source code
 │   │   ├── app/          # Application components
@@ -40,16 +44,14 @@ This application provides content management for conference materials with advan
 │   └── package.json      # NPM dependencies
 ├── .env                  # Environment variables (not in repo)
 ├── credentials.json      # GCP credentials (not in repo)
-├── run.py                # Application entry point
-├── wsgi.py               # WSGI entry point for production
-└── requirements.txt      # Python dependencies
+└── setup.sh              # Setup script for the FastAPI backend
 ```
 
 ## Setup
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - Node.js and npm for frontend
 - Google Cloud Platform account with the following services enabled:
   - Vertex AI API
@@ -66,31 +68,43 @@ This application provides content management for conference materials with advan
    cd conference-cms
    ```
 
-2. Create a virtual environment and install dependencies:
+2. Run the setup script to create a virtual environment and install dependencies:
    ```
-   python -m venv env
-   source env/bin/activate  # On Windows: env\Scripts\activate
-   pip install -r requirements.txt
+   chmod +x setup.sh
+   ./setup.sh
    ```
 
 3. Create a `credentials.json` file with your GCP service account key
 
-4. Create a `.env` file with the following variables:
+4. Create a `.env` file in the backend directory with the following variables:
    ```
-   GCP_PROJECT_ID=your-project-id
-   GCP_LOCATION=us-central1
-   GCS_BUCKET_NAME=your-bucket-name
-   VERTEX_RAG_MODEL=gemini-1.5-pro
-   VECTOR_INDEX_ENDPOINT=your-vector-index-endpoint-id  # Optional
-   VECTOR_INDEX_ID=your-vector-index-id  # Optional
-   ```
+   # API Settings
+   PORT=8000
 
-5. For Google Drive integration, create OAuth credentials:
-   ```
-   # Add the following to your .env file or set as environment variables
-   GOOGLE_OAUTH_CLIENT_ID=your-oauth-client-id
-   GOOGLE_OAUTH_CLIENT_SECRET=your-oauth-client-secret
-   GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/drive/auth/callback
+   # Google API Settings
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/callback
+
+   # Frontend URL
+   FRONTEND_URL=http://localhost:4200
+
+   # Firestore Settings
+   FIRESTORE_PROJECT_ID=your-project-id
+   FIRESTORE_EMULATOR_HOST=localhost:8080  # For local development
+
+   # Session Settings
+   SESSION_SECRET_KEY=your-secret-key
+
+   # RAG Settings
+   VERTEX_AI_PROJECT=your-project-id
+   VERTEX_AI_LOCATION=us-central1
+   VERTEX_RAG_MODEL=gemini-1.5-pro
+   TEXT_EMBEDDING_MODEL=textembedding-gecko@latest
+
+   # Vector Search Settings
+   VECTOR_INDEX_ENDPOINT=your-vector-index-endpoint-id
+   VECTOR_INDEX_ID=your-vector-index-id
    ```
 
 ### Frontend Installation
@@ -115,13 +129,7 @@ To enable Google Drive integration:
    - `https://www.googleapis.com/auth/drive.readonly`
    - `https://www.googleapis.com/auth/drive.metadata.readonly`
 4. Configure your OAuth consent screen with appropriate information
-5. Add your authentication credentials to the `.env` file:
-   ```
-   # Google Drive OAuth Configuration
-   GOOGLE_OAUTH_CLIENT_ID=your-oauth-client-id
-   GOOGLE_OAUTH_CLIENT_SECRET=your-oauth-client-secret
-   GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/drive/auth/callback
-   ```
+5. Add your authentication credentials to the `.env` file
 
 ### Vector Search Setup (Optional)
 
@@ -158,41 +166,27 @@ For enhanced similarity search capabilities, set up a Vector Search Index in Goo
 
 ### Starting the Backend API
 
-You can run the API server in two ways:
-
-#### 1. Traditional Flask Backend
-
-Start the API server:
+Navigate to the backend directory and start the FastAPI server:
 
 ```
-python run.py
+cd backend
+python main.py
 ```
 
-The backend will run on http://localhost:3001
-
-For production deployment, use Gunicorn:
-
-```
-gunicorn -w 4 -b 0.0.0.0:3001 wsgi:app
-```
-
-#### 2. FastAPI Backend (Latest Version)
-
-Run the FastAPI version of the backend:
-
-```
-python run_api.py
-```
-
-By default, this will run the minimal API server. To run the full FastAPI server:
-
-```
-python run_api.py --type server
-```
-
-The FastAPI backend will run on http://localhost:8000
+The backend will run on http://localhost:8000
 
 API documentation is available at http://localhost:8000/docs
+
+### Using Docker Compose (with Firestore Emulator)
+
+For local development with a Firestore emulator:
+
+```
+cd backend
+docker-compose up
+```
+
+This will start both the FastAPI application and a Firestore emulator.
 
 ### Starting the Frontend
 
@@ -206,29 +200,38 @@ The frontend will run on http://localhost:4200 (or another port if 4200 is occup
 
 ## API Endpoints
 
+### Authentication
+
+- `GET /api/auth/login`: Initiate OAuth login flow
+- `GET /api/auth/callback`: Handle OAuth callback
+- `GET /api/auth/logout`: Log out
+- `GET /api/auth/status`: Check authentication status
+
 ### Content Management
 
-- `POST /api/upload`: Upload conference content with metadata
-- `POST /api/content-by-ids`: Get multiple content items by their IDs
-- `GET /api/popular-tags`: Get most popular tags
-- `GET /api/recent-content`: Get recent content with pagination
-- `POST /api/search`: Search for content with filters
+- `GET /api/content/`: List all content with pagination
+- `GET /api/content/{content_id}`: Get content by ID
+- `POST /api/content/`: Create new content with optional file upload
+- `PUT /api/content/{content_id}`: Update existing content
+- `DELETE /api/content/{content_id}`: Delete content
+- `POST /api/content/search`: Search for content
+- `GET /api/content/recent`: Get recent content with pagination
+- `GET /api/content/popular-tags`: Get most popular tags
+- `POST /api/content/by-ids`: Get multiple content items by their IDs
 
-### RAG Features
+### Drive Integration
 
-- `POST /api/rag/ask`: Ask a question using RAG
-- `POST /api/rag/summarize`: Summarize a document using Vertex AI
-- `POST /api/rag/generate-tags`: Generate tags for a document using Vertex AI
-- `POST /api/rag/similar`: Find similar documents based on a query or content ID
+- `GET /api/drive/files`: List files from Google Drive
+- `GET /api/drive/files/{file_id}`: Get metadata for a specific Drive file
+- `POST /api/drive/import`: Import files from Google Drive
+- `GET /api/drive/folders`: List folders from Google Drive
 
-### Google Drive Integration
+### RAG Capabilities
 
-- `GET /api/drive/auth`: Start OAuth flow for Google Drive access
-- `GET /api/drive/auth/callback`: OAuth callback endpoint
-- `GET /api/drive/files`: List files from authenticated user's Google Drive
-- `GET /api/drive/files/<file_id>`: Get metadata for a Google Drive file
-- `POST /api/drive/import`: Import files from Google Drive into the system
-- `GET /api/drive/folders`: List folders from authenticated user's Google Drive
+- `POST /api/rag/ask`: Ask a question about content
+- `POST /api/rag/{content_id}/summarize`: Generate a summary of content
+- `POST /api/rag/{content_id}/tags`: Generate tags for content
+- `GET /api/rag/{content_id}/similar`: Find similar content
 
 ### System Health
 
@@ -250,6 +253,25 @@ The application can run in development mode without a complete GCP setup. In thi
 - In-memory storage is used instead of Firestore and Cloud Storage
 - Mock responses are provided for AI-related features
 - All functionality can be tested without cloud dependencies
+
+## Deployment
+
+### Google Cloud Run
+
+1. Build the Docker image:
+   ```
+   cd backend
+   gcloud builds submit --tag gcr.io/your-project-id/conference-cms-api
+   ```
+
+2. Deploy to Cloud Run:
+   ```
+   gcloud run deploy conference-cms-api \
+     --image gcr.io/your-project-id/conference-cms-api \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated
+   ```
 
 ## License
 
