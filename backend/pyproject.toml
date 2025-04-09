@@ -41,3 +41,43 @@ strict_optional = true
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+markers = [
+    "unit: unit tests",
+    "integration: integration tests",
+    "e2e: end-to-end tests",
+    "performance: performance tests"
+]
+addopts = [
+    "--verbose",
+    "--strict-markers",
+    "--cov=app",
+    "--cov-report=term",
+    "--cov-report=html:coverage_reports/html",
+    "--cov-report=xml:coverage_reports/coverage.xml"
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+    "*/migrations/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError"
+]
+show_missing = true
+fail_under = 75
