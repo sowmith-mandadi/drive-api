@@ -3,19 +3,19 @@ Logging configuration for the application.
 """
 import logging
 import sys
-from typing import Any, Dict, Optional
 
 import structlog
-from structlog.types import Processor
 from structlog.processors import CallsiteParameter
+from structlog.types import Processor
+
 
 def configure_logging(log_level: str = "INFO") -> structlog.BoundLogger:
     """
     Configure structured logging for the application.
-    
+
     Args:
         log_level (str): Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        
+
     Returns:
         structlog.BoundLogger: Configured logger instance
     """
@@ -41,7 +41,7 @@ def configure_logging(log_level: str = "INFO") -> structlog.BoundLogger:
             parameters={
                 CallsiteParameter.FILENAME,
                 CallsiteParameter.LINENO,
-                CallsiteParameter.FUNC_NAME
+                CallsiteParameter.FUNC_NAME,
             }
         ),
         # Format exception
@@ -60,4 +60,4 @@ def configure_logging(log_level: str = "INFO") -> structlog.BoundLogger:
     )
 
     # Create and return logger
-    return structlog.get_logger("app") 
+    return structlog.get_logger("app")

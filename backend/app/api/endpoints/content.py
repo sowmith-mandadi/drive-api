@@ -124,10 +124,11 @@ async def delete_content(content_id: str):
 @router.post("/search", response_model=List[Content])
 async def search_content(
     query: Optional[str] = None,
-    filters: Dict[str, Any] = Body({})
+    filters: Optional[Dict[str, Any]] = Body({})
 ):
     """Search for content with optional filters."""
-    results = content_service.search_content(query, filters)
+    # Convert None to empty string for the service layer
+    results = content_service.search_content(query or "", filters)
     return results
 
 @router.post("/content-by-ids", response_model=List[Content])

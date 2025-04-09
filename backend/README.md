@@ -247,4 +247,4 @@ Make sure to set these environment variables in your production environment:
 1. Create a feature branch from main
 2. Make your changes
 3. Write tests for your changes
-4. Submit a pull request 
+4. Submit a pull request

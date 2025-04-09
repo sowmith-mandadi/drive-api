@@ -56,4 +56,4 @@ fi
 mkdir -p uploads
 
 echo "FastAPI backend setup complete!"
-echo "To run the application, use: uvicorn main:app --reload" 
+echo "To run the application, use: uvicorn main:app --reload"
