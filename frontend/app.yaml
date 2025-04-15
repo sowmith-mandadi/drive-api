@@ -1,0 +1,14 @@
+runtime: nodejs18
+service: frontend
+
+handlers:
+- url: /
+  static_files: dist/frontend/browser/index.html
+  upload: dist/frontend/browser/index.html
+
+- url: /(.*)
+  static_files: dist/frontend/browser/\1
+  upload: dist/frontend/browser/(.*)
+
+env_variables:
+  NODE_ENV: "production"

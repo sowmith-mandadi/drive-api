@@ -1,0 +1,72 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+coverage_reports/
+test_reports/
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Logs
+*.log
+logs/
+
+# User uploads (keep directory structure)
+uploads/*
+!uploads/.gitkeep
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Google Cloud generated credentials
+*.json.enc
+app-engine-service-account.json
+gcloud-service-key.json
+
+# Docker
+.docker/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup

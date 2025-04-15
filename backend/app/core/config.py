@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")
     VERTEX_AI_PROJECT: Optional[str] = os.getenv("VERTEX_AI_PROJECT")
     VERTEX_MODEL_ID: str = os.getenv("VERTEX_MODEL_ID", "text-bison")
+    VERTEX_RAG_MODEL: Optional[str] = os.getenv("VERTEX_RAG_MODEL")
+    TEXT_EMBEDDING_MODEL: Optional[str] = os.getenv("TEXT_EMBEDDING_MODEL")
+
+    # Google Cloud Settings
+    GOOGLE_CLOUD_PROJECT: Optional[str] = os.getenv("GOOGLE_CLOUD_PROJECT")
+    GCS_BUCKET_NAME: Optional[str] = os.getenv("GCS_BUCKET_NAME")
 
     # Firestore Settings
     FIRESTORE_PROJECT_ID: str = os.getenv("FIRESTORE_PROJECT_ID", "conference-cms")
@@ -53,6 +59,9 @@ class Settings(BaseSettings):
 
     # Session Settings
     SESSION_SECRET_KEY: str = os.getenv("SESSION_SECRET_KEY", "supersecretkey")
+
+    # Flask Settings (for compatibility)
+    FLASK_ENV: Optional[str] = os.getenv("FLASK_ENV")
 
     class Config:
         """Configuration for BaseSettings."""
