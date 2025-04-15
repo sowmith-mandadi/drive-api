@@ -14,10 +14,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { ConferenceContentService } from '../../services/conference-content.service';
-import { 
-  ConferenceSchema, 
-  FieldDefinition, 
-  ContentTypeDefinition 
+import {
+  ConferenceSchema,
+  FieldDefinition,
+  ContentTypeDefinition
 } from '../../models/conference.model';
 
 @Component({
@@ -48,7 +48,7 @@ export class ConferenceSchemaComponent implements OnInit {
   isEditMode = false;
   loading = false;
   error: string | null = null;
-  
+
   fieldTypes = [
     { value: 'text', label: 'Text' },
     { value: 'number', label: 'Number' },
@@ -58,7 +58,7 @@ export class ConferenceSchemaComponent implements OnInit {
     { value: 'multiselect', label: 'Multi Select' },
     { value: 'rich-text', label: 'Rich Text' }
   ];
-  
+
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
@@ -69,10 +69,10 @@ export class ConferenceSchemaComponent implements OnInit {
 
   ngOnInit(): void {
     this.initializeForm();
-    
+
     this.route.paramMap.subscribe(params => {
       this.conferenceId = params.get('conferenceId');
-      
+
       if (this.conferenceId) {
         this.isEditMode = true;
         this.loadExistingSchema();
@@ -92,13 +92,13 @@ export class ConferenceSchemaComponent implements OnInit {
 
   private loadExistingSchema(): void {
     this.loading = true;
-    
+
     if (this.conferenceId === null) {
       this.error = 'Conference ID is required';
       this.loading = false;
       return;
     }
-    
+
     this.contentService.getConferenceSchema(this.conferenceId)
       .subscribe({
         next: (schema) => {
@@ -119,16 +119,16 @@ export class ConferenceSchemaComponent implements OnInit {
       year: schema.year,
       description: schema.description
     });
-    
+
     // Clear existing arrays
     this.fieldsArray.clear();
     this.contentTypesArray.clear();
-    
+
     // Add fields
     schema.fields.forEach(field => {
       this.addField(field);
     });
-    
+
     // Add content types
     schema.contentTypes.forEach(contentType => {
       this.addContentType(contentType);
@@ -141,6 +141,16 @@ export class ConferenceSchemaComponent implements OnInit {
 
   get contentTypesArray(): FormArray {
     return this.schemaForm.get('contentTypes') as FormArray;
+  }
+
+  // Helper method to get field control as FormGroup
+  getFieldAsFormGroup(index: number): FormGroup {
+    return this.fieldsArray.at(index) as FormGroup;
+  }
+
+  // Helper method to get content type control as FormGroup
+  getContentTypeAsFormGroup(index: number): FormGroup {
+    return this.contentTypesArray.at(index) as FormGroup;
   }
 
   createFieldFormGroup(field?: FieldDefinition): FormGroup {
@@ -213,9 +223,9 @@ export class ConferenceSchemaComponent implements OnInit {
     if (this.schemaForm.invalid) {
       return;
     }
-    
+
     this.loading = true;
-    
+
     // Transform form data to schema model
     const formValue = this.schemaForm.value;
     const schema: Partial<ConferenceSchema> = {
@@ -225,12 +235,12 @@ export class ConferenceSchemaComponent implements OnInit {
       fields: this.transformFields(formValue.fields),
       contentTypes: this.transformContentTypes(formValue.contentTypes)
     };
-    
+
     // Handle save or update
     const saveObservable = this.isEditMode && this.conferenceId
       ? this.contentService.updateConferenceSchema(this.conferenceId, schema)
       : this.contentService.createConferenceSchema(schema);
-    
+
     saveObservable.subscribe({
       next: (result) => {
         this.loading = false;
@@ -254,21 +264,21 @@ export class ConferenceSchemaComponent implements OnInit {
         helpText: field.helpText,
         groupName: field.groupName
       };
-      
+
       if (field.defaultValue) {
         transformedField.defaultValue = field.defaultValue;
       }
-      
+
       if (this.displayOptionsField(field.type) && field.options) {
         transformedField.options = field.options
           .split('\n')
           .map((opt: string) => opt.trim())
           .filter((opt: string) => opt);
       }
-      
+
       if (this.displayValidationFields(field.type)) {
         transformedField.validation = {};
-        
+
         if (field.validation.minLength) transformedField.validation.minLength = field.validation.minLength;
         if (field.validation.maxLength) transformedField.validation.maxLength = field.validation.maxLength;
         if (field.validation.min) transformedField.validation.min = field.validation.min;
@@ -276,7 +286,7 @@ export class ConferenceSchemaComponent implements OnInit {
         if (field.validation.pattern) transformedField.validation.pattern = field.validation.pattern;
         if (field.validation.customValidator) transformedField.validation.customValidator = field.validation.customValidator;
       }
-      
+
       return transformedField;
     });
   }
@@ -290,15 +300,15 @@ export class ConferenceSchemaComponent implements OnInit {
         baseFields: contentType.baseFields,
         optionalFields: contentType.optionalFields
       };
-      
+
       if (contentType.description) {
         transformedContentType.description = contentType.description;
       }
-      
+
       if (contentType.inheritsFrom) {
         transformedContentType.inheritsFrom = contentType.inheritsFrom;
       }
-      
+
       return transformedContentType;
     });
   }
@@ -319,4 +329,4 @@ export class ConferenceSchemaComponent implements OnInit {
   private generateUniqueId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   }
-} 
+}

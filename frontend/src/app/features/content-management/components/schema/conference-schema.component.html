@@ -67,7 +67,7 @@
           (cdkDropListDropped)="onFieldDrop($event)">
 
           <div *ngFor="let fieldControl of fieldsArray.controls; let i = index" cdkDrag class="field-item">
-            <div class="field-item-content" [formGroup]="fieldControl">
+            <div class="field-item-content" [formGroup]="getFieldAsFormGroup(i)">
               <div class="drag-handle" cdkDragHandle>
                 <mat-icon>drag_indicator</mat-icon>
               </div>
@@ -211,7 +211,7 @@
           (cdkDropListDropped)="onContentTypeDrop($event)">
 
           <div *ngFor="let contentTypeControl of contentTypesArray.controls; let i = index" cdkDrag class="content-type-item">
-            <div class="content-type-item-content" [formGroup]="contentTypeControl">
+            <div class="content-type-item-content" [formGroup]="getContentTypeAsFormGroup(i)">
               <div class="drag-handle" cdkDragHandle>
                 <mat-icon>drag_indicator</mat-icon>
               </div>
