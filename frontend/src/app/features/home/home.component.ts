@@ -143,7 +143,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopLatestAutoplay();
-    
+
     // Clean up all subscriptions
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
@@ -161,7 +161,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.loading.latest = false;
       }
     });
-    
+
     // Load recommended content
     const recommendedSub = this.contentService.getRecommendedContent().subscribe({
       next: (data) => {
@@ -174,7 +174,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.loading.recommended = false;
       }
     });
-    
+
     // Store subscriptions for cleanup
     this.subscriptions.push(latestSub, recommendedSub);
   }
@@ -324,7 +324,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         const dateB = new Date(a.dateModified).getTime();
         return dateA - dateB;
       });
-      
+
       this.recommendedContent.sort((a, b) => {
         const dateA = new Date(b.dateModified).getTime();
         const dateB = new Date(a.dateModified).getTime();
@@ -374,9 +374,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   isRecommended(item: Content): boolean {
     // Check if item has recommended flag or tag
     if (item.recommended) return true;
-    return item.tags.some(tag => 
-      tag.toLowerCase() === 'recommended' || 
-      tag.toLowerCase() === 'featured' || 
+    return item.tags.some(tag =>
+      tag.toLowerCase() === 'recommended' ||
+      tag.toLowerCase() === 'featured' ||
       tag.toLowerCase() === 'popular'
     );
   }

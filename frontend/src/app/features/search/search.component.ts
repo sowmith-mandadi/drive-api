@@ -940,7 +940,7 @@ export class SearchComponent {
   hasSearched = signal(false);
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
     private http: HttpClient,
     private router: Router,
     private contentService: ContentService
@@ -1025,19 +1025,19 @@ export class SearchComponent {
 
   getSelectedFilters(): any {
     const filters: any = {};
-    
+
     this.filters.forEach(filter => {
       const selected = filter.options
         .filter(option => option.selected)
         .map(option => option.value);
-      
+
       if (selected.length > 0) {
         // Convert filter name to camelCase for API parameters
         const key = filter.name.toLowerCase().replace(/\s(.)/g, ($1) => $1.toUpperCase()).replace(/\s/g, '');
         filters[key] = selected;
       }
     });
-    
+
     return filters;
   }
 

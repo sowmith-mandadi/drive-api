@@ -12,3 +12,5 @@ handlers:
 
 env_variables:
   NODE_ENV: "production"
+
+instance_class: F1

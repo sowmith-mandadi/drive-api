@@ -604,20 +604,20 @@ html, body {
   .card-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .featured-carousel {
     margin: 20px 24px 40px;
   }
-  
+
   .slide-content {
     flex-direction: column-reverse;
   }
-  
+
   .slide-text, .slide-image {
     width: 100%;
     padding: 16px;
   }
-  
+
   .carousel-slides {
     height: 480px;
   }
@@ -640,15 +640,15 @@ html, body {
   .filter-sidebar {
     width: 280px;
   }
-  
+
   .featured-carousel {
     margin: 20px 16px 40px;
   }
-  
+
   .slide-text h2 {
     font-size: 24px;
   }
-  
+
   .carousel-slides {
     height: 520px;
   }

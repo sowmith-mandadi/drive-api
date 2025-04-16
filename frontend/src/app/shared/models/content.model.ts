@@ -56,7 +56,7 @@ export interface Content {
   jobRole?: string;      // Target audience job role
   areaOfInterest?: string; // Area of interest
   industry?: string;      // Relevant industry
-  
+
   // Metadata
   status: 'draft' | 'review' | 'approved' | 'published' | 'rejected' | 'archived';
   dateCreated: Date | string;
@@ -64,17 +64,17 @@ export interface Content {
   createdBy?: string;    // User ID
   updatedBy?: string;    // User ID
   version?: number;
-  
+
   // UI flags
   priority?: boolean;    // High priority content
   recommended?: boolean; // Recommended to users
   bookmarked?: boolean;  // User has bookmarked (client-side only)
-  
+
   // Related content
   presenters: Presenter[];
   assets?: Asset[];      // Attached files
   comments?: Comment[];  // User comments
-  
+
   // AI-generated content
   aiSummary?: string;    // AI-generated summary
   aiTags?: string[];     // AI-suggested tags
@@ -121,4 +121,4 @@ export interface Filter {
   name: string;
   options: FilterOption[];
   expanded: boolean;
-} 
+}

@@ -92,7 +92,7 @@ export class ContentService {
           const filtered = this.applyFilters(contents, params);
           const sorted = this.applySorting(filtered, params.sort || 'newest');
           const paginated = this.applyPagination(sorted, params.page || 0, params.size || 10);
-          
+
           return {
             items: paginated,
             total: filtered.length,
@@ -112,7 +112,7 @@ export class ContentService {
    */
   private applyFilters(contents: Content[], params: any): Content[] {
     if (!params) return contents;
-    
+
     return contents.filter(item => {
       // Apply text search if query exists
       if (params.query && params.query.trim() !== '') {
@@ -181,17 +181,17 @@ export class ContentService {
           const dateB = new Date(b.dateModified || b.dateCreated).getTime();
           return dateB - dateA;
         });
-      
+
       case 'oldest':
         return items.sort((a, b) => {
           const dateA = new Date(a.dateCreated).getTime();
           const dateB = new Date(b.dateCreated).getTime();
           return dateA - dateB;
         });
-      
+
       case 'title':
         return items.sort((a, b) => a.title.localeCompare(b.title));
-      
+
       case 'relevance':
       default:
         // For relevance, we would normally rely on backend scoring
@@ -210,4 +210,4 @@ export class ContentService {
     const startIndex = page * size;
     return contents.slice(startIndex, startIndex + size);
   }
-} 
+}

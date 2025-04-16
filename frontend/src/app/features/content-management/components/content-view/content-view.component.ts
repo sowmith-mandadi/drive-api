@@ -509,7 +509,7 @@ export class ContentViewComponent implements OnInit {
 
   formatDate(dateString: string | Date): string {
     if (!dateString) return 'N/A';
-    
+
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -520,7 +520,7 @@ export class ContentViewComponent implements OnInit {
 
   getTagClass(tag: string): string {
     const tagLower = tag.toLowerCase();
-    
+
     if (tagLower.includes('ai') || tagLower.includes('ml') || tagLower.includes('machine learning')) {
       return 'ai';
     } else if (tagLower.includes('cloud')) {
@@ -528,7 +528,7 @@ export class ContentViewComponent implements OnInit {
     } else if (tagLower.includes('security')) {
       return 'security';
     }
-    
+
     return '';
   }
 }
