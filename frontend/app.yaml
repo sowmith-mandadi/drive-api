@@ -6,9 +6,9 @@ handlers:
   static_files: dist/frontend/browser/index.html
   upload: dist/frontend/browser/index.html
 
-- url: /(.*\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot))
+- url: /(.*\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot|json))
   static_files: dist/frontend/browser/\1
-  upload: dist/frontend/browser/(.*\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot))
+  upload: dist/frontend/browser/(.*\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot|json))
 
 - url: /(.*)
   static_files: dist/frontend/browser/index.html
