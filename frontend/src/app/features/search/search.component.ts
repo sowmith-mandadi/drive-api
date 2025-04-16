@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
-import { RouterLink, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+interface Asset {
+  type: string;
+  name: string;
+  url: string;
+}
 
 interface ContentItem {
   id: string;
@@ -32,6 +39,7 @@ interface ContentItem {
   dateModified: string;
   dateCreated: string;
   thumbUrl?: string;
+  assets?: Asset[];
 }
 
 interface SearchResult {
@@ -46,7 +54,6 @@ interface SearchResult {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    RouterLink,
     RouterModule,
     MatCardModule,
     MatButtonModule,
@@ -62,7 +69,8 @@ interface SearchResult {
     MatProgressSpinnerModule,
     MatDividerModule,
     MatExpansionModule,
-    MatBadgeModule
+    MatBadgeModule,
+    MatTooltipModule
   ],
   template: `
     <div class="search-container">
@@ -92,23 +100,10 @@ interface SearchResult {
             <button
               mat-button
               type="button"
-              [matBadge]="getActiveFiltersCount()"
-              [matBadgeHidden]="getActiveFiltersCount() === 0"
-              matBadgePosition="after"
-              matBadgeColor="accent"
+              class="filters-toggle"
               (click)="filtersExpanded = !filtersExpanded">
-              <mat-icon>filter_list</mat-icon>
+              <mat-icon>{{ filtersExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               {{ filtersExpanded ? 'Hide Filters' : 'Show Filters' }}
-            </button>
-
-            <button
-              mat-button
-              type="button"
-              color="warn"
-              (click)="resetFilters()"
-              [disabled]="getActiveFiltersCount() === 0">
-              <mat-icon>clear_all</mat-icon>
-              Reset Filters
             </button>
           </div>
 
@@ -171,8 +166,6 @@ interface SearchResult {
         </form>
       </div>
 
-      <mat-divider class="section-divider"></mat-divider>
-
       <div class="loading-spinner" *ngIf="isLoading()">
         <mat-spinner diameter="40"></mat-spinner>
       </div>
@@ -197,29 +190,52 @@ interface SearchResult {
         </div>
 
         <div class="results-grid" *ngIf="resultsTotal() > 0">
-          <mat-card class="result-card" *ngFor="let item of results()">
-            <div class="card-header" [style.background-image]="item.thumbUrl ? 'url(' + item.thumbUrl + ')' : ''">
-              <div class="card-overlay">
-                <mat-chip-set>
-                  <mat-chip *ngFor="let tag of item.tags.slice(0, 2)">{{ tag }}</mat-chip>
-                </mat-chip-set>
-              </div>
-            </div>
+          <mat-card class="result-card" *ngFor="let item of results(); let i = index">
             <mat-card-content>
               <h3 class="card-title">{{ item.title }}</h3>
-              <p class="card-abstract">{{ item.abstract }}</p>
+
+              <div class="card-tags">
+                <mat-chip-set>
+                  <mat-chip *ngFor="let tag of item.tags.slice(0, 3)" color="primary" selected>{{ tag }}</mat-chip>
+                </mat-chip-set>
+              </div>
+
+              <div class="card-abstract">
+                <p>
+                  {{ getAbstractToShow(item, i) }}
+                  <button
+                    *ngIf="shouldShowMoreButton(item, i)"
+                    mat-button
+                    color="primary"
+                    class="show-more-btn"
+                    (click)="toggleShowMore(i)">
+                    {{ expandedAbstracts[i] ? 'Show less' : 'Show more' }}
+                  </button>
+                </p>
+              </div>
+
               <div class="card-meta">
                 <span class="meta-type">{{ item.type }}</span>
                 <span class="meta-track">{{ item.track }}</span>
                 <span class="meta-date">{{ formatDate(item.dateModified) }}</span>
               </div>
+
+              <div class="asset-links" *ngIf="item.assets && item.assets.length > 0">
+                <div class="asset-buttons">
+                  <a
+                    *ngFor="let asset of item.assets"
+                    mat-stroked-button
+                    [href]="asset.url"
+                    target="_blank"
+                    [matTooltip]="asset.name">
+                    <mat-icon>
+                      {{ getAssetIcon(asset.type) }}
+                    </mat-icon>
+                    {{ asset.type }}
+                  </a>
+                </div>
+              </div>
             </mat-card-content>
-            <mat-card-actions>
-              <button mat-button color="primary" [routerLink]="['/content-management/content', item.id]">
-                <mat-icon>visibility</mat-icon>
-                View
-              </button>
-            </mat-card-actions>
           </mat-card>
         </div>
 
@@ -228,7 +244,7 @@ interface SearchResult {
           [length]="resultsTotal()"
           [pageSize]="pageSize"
           [pageIndex]="pageIndex"
-          [pageSizeOptions]="[6, 12, 24, 48]"
+          [pageSizeOptions]="[4, 8, 16, 32]"
           (page)="handlePageEvent($event)"
           aria-label="Select page">
         </mat-paginator>
@@ -236,143 +252,232 @@ interface SearchResult {
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      width: 100%;
+    }
+
     .search-container {
-      @apply max-w-7xl mx-auto p-6;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
     }
 
     .search-header {
-      @apply mb-6;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
 
-      h1 {
-        @apply text-2xl font-semibold text-gray-800 m-0;
-      }
+    .search-header h1 {
+      font-size: 1.75rem;
+      color: #202124;
+      margin: 0;
     }
 
     .search-form-container {
-      @apply bg-white rounded-lg shadow-md p-6 mb-6;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
     }
 
     .search-bar {
-      @apply flex gap-4 items-center;
+      display: flex;
+      align-items: center;
+      max-width: 800px;
+      margin: 0 auto;
+      gap: 0.5rem;
     }
 
     .search-input {
-      @apply flex-1;
+      flex: 1;
+    }
+
+    .search-button {
+      height: 56px;
+      min-width: 100px;
     }
 
     .filter-actions {
-      @apply flex justify-between mt-4;
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .filters-toggle {
+      color: #5f6368;
+      font-size: 0.875rem;
     }
 
     .filters-panel {
-      @apply mt-4 pt-4 border-t border-gray-200;
+      margin-top: 1rem;
+      border-top: 1px solid #dadce0;
+      padding-top: 1rem;
     }
 
     .grid-filters {
-      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
     }
 
     .tag-filters {
-      @apply mt-4;
+      margin-top: 1rem;
     }
 
     .full-width {
-      @apply w-full;
-    }
-
-    .section-divider {
-      @apply my-6;
+      width: 100%;
     }
 
     .results-header {
-      @apply flex justify-between items-center mb-6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
 
-      h2 {
-        @apply text-xl font-medium text-gray-800 m-0;
-      }
+    .results-header h2 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #202124;
+      margin: 0;
     }
 
     .sort-select {
-      @apply w-48;
+      width: 180px;
     }
 
     .no-results {
-      @apply flex flex-col items-center justify-center py-16 text-center text-gray-500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 0;
+      text-align: center;
+      color: #5f6368;
+    }
 
-      mat-icon {
-        @apply text-5xl mb-4;
-      }
+    .no-results mat-icon {
+      font-size: 3rem;
+      height: 3rem;
+      width: 3rem;
+      margin-bottom: 1rem;
+    }
 
-      h3 {
-        @apply text-xl font-medium mb-2;
-      }
+    .no-results h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
     }
 
     .results-grid {
-      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
     }
 
     .result-card {
-      @apply flex flex-col h-full transition-transform duration-300;
-
-      &:hover {
-        transform: translateY(-4px);
-        @apply shadow-lg;
-      }
+      height: 100%;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+      transition: box-shadow 0.2s;
     }
 
-    .card-header {
-      height: 160px;
-      background-color: #673ab7;
-      background-size: cover;
-      background-position: center;
-      position: relative;
-    }
-
-    .card-overlay {
-      @apply absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent;
+    .result-card:hover {
+      box-shadow: 0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
     }
 
     .card-title {
-      @apply text-lg font-medium mb-2 line-clamp-2;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #202124;
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-tags {
+      margin-bottom: 1rem;
     }
 
     .card-abstract {
-      @apply text-sm text-gray-600 mb-3 line-clamp-3;
+      font-size: 0.875rem;
+      color: #5f6368;
+      margin-bottom: 1rem;
+    }
+
+    .card-abstract p {
+      margin: 0;
+    }
+
+    .show-more-btn {
+      padding: 0;
+      min-width: 0;
+      font-weight: 500;
+      height: 24px;
+      line-height: 24px;
     }
 
     .card-meta {
-      @apply flex flex-wrap gap-2 text-xs;
-      margin-top: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
     }
 
     .meta-type, .meta-track, .meta-date {
-      @apply px-2 py-1 rounded-full;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
     }
 
     .meta-type {
-      @apply bg-purple-100 text-purple-800;
+      background-color: #e8f0fe;
+      color: #1a73e8;
     }
 
     .meta-track {
-      @apply bg-blue-100 text-blue-800;
+      background-color: #e6f4ea;
+      color: #137333;
     }
 
     .meta-date {
-      @apply bg-gray-100 text-gray-700;
+      background-color: #f1f3f4;
+      color: #5f6368;
+    }
+
+    .asset-links {
+      margin-top: 1rem;
+    }
+
+    .asset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .asset-buttons a {
+      font-size: 0.75rem;
     }
 
     .loading-spinner {
-      @apply flex justify-center my-16;
+      display: flex;
+      justify-content: center;
+      padding: 3rem 0;
     }
 
     @media (max-width: 768px) {
       .search-bar {
-        @apply flex-col;
+        flex-direction: column;
+      }
 
-        .search-button {
-          @apply w-full;
-        }
+      .search-button {
+        width: 100%;
+      }
+
+      .results-grid {
+        grid-template-columns: 1fr;
       }
     }
   `]
@@ -381,8 +486,12 @@ export class SearchComponent {
   searchForm: FormGroup;
   filtersExpanded = false;
   sortField = 'relevance';
-  pageSize = 12;
+  pageSize = 8;
   pageIndex = 0;
+
+  // For managing abstract expansions
+  expandedAbstracts: { [key: number]: boolean } = {};
+  abstractMaxLength = 80;
 
   // Signals
   isLoading = signal(false);
@@ -404,6 +513,7 @@ export class SearchComponent {
   search(): void {
     this.isLoading.set(true);
     this.hasSearched.set(true);
+    this.expandedAbstracts = {}; // Reset expanded state when new search is performed
 
     // Build search params
     const params = {
@@ -431,6 +541,41 @@ export class SearchComponent {
         this.resultsTotal.set(data.total);
         this.isLoading.set(false);
       });
+  }
+
+  getAbstractToShow(item: ContentItem, index: number): string {
+    if (!item.abstract) return '';
+
+    if (this.expandedAbstracts[index] || item.abstract.length <= this.abstractMaxLength) {
+      return item.abstract;
+    }
+
+    return item.abstract.substring(0, this.abstractMaxLength) + '...';
+  }
+
+  shouldShowMoreButton(item: ContentItem, index: number): boolean {
+    return !!(item.abstract && item.abstract.length > this.abstractMaxLength);
+  }
+
+  toggleShowMore(index: number): void {
+    this.expandedAbstracts[index] = !this.expandedAbstracts[index];
+  }
+
+  getAssetIcon(assetType: string): string {
+    switch(assetType.toLowerCase()) {
+      case 'pdf':
+        return 'picture_as_pdf';
+      case 'slides':
+        return 'slideshow';
+      case 'video':
+        return 'videocam';
+      case 'demo':
+        return 'code';
+      case 'github':
+        return 'code';
+      default:
+        return 'insert_drive_file';
+    }
   }
 
   handlePageEvent(event: PageEvent): void {
@@ -479,73 +624,99 @@ export class SearchComponent {
         id: '1',
         title: 'Infrastructure as Code with Terraform on Google Cloud',
         tags: ['Infrastructure', 'DevOps', 'Terraform'],
-        abstract: 'Learn how to use Terraform to manage your Google Cloud infrastructure efficiently with code.',
+        abstract: 'Learn how to use Terraform to manage your Google Cloud infrastructure efficiently with code. This session will cover best practices, state management, and integration with CI/CD pipelines.',
         type: 'Technical Session',
         track: 'Infrastructure',
         author: 'Sarah Johnson',
         dateCreated: '2023-04-15T10:30:00Z',
         dateModified: '2023-05-10T14:20:00Z',
-        thumbUrl: 'assets/images/terraform.jpg'
+        thumbUrl: 'assets/images/terraform.jpg',
+        assets: [
+          { type: 'PDF', name: 'Terraform Best Practices', url: 'assets/documents/terraform-best-practices.pdf' },
+          { type: 'Slides', name: 'Session Slides', url: 'assets/slides/terraform-slides.pptx' },
+          { type: 'GitHub', name: 'Sample Code', url: 'https://github.com/example/terraform-samples' }
+        ]
       },
       {
         id: '2',
         title: 'Building Scalable Microservices with GKE',
         tags: ['Kubernetes', 'Microservices', 'GKE'],
-        abstract: 'Discover patterns for designing and deploying resilient microservices on Google Kubernetes Engine.',
+        abstract: 'Discover patterns for designing and deploying resilient microservices on Google Kubernetes Engine. Learn how to implement service mesh, autoscaling, and observability for your containerized applications.',
         type: 'Workshop',
         track: 'Application Development',
         author: 'Michael Chen',
         dateCreated: '2023-04-10T08:15:00Z',
         dateModified: '2023-05-05T09:45:00Z',
-        thumbUrl: 'assets/images/kubernetes.jpg'
+        thumbUrl: 'assets/images/kubernetes.jpg',
+        assets: [
+          { type: 'PDF', name: 'Workshop Guide', url: 'assets/documents/gke-workshop-guide.pdf' },
+          { type: 'Demo', name: 'Live Demo', url: 'https://demo.example.com/gke-microservices' }
+        ]
       },
       {
         id: '3',
         title: 'Data Analytics with BigQuery ML',
         tags: ['BigQuery', 'Machine Learning', 'Analytics'],
-        abstract: 'Explore how to implement machine learning models directly in BigQuery using SQL.',
+        abstract: 'Explore how to implement machine learning models directly in BigQuery using SQL. This session covers regression, classification, and clustering models without having to export your data.',
         type: 'Presentation',
         track: 'Data & Analytics',
         author: 'Emily Rodriguez',
         dateCreated: '2023-04-05T11:00:00Z',
         dateModified: '2023-05-01T15:30:00Z',
-        thumbUrl: 'assets/images/bigquery.jpg'
+        thumbUrl: 'assets/images/bigquery.jpg',
+        assets: [
+          { type: 'Slides', name: 'Presentation Slides', url: 'assets/slides/bigquery-ml-slides.pptx' },
+          { type: 'Video', name: 'Demo Recording', url: 'assets/videos/bigquery-ml-demo.mp4' }
+        ]
       },
       {
         id: '4',
         title: 'Serverless Architecture with Cloud Functions',
         tags: ['Serverless', 'Cloud Functions', 'Event-driven'],
-        abstract: 'Build event-driven applications without managing infrastructure using Google Cloud Functions.',
+        abstract: 'Build event-driven applications without managing infrastructure using Google Cloud Functions. Learn best practices for function design, triggers, and how to integrate with other Google Cloud services.',
         type: 'Technical Session',
         track: 'Application Development',
         author: 'David Wilson',
         dateCreated: '2023-03-20T14:45:00Z',
         dateModified: '2023-04-25T10:15:00Z',
-        thumbUrl: 'assets/images/serverless.jpg'
+        thumbUrl: 'assets/images/serverless.jpg',
+        assets: [
+          { type: 'PDF', name: 'Architecture Diagrams', url: 'assets/documents/serverless-architecture.pdf' },
+          { type: 'GitHub', name: 'Example Functions', url: 'https://github.com/example/cloud-functions-samples' }
+        ]
       },
       {
         id: '5',
         title: 'CI/CD Pipelines with Cloud Build',
         tags: ['CI/CD', 'DevOps', 'Cloud Build'],
-        abstract: 'Implement continuous integration and deployment pipelines using Google Cloud Build.',
+        abstract: 'Implement continuous integration and deployment pipelines using Google Cloud Build. This hands-on workshop will guide you through setting up a complete CI/CD pipeline for your applications.',
         type: 'Workshop',
         track: 'DevOps',
         author: 'Jessica Lee',
         dateCreated: '2023-03-15T09:30:00Z',
         dateModified: '2023-04-20T13:10:00Z',
-        thumbUrl: 'assets/images/cicd.jpg'
+        thumbUrl: 'assets/images/cicd.jpg',
+        assets: [
+          { type: 'PDF', name: 'Workshop Guide', url: 'assets/documents/cloudbuild-workshop.pdf' },
+          { type: 'GitHub', name: 'Sample Pipeline', url: 'https://github.com/example/cloudbuild-pipeline' },
+          { type: 'Slides', name: 'Workshop Slides', url: 'assets/slides/cloudbuild-slides.pptx' }
+        ]
       },
       {
         id: '6',
         title: 'Securing APIs with Cloud Armor',
         tags: ['Security', 'API', 'Cloud Armor'],
-        abstract: 'Protect your applications from web attacks and DDoS with Google Cloud Armor.',
+        abstract: 'Protect your applications from web attacks and DDoS with Google Cloud Armor. Learn how to configure security policies, rate limiting, and integrate with WAF capabilities to safeguard your services.',
         type: 'Presentation',
         track: 'Security',
         author: 'Robert Garcia',
         dateCreated: '2023-03-10T16:20:00Z',
         dateModified: '2023-04-15T11:05:00Z',
-        thumbUrl: 'assets/images/security.jpg'
+        thumbUrl: 'assets/images/security.jpg',
+        assets: [
+          { type: 'PDF', name: 'Security Whitepaper', url: 'assets/documents/cloud-armor-security.pdf' },
+          { type: 'Slides', name: 'Presentation Deck', url: 'assets/slides/cloud-armor-slides.pptx' }
+        ]
       }
     ];
 
