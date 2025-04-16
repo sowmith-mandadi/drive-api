@@ -1,59 +1,64 @@
-# Frontend
+# Google Cloud Next '25 Content Management System
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.6.
+This project provides a content management system for Google Cloud Next '25 event content, including sessions, speakers, presentations, and other materials.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- **Modern Google Cloud Next Design**: Sleek, professional UI matching Google Cloud Next branding
+- **Content Management**: Create, edit, and organize event content
+- **Speaker Management**: Track speakers, their bios, and session assignments
+- **AI Integration**: AI-powered content tagging and summarization
+- **Advanced Search**: Find and filter content with powerful search capabilities
 
-```bash
-ng serve
-```
+## Key Components
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+1. **Home Dashboard**: Overview of event content metrics and quick actions
+2. **Content Form**: Create and edit sessions, speakers, and other content types
+3. **Conference Schema Management**: Define content types and fields
+4. **Content Review Workflow**: Approve and manage content review process
 
-## Code scaffolding
+## Theme
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+The UI is themed after Google Cloud Next '25 event, using:
 
-```bash
-ng generate component component-name
-```
+- **Color Scheme**: Google Cloud blue (#1a73e8) and green (#34a853)
+- **Typography**: Google Sans font
+- **Card-based interface**: Modern, clean card layouts
+- **Material Design**: Angular Material components with custom styling
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Getting Started
 
-```bash
-ng generate --help
-```
+1. **Install dependencies**:
+   ```
+   npm install
+   ```
 
-## Building
+2. **Run development server**:
+   ```
+   npm run start
+   ```
 
-To build the project run:
+3. **Access the application**:
+   Navigate to `http://localhost:4200/`
 
-```bash
-ng build
-```
+## Project Structure
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+- `src/app/features/content-management`: Content management components
+- `src/app/features/home`: Dashboard components
+- `src/app/shared`: Shared components, pipes, and directives
+- `src/app/core`: Core services, guards, and interceptors
 
-## Running unit tests
+## UI/UX Features
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+- Responsive design for all device sizes
+- Smooth animations and transitions
+- Intuitive navigation and workflows
+- Google Cloud Next visual identity
 
-```bash
-ng test
-```
+## Technologies
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Angular 16+
+- Angular Material
+- RxJS
+- SCSS with custom theming
+- Google Cloud integration

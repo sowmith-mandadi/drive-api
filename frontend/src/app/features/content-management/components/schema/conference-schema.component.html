@@ -3,7 +3,7 @@
     <h1>{{ isEditMode ? 'Edit' : 'Create' }} Conference Schema</h1>
 
     <div class="actions" *ngIf="isEditMode">
-      <button mat-raised-button color="primary" (click)="openCloneDialog()">
+      <button mat-raised-button (click)="openCloneDialog()">
         <mat-icon>content_copy</mat-icon> Clone Schema
       </button>
     </div>
@@ -16,46 +16,51 @@
   <mat-card *ngIf="loading">
     <mat-card-content>
       <div class="loading-indicator">
-        <mat-spinner diameter="40"></mat-spinner>
+        <mat-spinner diameter="40" color="primary"></mat-spinner>
         <span>Loading schema...</span>
       </div>
     </mat-card-content>
   </mat-card>
 
-  <form [formGroup]="schemaForm" (ngSubmit)="saveSchema()" *ngIf="!loading">
+  <form [formGroup]="schemaForm" (ngSubmit)="saveSchema()" *ngIf="!loading" class="slide-in-up">
     <mat-card class="base-info-card">
       <mat-card-header>
+        <mat-icon color="primary">event</mat-icon>
         <mat-card-title>Conference Information</mat-card-title>
       </mat-card-header>
 
       <mat-card-content>
         <div class="form-row">
-          <mat-form-field appearance="fill">
+          <mat-form-field appearance="outline">
             <mat-label>Conference Name</mat-label>
-            <input matInput formControlName="name" placeholder="Conference 2023">
+            <input matInput formControlName="name" placeholder="Google Cloud Next '25">
+            <mat-icon matSuffix>event_note</mat-icon>
             <mat-error *ngIf="schemaForm.get('name') && schemaForm.get('name')!.invalid && schemaForm.get('name')!.touched">
               Conference name is required
             </mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="fill">
+          <mat-form-field appearance="outline">
             <mat-label>Year</mat-label>
             <input matInput type="number" formControlName="year">
+            <mat-icon matSuffix>calendar_today</mat-icon>
             <mat-error *ngIf="schemaForm.get('year') && schemaForm.get('year')!.invalid && schemaForm.get('year')!.touched">
               Valid year is required (2000-2100)
             </mat-error>
           </mat-form-field>
         </div>
 
-        <mat-form-field appearance="fill" class="full-width">
+        <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description</mat-label>
-          <textarea matInput formControlName="description" rows="3"></textarea>
+          <textarea matInput formControlName="description" rows="3" placeholder="A conference focused on cloud technologies and innovations"></textarea>
+          <mat-icon matSuffix>description</mat-icon>
         </mat-form-field>
       </mat-card-content>
     </mat-card>
 
     <mat-card class="fields-card">
       <mat-card-header>
+        <mat-icon color="primary">view_list</mat-icon>
         <mat-card-title>Content Fields</mat-card-title>
         <mat-card-subtitle>Define the fields that can be used across content types</mat-card-subtitle>
       </mat-card-header>
@@ -82,23 +87,26 @@
 
               <div class="field-form">
                 <div class="form-row">
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Field ID</mat-label>
                     <input matInput formControlName="id" readonly>
+                    <mat-icon matSuffix>tag</mat-icon>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Field Name</mat-label>
                     <input matInput formControlName="name" placeholder="fieldName">
                     <mat-hint>Use camelCase without spaces or special characters</mat-hint>
+                    <mat-icon matSuffix>label</mat-icon>
                     <mat-error *ngIf="fieldControl.get('name') && fieldControl.get('name')!.invalid && fieldControl.get('name')!.touched">
                       Field name is required and must only contain letters, numbers, and underscores
                     </mat-error>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Display Name</mat-label>
                     <input matInput formControlName="displayName" placeholder="Field Name">
+                    <mat-icon matSuffix>text_fields</mat-icon>
                     <mat-error *ngIf="fieldControl.get('displayName') && fieldControl.get('displayName')!.invalid && fieldControl.get('displayName')!.touched">
                       Display name is required
                     </mat-error>
@@ -106,79 +114,90 @@
                 </div>
 
                 <div class="form-row">
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Field Type</mat-label>
                     <mat-select formControlName="type">
                       <mat-option *ngFor="let type of fieldTypes" [value]="type.value">
                         {{ type.label }}
                       </mat-option>
                     </mat-select>
+                    <mat-icon matSuffix>category</mat-icon>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Group Name</mat-label>
                     <input matInput formControlName="groupName" placeholder="main">
                     <mat-hint>Optional. Used to group related fields.</mat-hint>
+                    <mat-icon matSuffix>folder</mat-icon>
                   </mat-form-field>
 
                   <div class="checkbox-field">
-                    <mat-checkbox formControlName="required">Required Field</mat-checkbox>
+                    <mat-checkbox formControlName="required" color="primary">Required Field</mat-checkbox>
                   </div>
                 </div>
 
-                <mat-form-field appearance="fill" class="full-width" *ngIf="displayOptionsField(fieldControl.get('type')?.value || '')">
+                <mat-form-field appearance="outline" class="full-width" *ngIf="displayOptionsField(fieldControl.get('type')?.value || '')">
                   <mat-label>Options (one per line)</mat-label>
                   <textarea matInput formControlName="options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
                   <mat-hint>Enter each option on a new line</mat-hint>
+                  <mat-icon matSuffix>list</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Default Value</mat-label>
                   <input matInput formControlName="defaultValue">
+                  <mat-icon matSuffix>format_color_fill</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Help Text</mat-label>
                   <input matInput formControlName="helpText" placeholder="Instructions for this field">
+                  <mat-icon matSuffix>help_outline</mat-icon>
                 </mat-form-field>
 
                 <div formGroupName="validation" *ngIf="displayValidationFields(fieldControl.get('type')?.value || '')" class="validation-section">
-                  <h4>Validation Rules</h4>
+                  <h4><mat-icon color="primary" inline>rule</mat-icon> Validation Rules</h4>
 
                   <div class="form-row" *ngIf="fieldControl.get('type')?.value === 'text' || fieldControl.get('type')?.value === 'rich-text'">
-                    <mat-form-field appearance="fill">
+                    <mat-form-field appearance="outline">
                       <mat-label>Min Length</mat-label>
                       <input matInput type="number" formControlName="minLength">
+                      <mat-icon matSuffix>text_fields</mat-icon>
                     </mat-form-field>
 
-                    <mat-form-field appearance="fill">
+                    <mat-form-field appearance="outline">
                       <mat-label>Max Length</mat-label>
                       <input matInput type="number" formControlName="maxLength">
+                      <mat-icon matSuffix>text_fields</mat-icon>
                     </mat-form-field>
                   </div>
 
                   <div class="form-row" *ngIf="fieldControl.get('type')?.value === 'number'">
-                    <mat-form-field appearance="fill">
+                    <mat-form-field appearance="outline">
                       <mat-label>Min Value</mat-label>
                       <input matInput type="number" formControlName="min">
+                      <mat-icon matSuffix>arrow_downward</mat-icon>
                     </mat-form-field>
 
-                    <mat-form-field appearance="fill">
+                    <mat-form-field appearance="outline">
                       <mat-label>Max Value</mat-label>
                       <input matInput type="number" formControlName="max">
+                      <mat-icon matSuffix>arrow_upward</mat-icon>
                     </mat-form-field>
                   </div>
 
-                  <mat-form-field appearance="fill" class="full-width" *ngIf="fieldControl.get('type')?.value === 'text'">
+                  <mat-form-field appearance="outline" class="full-width" *ngIf="fieldControl.get('type')?.value === 'text'">
                     <mat-label>Regex Pattern</mat-label>
                     <input matInput formControlName="pattern" placeholder="^[a-zA-Z0-9_]*$">
                     <mat-hint>JavaScript regular expression</mat-hint>
+                    <mat-icon matSuffix>code</mat-icon>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill" class="full-width">
+                  <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Custom Validator</mat-label>
                     <input matInput formControlName="customValidator" placeholder="validateEmail">
                     <mat-hint>Name of a custom validator function</mat-hint>
+                    <mat-icon matSuffix>check_circle</mat-icon>
                   </mat-form-field>
                 </div>
               </div>
@@ -200,6 +219,7 @@
 
     <mat-card class="content-types-card">
       <mat-card-header>
+        <mat-icon color="primary">category</mat-icon>
         <mat-card-title>Content Types</mat-card-title>
         <mat-card-subtitle>Define content types using the fields above</mat-card-subtitle>
       </mat-card-header>
@@ -226,35 +246,39 @@
 
               <div class="content-type-form">
                 <div class="form-row">
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Type ID</mat-label>
                     <input matInput formControlName="id" readonly>
+                    <mat-icon matSuffix>tag</mat-icon>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Type Name</mat-label>
                     <input matInput formControlName="name" placeholder="contentType">
                     <mat-hint>Use camelCase without spaces or special characters</mat-hint>
+                    <mat-icon matSuffix>label</mat-icon>
                     <mat-error *ngIf="contentTypeControl.get('name') && contentTypeControl.get('name')!.invalid && contentTypeControl.get('name')!.touched">
                       Type name is required and must only contain letters, numbers, and underscores
                     </mat-error>
                   </mat-form-field>
 
-                  <mat-form-field appearance="fill">
+                  <mat-form-field appearance="outline">
                     <mat-label>Display Name</mat-label>
                     <input matInput formControlName="displayName" placeholder="Content Type">
+                    <mat-icon matSuffix>text_fields</mat-icon>
                     <mat-error *ngIf="contentTypeControl.get('displayName') && contentTypeControl.get('displayName')!.invalid && contentTypeControl.get('displayName')!.touched">
                       Display name is required
                     </mat-error>
                   </mat-form-field>
                 </div>
 
-                <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Description</mat-label>
-                  <textarea matInput formControlName="description" rows="2"></textarea>
+                  <textarea matInput formControlName="description" rows="2" placeholder="Describe this content type"></textarea>
+                  <mat-icon matSuffix>description</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill">
+                <mat-form-field appearance="outline">
                   <mat-label>Inherits From</mat-label>
                   <mat-select formControlName="inheritsFrom">
                     <mat-option value="">None</mat-option>
@@ -265,18 +289,20 @@
                     </mat-option>
                   </mat-select>
                   <mat-hint>Inherit fields from another content type</mat-hint>
+                  <mat-icon matSuffix>device_hub</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Base Fields (always included)</mat-label>
                   <mat-select formControlName="baseFields" multiple>
                     <mat-option *ngFor="let field of fieldsArray.controls" [value]="field.get('id')?.value">
                       {{ field.get('displayName')?.value }}
                     </mat-option>
                   </mat-select>
+                  <mat-icon matSuffix>check_box</mat-icon>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Optional Fields</mat-label>
                   <mat-select formControlName="optionalFields" multiple>
                     <mat-option *ngFor="let field of fieldsArray.controls" [value]="field.get('id')?.value">
@@ -284,6 +310,7 @@
                     </mat-option>
                   </mat-select>
                   <mat-hint>Fields that can be toggled on/off per conference</mat-hint>
+                  <mat-icon matSuffix>check_box_outline_blank</mat-icon>
                 </mat-form-field>
               </div>
             </div>

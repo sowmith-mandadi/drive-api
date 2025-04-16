@@ -41,6 +41,60 @@ export interface ContentTypeDefinition {
   inheritsFrom?: string; // ID of parent content type to inherit fields from
 }
 
+export interface Content {
+  id?: string;
+  title: string;
+  description: string;
+  track: string;
+  tags: string[];
+  sessionType: string;
+  sessionDate?: string;
+  learningLevel?: string;
+  topic?: string;
+  jobRole?: string;
+  areaOfInterest?: string;
+  industry?: string;
+  presenters: Presenter[];
+  dateCreated?: Date;
+  dateModified?: Date;
+  fileUrls?: string[];
+  driveUrls?: string[];
+  aiSummary?: string;
+  comments?: Comment[];
+  used?: boolean;
+  aiTags?: string[];
+}
+
+export interface Presenter {
+  id?: string;
+  name: string;
+  company: string;
+  title?: string;
+  bio?: string;
+  photoUrl?: string;
+  email?: string;
+}
+
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: Date;
+  replyTo?: string;
+}
+
+export interface ContentChunk {
+  content_id: string;
+  chunk_id: string;
+  text: string;
+  slide_index?: number;
+  slide_id?: string;
+  slide_title?: string;
+  file_type?: string;
+  presentation_id?: string;
+}
+
 export interface ConferenceContent {
   id: string;
   conferenceId: string;
@@ -91,4 +145,4 @@ export interface UserAction {
   schemaId?: string;
   timestamp: Date;
   details: any;
-} 
+}

@@ -1,0 +1,330 @@
+<div class="content-form-container">
+  <div class="cloud-next-gradient content-header">
+    <h1>{{ isEditMode ? 'Edit' : 'New' }} Content</h1>
+    <p>Create great content for Google Cloud Next '25</p>
+  </div>
+
+  <div class="error-message" *ngIf="error">
+    <mat-error>{{ error }}</mat-error>
+  </div>
+
+  <mat-card *ngIf="loading">
+    <mat-card-content>
+      <div class="loading-indicator">
+        <mat-spinner diameter="40" color="primary"></mat-spinner>
+        <span>{{ isEditMode ? 'Loading content...' : 'Creating content...' }}</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <form [formGroup]="contentForm" (ngSubmit)="saveContent()" *ngIf="!loading" class="slide-in-up">
+    <mat-tab-group animationDuration="300ms">
+      <mat-tab label="Basic Information">
+        <div class="tab-content">
+          <mat-card class="info-card">
+            <mat-card-header>
+              <mat-icon color="primary">description</mat-icon>
+              <mat-card-title>Session Details</mat-card-title>
+              <mat-card-subtitle>Basic information about your session</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Session Title</mat-label>
+                <input matInput formControlName="title" placeholder="Enter a descriptive title">
+                <mat-icon matSuffix>title</mat-icon>
+                <mat-error *ngIf="contentForm.get('title')?.invalid && contentForm.get('title')?.touched">
+                  Title is required
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description</mat-label>
+                <textarea matInput formControlName="description" rows="4" placeholder="Describe what attendees will learn"></textarea>
+                <mat-icon matSuffix>description</mat-icon>
+                <mat-error *ngIf="contentForm.get('description')?.invalid && contentForm.get('description')?.touched">
+                  Description is required
+                </mat-error>
+              </mat-form-field>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Track</mat-label>
+                  <mat-select formControlName="track">
+                    <mat-option *ngFor="let track of tracks" [value]="track">{{ track }}</mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>category</mat-icon>
+                  <mat-error *ngIf="contentForm.get('track')?.invalid && contentForm.get('track')?.touched">
+                    Track is required
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Session Type</mat-label>
+                  <mat-select formControlName="sessionType">
+                    <mat-option *ngFor="let type of sessionTypes" [value]="type">{{ type }}</mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>event</mat-icon>
+                  <mat-error *ngIf="contentForm.get('sessionType')?.invalid && contentForm.get('sessionType')?.touched">
+                    Session type is required
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Session Date</mat-label>
+                  <input matInput [matDatepicker]="picker" formControlName="sessionDate">
+                  <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Learning Level</mat-label>
+                  <mat-select formControlName="learningLevel">
+                    <mat-option *ngFor="let level of learningLevels" [value]="level">{{ level }}</mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>school</mat-icon>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="tags-card">
+            <mat-card-header>
+              <mat-icon color="primary">local_offer</mat-icon>
+              <mat-card-title>Tags</mat-card-title>
+              <mat-card-subtitle>Add relevant tags to make your content discoverable</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Tags</mat-label>
+                <mat-chip-grid #chipGrid>
+                  <mat-chip-row *ngFor="let tag of contentForm.get('tags')?.value || []"
+                            (removed)="removeTag(tag)">
+                    {{tag}}
+                    <button matChipRemove>
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                  <input placeholder="New tag..."
+                         [matChipInputFor]="chipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         (matChipInputTokenEnd)="addTag($event)">
+                </mat-chip-grid>
+                <mat-icon matSuffix>label</mat-icon>
+                <mat-hint>Press Enter to add a tag</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Topic</mat-label>
+                <input matInput formControlName="topic" placeholder="Main topic">
+                <mat-icon matSuffix>topic</mat-icon>
+              </mat-form-field>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Job Role</mat-label>
+                  <input matInput formControlName="jobRole" placeholder="Target job role">
+                  <mat-icon matSuffix>work</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Industry</mat-label>
+                  <input matInput formControlName="industry" placeholder="Target industry">
+                  <mat-icon matSuffix>business</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Area of Interest</mat-label>
+                <input matInput formControlName="areaOfInterest" placeholder="Specific area of interest">
+                <mat-icon matSuffix>interests</mat-icon>
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Presenters">
+        <div class="tab-content">
+          <mat-card class="presenters-card">
+            <mat-card-header>
+              <mat-icon color="primary">people</mat-icon>
+              <mat-card-title>Presenters</mat-card-title>
+              <mat-card-subtitle>Add details about the session speakers</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div formArrayName="presenters" class="presenters-list">
+                <div *ngFor="let presenterControl of presentersArray.controls; let i = index"
+                     [formGroup]="getPresenterAsFormGroup(i)"
+                     class="presenter-item cloud-card">
+                  <h3>Presenter #{{i+1}}</h3>
+                  <button *ngIf="presentersArray.length > 1"
+                          mat-icon-button color="warn"
+                          type="button"
+                          class="remove-presenter-btn"
+                          (click)="removePresenter(i)"
+                          aria-label="Remove presenter">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+
+                  <div class="form-row">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Name</mat-label>
+                      <input matInput formControlName="name" placeholder="Full Name">
+                      <mat-icon matSuffix>person</mat-icon>
+                      <mat-error *ngIf="presenterControl.get('name')?.invalid && presenterControl.get('name')?.touched">
+                        Name is required
+                      </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Company</mat-label>
+                      <input matInput formControlName="company" placeholder="Company or Organization">
+                      <mat-icon matSuffix>business</mat-icon>
+                      <mat-error *ngIf="presenterControl.get('company')?.invalid && presenterControl.get('company')?.touched">
+                        Company is required
+                      </mat-error>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="form-row">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Title</mat-label>
+                      <input matInput formControlName="title" placeholder="Job Title">
+                      <mat-icon matSuffix>work</mat-icon>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Email</mat-label>
+                      <input matInput formControlName="email" placeholder="email@example.com">
+                      <mat-icon matSuffix>email</mat-icon>
+                      <mat-error *ngIf="presenterControl.get('email')?.invalid && presenterControl.get('email')?.touched">
+                        Please enter a valid email
+                      </mat-error>
+                    </mat-form-field>
+                  </div>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Bio</mat-label>
+                    <textarea matInput formControlName="bio" rows="3" placeholder="Brief professional bio"></textarea>
+                    <mat-icon matSuffix>subject</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Photo URL</mat-label>
+                    <input matInput formControlName="photoUrl" placeholder="https://example.com/photo.jpg">
+                    <mat-icon matSuffix>image</mat-icon>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="add-presenter-button">
+                <button mat-raised-button color="primary" type="button" (click)="addPresenter()">
+                  <mat-icon>person_add</mat-icon> Add Presenter
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Content & AI">
+        <div class="tab-content">
+          <mat-card class="content-card">
+            <mat-card-header>
+              <mat-icon color="primary">cloud_upload</mat-icon>
+              <mat-card-title>Content Files</mat-card-title>
+              <mat-card-subtitle>Add links to presentation slides, demos, and other content</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>File URLs</mat-label>
+                <mat-chip-grid #fileChipGrid>
+                  <mat-chip-row *ngFor="let url of contentForm.get('fileUrls')?.value || []"
+                            (removed)="removeFileUrl(url)">
+                    {{url}}
+                    <button matChipRemove>
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                  <input placeholder="Add file URL..."
+                         [matChipInputFor]="fileChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         (matChipInputTokenEnd)="addFileUrl($event)">
+                </mat-chip-grid>
+                <mat-icon matSuffix>attach_file</mat-icon>
+                <mat-hint>Press Enter to add a file URL</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Google Drive URLs</mat-label>
+                <mat-chip-grid #driveChipGrid>
+                  <mat-chip-row *ngFor="let url of contentForm.get('driveUrls')?.value || []"
+                            (removed)="removeDriveUrl(url)">
+                    {{url}}
+                    <button matChipRemove>
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                  <input placeholder="Add Drive URL..."
+                         [matChipInputFor]="driveChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         (matChipInputTokenEnd)="addDriveUrl($event)">
+                </mat-chip-grid>
+                <mat-icon matSuffix>cloud</mat-icon>
+                <mat-hint>Press Enter to add a Google Drive URL</mat-hint>
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="ai-card">
+            <mat-card-header>
+              <mat-icon color="primary">psychology</mat-icon>
+              <mat-card-title>AI Generated Content</mat-card-title>
+              <mat-card-subtitle>AI-powered insights and tags</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>AI Summary</mat-label>
+                <textarea matInput formControlName="aiSummary" rows="4" placeholder="AI-generated summary will appear here"></textarea>
+                <mat-icon matSuffix>summarize</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>AI-Generated Tags</mat-label>
+                <mat-chip-grid #aiChipGrid>
+                  <mat-chip-row *ngFor="let tag of contentForm.get('aiTags')?.value || []"
+                            (removed)="removeAiTag(tag)">
+                    {{tag}}
+                    <button matChipRemove>
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                  <input placeholder="Add AI tag..."
+                         [matChipInputFor]="aiChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         (matChipInputTokenEnd)="addAiTag($event)">
+                </mat-chip-grid>
+                <mat-icon matSuffix>smart_toy</mat-icon>
+                <mat-hint>AI-generated tags based on content analysis</mat-hint>
+              </mat-form-field>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+
+    <div class="form-actions">
+      <button mat-button type="button" (click)="navigateBack()">Cancel</button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="contentForm.invalid">
+        {{ isEditMode ? 'Update' : 'Create' }} Content
+      </button>
+    </div>
+  </form>
+</div>

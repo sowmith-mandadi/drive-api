@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { ContentFormComponent } from './features/content-management/components/content/content-form.component';
+import { ConferenceSchemaComponent } from './features/content-management/components/schema/conference-schema.component';
 
 export const routes: Routes = [
   {
@@ -8,65 +10,61 @@ export const routes: Routes = [
   },
   {
     path: 'home',
-    loadComponent: () => import('./features/home/home.component').then(c => c.HomeComponent)
+    loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent)
+  },
+  {
+    path: 'search',
+    loadComponent: () => import('./features/search/search.component').then(m => m.SearchComponent)
   },
   {
     path: 'content-management',
     children: [
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'contents',
         pathMatch: 'full'
       },
       {
-        path: 'dashboard',
-        loadComponent: () => import('./features/content-management/components/dashboard/conference-dashboard.component').then(c => c.ConferenceDashboardComponent)
+        path: 'contents',
+        component: ContentFormComponent
       },
       {
-        path: 'conferences',
-        loadComponent: () => import('./features/content-management/components/dashboard/conference-list.component').then(c => c.ConferenceListComponent)
+        path: 'content/new',
+        component: ContentFormComponent
       },
       {
-        path: 'conferences/create',
-        loadComponent: () => import('./features/content-management/components/schema/conference-schema.component').then(c => c.ConferenceSchemaComponent)
+        path: 'content/:contentId',
+        component: ContentFormComponent
       },
       {
-        path: 'conferences/:conferenceId',
-        loadComponent: () => import('./features/content-management/components/dashboard/conference-dashboard.component').then(c => c.ConferenceDashboardComponent)
+        path: 'schemas',
+        component: ConferenceSchemaComponent
       },
       {
-        path: 'conferences/:conferenceId/edit',
-        loadComponent: () => import('./features/content-management/components/schema/conference-schema.component').then(c => c.ConferenceSchemaComponent)
+        path: 'schema/new',
+        component: ConferenceSchemaComponent
       },
       {
-        path: 'conferences/:conferenceId/create',
-        loadComponent: () => import('./features/content-management/components/edit-content/content-editor.component').then(c => c.ContentEditorComponent)
+        path: 'schema/:conferenceId',
+        component: ConferenceSchemaComponent
       },
       {
-        path: 'conferences/:conferenceId/content/:contentId',
-        loadComponent: () => import('./features/content-management/components/edit-content/content-editor.component').then(c => c.ContentEditorComponent)
-      },
-      {
-        path: 'upload',
-        loadComponent: () => import('./features/content-management/components/single-upload/single-upload.component').then(c => c.SingleUploadComponent)
-      },
-      {
-        path: 'bulk-upload',
-        loadComponent: () => import('./features/content-management/components/bulk-upload/bulk-upload.component').then(c => c.BulkUploadComponent)
+        path: 'review',
+        component: ContentFormComponent
       }
     ]
   },
   {
-    path: 'content-library',
-    loadComponent: () => import('./features/content-library/content-library.component').then(c => c.ContentLibraryComponent)
-  },
-  {
-    path: 'search',
-    loadComponent: () => import('./features/search/search.component').then(c => c.SearchComponent)
-  },
-  {
     path: 'ai-features',
-    loadComponent: () => import('./features/ai-features/ai-features.component').then(c => c.AIFeaturesComponent)
+    component: ContentFormComponent
+  },
+  {
+    path: 'analytics',
+    component: ContentFormComponent
+  },
+  {
+    path: 'settings',
+    component: ContentFormComponent
   },
   {
     path: '**',

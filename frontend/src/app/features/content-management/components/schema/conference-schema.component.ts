@@ -94,7 +94,6 @@ export class ConferenceSchemaComponent implements OnInit {
     this.loading = true;
 
     if (this.conferenceId === null) {
-      this.error = 'Conference ID is required';
       this.loading = false;
       return;
     }

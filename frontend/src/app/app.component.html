@@ -1,77 +1,126 @@
 <div class="app-container">
-  <header class="app-header">
-    <mat-toolbar color="primary">
-      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu button">
-        <mat-icon>menu</mat-icon>
-      </button>
-      <span class="app-title" routerLink="/">Conference CMS</span>
-      
-      <span class="header-spacer"></span>
-      
-      <div class="nav-links">
-        <a mat-button routerLink="/">
-          <mat-icon>home</mat-icon>
-          Home
-        </a>
-        <a mat-button routerLink="/search">
-          <mat-icon>search</mat-icon>
-          Search
-        </a>
-        <a mat-button routerLink="/content-library">
-          <mat-icon>library_books</mat-icon>
-          Library
-        </a>
-        <a mat-button routerLink="/content-management">
-          <mat-icon>dashboard</mat-icon>
-          Management
-        </a>
-      </div>
+  <mat-toolbar color="primary" class="top-toolbar">
+    <button mat-icon-button (click)="sidenav.toggle()" class="menu-button">
+      <mat-icon>menu</mat-icon>
+    </button>
 
-      <button mat-icon-button aria-label="User account">
+    <div class="logo-container">
+      <img src="assets/cloud-next-logo.svg" alt="Google Cloud Next Logo" class="cloud-logo">
+      <span class="logo-text">Cloud Next '25</span>
+    </div>
+
+    <span class="toolbar-spacer"></span>
+
+    <div class="toolbar-actions">
+      <button mat-icon-button [matMenuTriggerFor]="notificationsMenu" [matBadge]="3" matBadgeColor="accent">
+        <mat-icon>notifications</mat-icon>
+      </button>
+
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-button">
         <mat-icon>account_circle</mat-icon>
       </button>
-    </mat-toolbar>
+    </div>
+  </mat-toolbar>
 
-    <mat-menu #menu="matMenu">
-      <a mat-menu-item routerLink="/">
-        <mat-icon>home</mat-icon>
-        <span>Home</span>
-      </a>
-      <a mat-menu-item routerLink="/search">
-        <mat-icon>search</mat-icon>
-        <span>Search</span>
-      </a>
-      <a mat-menu-item routerLink="/content-library">
-        <mat-icon>library_books</mat-icon>
-        <span>Content Library</span>
-      </a>
-      <a mat-menu-item routerLink="/content-management">
-        <mat-icon>dashboard</mat-icon>
-        <span>Content Management</span>
-      </a>
-      <mat-divider></mat-divider>
-      <a mat-menu-item routerLink="/content-management/conferences">
-        <mat-icon>event</mat-icon>
-        <span>Conferences</span>
-      </a>
-      <a mat-menu-item routerLink="/content-management/upload">
-        <mat-icon>upload_file</mat-icon>
-        <span>Upload Content</span>
-      </a>
-      <a mat-menu-item routerLink="/content-management/bulk-upload">
-        <mat-icon>drive_folder_upload</mat-icon>
-        <span>Bulk Upload</span>
-      </a>
-    </mat-menu>
-  </header>
+  <mat-menu #notificationsMenu="matMenu" class="notifications-menu">
+    <div class="menu-header">
+      <h3>Notifications</h3>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="notification-list">
+      <button mat-menu-item class="notification-item unread">
+        <mat-icon color="primary">description</mat-icon>
+        <span class="notification-content">
+          <span class="notification-title">New Content Added</span>
+          <span class="notification-message">A new presentation was added to Google Cloud Next</span>
+          <span class="notification-time">5 minutes ago</span>
+        </span>
+      </button>
+      <button mat-menu-item class="notification-item unread">
+        <mat-icon color="accent">rate_review</mat-icon>
+        <span class="notification-content">
+          <span class="notification-title">Content Review Required</span>
+          <span class="notification-message">3 items need your review</span>
+          <span class="notification-time">2 hours ago</span>
+        </span>
+      </button>
+      <button mat-menu-item class="notification-item">
+        <mat-icon color="warn">warning</mat-icon>
+        <span class="notification-content">
+          <span class="notification-title">Upload Failed</span>
+          <span class="notification-message">There was an issue with your recent upload</span>
+          <span class="notification-time">Yesterday</span>
+        </span>
+      </button>
+    </div>
+    <mat-divider></mat-divider>
+    <button mat-menu-item>
+      <mat-icon>settings</mat-icon>
+      <span>Notification Settings</span>
+    </button>
+  </mat-menu>
 
-  <main class="app-content">
-    <router-outlet></router-outlet>
-  </main>
+  <mat-menu #userMenu="matMenu">
+    <div class="user-info">
+      <div class="user-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <div class="user-details">
+        <div class="user-name">Admin User</div>
+        <div class="user-email">admin&#64;example.com</div>
+      </div>
+    </div>
+    <mat-divider></mat-divider>
+    <button mat-menu-item>
+      <mat-icon>person</mat-icon>
+      <span>My Profile</span>
+    </button>
+    <button mat-menu-item>
+      <mat-icon>settings</mat-icon>
+      <span>Settings</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item>
+      <mat-icon>exit_to_app</mat-icon>
+      <span>Logout</span>
+    </button>
+  </mat-menu>
 
-  <footer class="app-footer">
+  <mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #sidenav="matSidenav" mode="side" [opened]="true" class="app-sidenav">
+      <div class="sidenav-header">
+        <div class="logo">
+          <img src="assets/cloud-icon.svg" alt="Cloud Icon">
+          <span class="logo-text">Content Hub</span>
+        </div>
+      </div>
+
+      <mat-nav-list>
+        <a mat-list-item routerLink="/home" routerLinkActive="active-link">
+          <mat-icon>home</mat-icon>
+          <span>Home</span>
+        </a>
+        <a mat-list-item routerLink="/content-management/review" routerLinkActive="active-link">
+          <mat-icon>rate_review</mat-icon>
+          <span>Review Content</span>
+        </a>
+        <a mat-list-item routerLink="/search" routerLinkActive="active-link">
+          <mat-icon>search</mat-icon>
+          <span>Search</span>
+        </a>
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="sidenav-content">
+      <div class="main-content">
+        <router-outlet></router-outlet>
+      </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+
+  <footer class="app-footer cloud-next-footer">
     <div class="footer-content">
-      <p>&copy; 2025 Conference CMS | Powered by Angular 19</p>
+      <p>&copy; 2025 Google Cloud Next | Powered by Angular</p>
     </div>
   </footer>
 </div>

@@ -4,64 +4,64 @@
 
 // Define CSS Variables for theming
 :root {
-  // Primary theme colors
-  --primary-color: #673ab7;
-  --primary-color-rgb: 103, 58, 183;
-  --primary-color-light: #9a67ea;
-  --primary-color-dark: #4a1991;
-  
-  // Accent colors
-  --accent-color: #3f51b5;
-  --accent-color-rgb: 63, 81, 181;
-  --accent-color-light: #757de8;
-  --accent-color-dark: #002984;
-  
+  // Primary theme colors - Google Cloud colors
+  --primary-color: #1a73e8;
+  --primary-color-rgb: 26, 115, 232;
+  --primary-color-light: #4285f4;
+  --primary-color-dark: #0d47a1;
+
+  // Accent colors - Google Cloud green
+  --accent-color: #34a853;
+  --accent-color-rgb: 52, 168, 83;
+  --accent-color-light: #4caf50;
+  --accent-color-dark: #1e8e3e;
+
   // Text colors
   --text-color: #202124;
   --text-secondary-color: #5f6368;
   --text-tertiary-color: #9aa0a6;
-  
+
   // Background colors
   --bg-color: #f8f9fa;
   --bg-color-light: #ffffff;
   --bg-color-dark: #e8eaed;
-  
+
   // Status colors
-  --success-color: #137333;
-  --warning-color: #b06000;
-  --error-color: #c5221f;
+  --success-color: #34a853;
+  --warning-color: #fbbc04;
+  --error-color: #ea4335;
   --info-color: #1a73e8;
-  
+
   // Other
   --border-radius: 8px;
-  --card-shadow: 
-    0 1px 2px rgba(0,0,0,0.02), 
-    0 2px 4px rgba(0,0,0,0.02), 
-    0 4px 8px rgba(0,0,0,0.02), 
+  --card-shadow:
+    0 1px 2px rgba(0,0,0,0.02),
+    0 2px 4px rgba(0,0,0,0.02),
+    0 4px 8px rgba(0,0,0,0.02),
     0 8px 16px rgba(0,0,0,0.02);
 }
 
 // Optional dark theme
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary-color: #bb86fc;
-    --primary-color-rgb: 187, 134, 252;
-    --primary-color-light: #d4afff;
-    --primary-color-dark: #9d60c9;
-    
-    --accent-color: #03dac6;
-    --accent-color-rgb: 3, 218, 198;
-    --accent-color-light: #66fff8;
-    --accent-color-dark: #00a896;
-    
+    --primary-color: #4285f4;
+    --primary-color-rgb: 66, 133, 244;
+    --primary-color-light: #8ab4f8;
+    --primary-color-dark: #1a73e8;
+
+    --accent-color: #34a853;
+    --accent-color-rgb: 52, 168, 83;
+    --accent-color-light: #81c995;
+    --accent-color-dark: #1e8e3e;
+
     --text-color: #e8eaed;
     --text-secondary-color: #bdc1c6;
     --text-tertiary-color: #9aa0a6;
-    
+
     --bg-color: #202124;
     --bg-color-light: #303134;
     --bg-color-dark: #1c1c1c;
-    
+
     --success-color: #81c995;
     --warning-color: #fcc934;
     --error-color: #f28b82;
@@ -69,16 +69,28 @@
   }
 }
 
-html, body { 
-  height: 100%; 
+html, body {
+  height: 100%;
   margin: 0;
+  overflow: hidden; /* Prevent body scrolling */
 }
 
-body { 
-  font-family: 'Google Sans', Roboto, "Helvetica Neue", sans-serif; 
+body {
+  font-family: 'Google Sans', Roboto, "Helvetica Neue", sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   line-height: 1.6;
+}
+
+/* Ensure mat-drawer-content scrolls properly */
+.mat-drawer-content {
+  overflow: hidden !important;
+}
+
+/* Fix nested router-outlet scrolling issues */
+router-outlet + * {
+  display: block;
+  height: 100%;
 }
 
 // Material component theming overrides
@@ -89,15 +101,18 @@ body {
   background-color: var(--bg-color-light) !important;
   border: none !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--card-shadow) !important;
 }
 
 // Button styling
-.mat-mdc-button, 
-.mat-mdc-raised-button, 
+.mat-mdc-button,
+.mat-mdc-raised-button,
 .mat-mdc-outlined-button,
 .mat-mdc-unelevated-button {
   font-weight: 500 !important;
   letter-spacing: 0.25px !important;
+  border-radius: 4px !important;
+  text-transform: none !important;
 }
 
 .mat-mdc-raised-button.mat-primary {
@@ -116,6 +131,7 @@ body {
 // Chip styling
 .mat-mdc-chip {
   font-weight: 500 !important;
+  border-radius: 16px !important;
 }
 
 // Tab styling
@@ -212,4 +228,91 @@ body {
 
 .slide-in-up {
   animation: slideInUp 0.3s ease-out;
+}
+
+// Google Cloud specific styles
+.cloud-section {
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  background-color: var(--bg-color-light);
+  box-shadow: var(--card-shadow);
+}
+
+.cloud-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .cloud-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+  }
+
+  .cloud-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin: 0;
+  }
+}
+
+.cloud-card {
+  border-radius: 8px;
+  padding: 16px;
+  background-color: var(--bg-color-light);
+  box-shadow: var(--card-shadow);
+  border-left: 4px solid var(--primary-color);
+  margin-bottom: 16px;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.cloud-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0 24px;
+  height: 36px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: var(--primary-color-dark);
+  }
+
+  &.outlined {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+
+    &:hover {
+      background-color: rgba(26, 115, 232, 0.04);
+    }
+  }
+}
+
+// Cloud Next specific styles
+.cloud-next-gradient {
+  background: linear-gradient(135deg, #4285f4, #0f9d58);
+  color: white;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.cloud-next-footer {
+  background-color: #202124;
+  color: white;
+  padding: 24px;
+  text-align: center;
 }
