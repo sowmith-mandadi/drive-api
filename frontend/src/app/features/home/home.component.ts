@@ -328,8 +328,7 @@ export class HomeComponent implements OnInit {
   }
 
   applyFilters(): void {
-    // In a real implementation, this would filter the actual data
-    // For now, we'll just log the selected filters
+    // In a real implementation, this would filter the actual data using the API
     const selectedFilters = this.filters
       .map(filter => ({
         name: filter.name,
@@ -339,6 +338,9 @@ export class HomeComponent implements OnInit {
 
     console.log('Applied filters:', selectedFilters);
     console.log('Search query:', this.searchQuery);
+    
+    // If there's an HTTP call to the search API, it should use the correct endpoint:
+    // Instead of '/api/search' it should be '/api/content/search'
   }
 
   saveFilterPreset(): void {

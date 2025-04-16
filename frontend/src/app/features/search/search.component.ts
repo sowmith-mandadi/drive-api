@@ -527,7 +527,7 @@ export class SearchComponent {
     if (params.dateFrom) params.dateFrom = params.dateFrom.toISOString();
     if (params.dateTo) params.dateTo = params.dateTo.toISOString();
 
-    this.http.post<SearchResult>('/api/search', params)
+    this.http.post<SearchResult>('/api/content/search', params)
       .pipe(
         catchError(err => {
           console.error('Search error', err);

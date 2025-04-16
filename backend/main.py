@@ -15,11 +15,14 @@ from fastapi.openapi.utils import get_openapi
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.endpoints.auth import router as auth_router
+from app.api.endpoints.batch import router as batch_router
 from app.api.endpoints.content import router as content_router
 
 # Import routers
 from app.api.endpoints.drive import router as drive_router
+from app.api.endpoints.files import router as files_router
 from app.api.endpoints.rag import router as rag_router
+from app.api.endpoints.upload import router as upload_router
 
 # Import settings
 from app.core.config import settings
@@ -139,6 +142,9 @@ app.include_router(drive_router, prefix="/api", tags=["Google Drive Integration"
 app.include_router(content_router, prefix="/api", tags=["Content Management"])
 app.include_router(rag_router, prefix="/api", tags=["RAG Services"])
 app.include_router(auth_router, prefix="/api", tags=["Authentication"])
+app.include_router(upload_router, prefix="/api", tags=["File Uploads"])
+app.include_router(batch_router, prefix="/api", tags=["Batch Operations"])
+app.include_router(files_router, prefix="/api", tags=["File Serving"])
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))

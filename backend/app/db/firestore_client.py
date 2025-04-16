@@ -234,3 +234,19 @@ class FirestoreClient:
         except Exception as e:
             logger.error(f"Error searching documents in {collection}: {str(e)}")
             return []
+
+    def generate_id(self) -> str:
+        """Generate a unique document ID.
+        
+        Returns:
+            A unique document ID string.
+        """
+        try:
+            # Use Firestore's document ID generation
+            doc_ref = self.db.collection("_unused").document()
+            return doc_ref.id
+        except Exception as e:
+            logger.error(f"Error generating document ID: {str(e)}")
+            # Fallback to a timestamp-based ID if Firestore generation fails
+            import uuid
+            return str(uuid.uuid4())
