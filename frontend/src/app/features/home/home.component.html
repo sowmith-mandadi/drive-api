@@ -1,0 +1,296 @@
+<div class="home-container">
+  <mat-drawer-container class="content-container">
+    <!-- Drawer for filters - only visible when showFilters is true -->
+    <mat-drawer mode="side" position="end" [opened]="showFilters" class="filter-drawer">
+      <div class="filter-header">
+        <h2>Filters</h2>
+        <button mat-icon-button (click)="clearAllFilters()" matTooltip="Clear all filters">
+          <mat-icon>clear_all</mat-icon>
+        </button>
+      </div>
+
+      <div class="filter-search">
+        <mat-form-field appearance="outline" class="filter-search-field">
+          <mat-label>Search in results</mat-label>
+          <input matInput [(ngModel)]="searchQuery" placeholder="Type to search...">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="filter-groups">
+        <mat-accordion multi>
+          <mat-expansion-panel *ngFor="let filter of filters" [expanded]="filter.expanded">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                {{ filter.name }}
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="filter-options">
+              <mat-checkbox
+                *ngFor="let option of filter.options"
+                [(ngModel)]="option.selected"
+                (change)="applyFilters()"
+                class="filter-option">
+                {{ option.label }} ({{ option.count }})
+              </mat-checkbox>
+            </div>
+          </mat-expansion-panel>
+        </mat-accordion>
+      </div>
+
+      <div class="filter-actions">
+        <button mat-flat-button color="primary" (click)="saveFilterPreset()">
+          <mat-icon>save</mat-icon> Save Filter
+        </button>
+      </div>
+    </mat-drawer>
+
+    <mat-drawer-content class="main-content">
+      <!-- Welcome section -->
+      <div class="welcome-section">
+        <div class="welcome-text">
+          <h1>Welcome back, User</h1>
+          <p>Here's what's new in your content management system</p>
+        </div>
+      </div>
+
+      <!-- Search and filter bar -->
+      <div class="search-filter-bar">
+        <div class="search-container">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search content</mat-label>
+            <input matInput placeholder="Search...">
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="filter-buttons">
+          <button mat-stroked-button [matMenuTriggerFor]="sortMenu">
+            <mat-icon>sort</mat-icon> Sort by
+          </button>
+
+          <button mat-stroked-button (click)="toggleFilters()">
+            <mat-icon>filter_list</mat-icon> Filters
+          </button>
+        </div>
+      </div>
+
+      <mat-menu #sortMenu="matMenu">
+        <button mat-menu-item (click)="sortBy('dateNewest')">Newest first</button>
+        <button mat-menu-item (click)="sortBy('dateOldest')">Oldest first</button>
+        <button mat-menu-item (click)="sortBy('titleAZ')">Title A-Z</button>
+        <button mat-menu-item (click)="sortBy('titleZA')">Title Z-A</button>
+      </mat-menu>
+
+      <!-- Featured Content Carousel -->
+      <div class="carousel-section">
+        <div class="section-header">
+          <h2>Featured Content</h2>
+          <a routerLink="/search" class="view-all">View All</a>
+        </div>
+
+        <div class="card-carousel-container">
+          <button mat-mini-fab class="carousel-nav-button prev-button" (click)="prevCarouselSlide()" [attr.aria-label]="'Previous slide'">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+
+          <div class="card-carousel">
+            <div class="card-carousel-track" [style.transform]="'translateX(' + (-selectedCarouselIndex * 100) + '%)'">
+              <mat-card *ngFor="let feature of featuredContent; let i = index" class="content-card carousel-card" [class.active]="i === selectedCarouselIndex">
+                <div class="card-badge" *ngIf="feature.status === 'review'">NEEDS REVIEW</div>
+                <div class="card-badge approved" *ngIf="feature.status === 'approved'">APPROVED</div>
+                <div class="card-badge published" *ngIf="feature.status === 'published'">PUBLISHED</div>
+
+                <mat-card-content>
+                  <div class="card-track">{{ feature.track || 'Featured' }}</div>
+                  <h3 class="card-title">{{ feature.title }}</h3>
+                  <p class="card-description">{{ feature.description | slice:0:120 }}{{ feature.description.length > 120 ? '...' : '' }}</p>
+
+                  <div class="card-meta">
+                    <div class="presenters" *ngIf="feature.presenters && feature.presenters.length > 0">
+                      <div *ngFor="let presenter of feature.presenters.slice(0, 2)" class="presenter">
+                        <span class="presenter-name">{{ presenter.name }}</span>
+                        <span class="presenter-company" *ngIf="presenter.title">{{ presenter.title }}, </span>
+                        <span class="presenter-company">{{ presenter.company }}</span>
+                      </div>
+                      <div *ngIf="feature.presenters.length > 2" class="presenter-more">
+                        +{{ feature.presenters.length - 2 }} more
+                      </div>
+                    </div>
+
+                    <div class="card-date" *ngIf="feature.dateModified">
+                      {{ feature.dateModified | date:'mediumDate' }}
+                    </div>
+                  </div>
+
+                  <div class="card-tags" *ngIf="feature.tags && feature.tags.length > 0">
+                    <mat-chip-listbox aria-label="Tags" class="tag-list">
+                      <mat-chip-option *ngFor="let tag of feature.tags.slice(0, 3)" disableRipple selected="false" disabled>
+                        {{ tag }}
+                      </mat-chip-option>
+                      <mat-chip-option *ngIf="feature.tags.length > 3" disableRipple selected="false" disabled>
+                        +{{ feature.tags.length - 3 }}
+                      </mat-chip-option>
+                    </mat-chip-listbox>
+                  </div>
+                </mat-card-content>
+
+                <mat-card-actions>
+                  <button mat-button color="primary" [routerLink]="['/content-management/content', feature.id]">VIEW DETAILS</button>
+                  <button mat-button color="accent" *ngIf="feature.status === 'review'" [routerLink]="['/content-management/review']">REVIEW</button>
+                </mat-card-actions>
+              </mat-card>
+            </div>
+          </div>
+
+          <button mat-mini-fab class="carousel-nav-button next-button" (click)="nextCarouselSlide()" [attr.aria-label]="'Next slide'">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+
+        <div class="carousel-indicators">
+          <button
+            *ngFor="let feature of featuredContent; let i = index"
+            class="carousel-indicator"
+            [class.active]="i === selectedCarouselIndex"
+            (click)="selectedCarouselIndex = i"
+            [attr.aria-label]="'Go to slide ' + (i+1)">
+          </button>
+        </div>
+      </div>
+
+      <!-- Latest Updates section -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>Latest Updates</h2>
+          <a routerLink="/search" class="view-all">View All</a>
+        </div>
+
+        <div class="card-carousel-container">
+          <button mat-mini-fab class="carousel-nav-button prev-button" (click)="prevLatestSlide()" [attr.aria-label]="'Previous latest updates'">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+
+          <div class="card-carousel">
+            <div class="card-carousel-track" [style.transform]="'translateX(' + (-selectedLatestIndex * 100) + '%)'">
+              <mat-card *ngFor="let content of latestUpdates; let i = index" class="content-card carousel-card" [class.active]="i === selectedLatestIndex">
+                <div class="card-badge" *ngIf="content.status === 'review'">NEEDS REVIEW</div>
+                <div class="card-badge approved" *ngIf="content.status === 'approved'">APPROVED</div>
+                <div class="card-badge published" *ngIf="content.status === 'published'">PUBLISHED</div>
+
+                <mat-card-content>
+                  <div class="card-track">{{ content.track }}</div>
+                  <h3 class="card-title">{{ content.title }}</h3>
+                  <p class="card-description">{{ content.description | slice:0:120 }}{{ content.description.length > 120 ? '...' : '' }}</p>
+
+                  <div class="card-meta">
+                    <div class="presenters" *ngIf="content.presenters && content.presenters.length > 0">
+                      <div *ngFor="let presenter of content.presenters.slice(0, 2)" class="presenter">
+                        <span class="presenter-name">{{ presenter.name }}</span>
+                        <span class="presenter-company" *ngIf="presenter.title">{{ presenter.title }}, </span>
+                        <span class="presenter-company">{{ presenter.company }}</span>
+                      </div>
+                      <div *ngIf="content.presenters.length > 2" class="presenter-more">
+                        +{{ content.presenters.length - 2 }} more
+                      </div>
+                    </div>
+
+                    <div class="card-date" *ngIf="content.dateModified">
+                      {{ content.dateModified | date:'mediumDate' }}
+                    </div>
+                  </div>
+
+                  <div class="card-tags" *ngIf="content.tags && content.tags.length > 0">
+                    <mat-chip-listbox aria-label="Tags" class="tag-list">
+                      <mat-chip-option *ngFor="let tag of content.tags.slice(0, 3)" disableRipple selected="false" disabled>
+                        {{ tag }}
+                      </mat-chip-option>
+                      <mat-chip-option *ngIf="content.tags.length > 3" disableRipple selected="false" disabled>
+                        +{{ content.tags.length - 3 }}
+                      </mat-chip-option>
+                    </mat-chip-listbox>
+                  </div>
+                </mat-card-content>
+
+                <mat-card-actions>
+                  <button mat-button color="primary" [routerLink]="['/content-management/content', content.id]">VIEW DETAILS</button>
+                  <button mat-button color="accent" *ngIf="content.status === 'review'" [routerLink]="['/content-management/review']">REVIEW</button>
+                </mat-card-actions>
+              </mat-card>
+            </div>
+          </div>
+
+          <button mat-mini-fab class="carousel-nav-button next-button" (click)="nextLatestSlide()" [attr.aria-label]="'Next latest updates'">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+
+        <div class="carousel-indicators">
+          <button
+            *ngFor="let content of latestUpdates; let i = index"
+            class="carousel-indicator"
+            [class.active]="i === selectedLatestIndex"
+            (click)="selectedLatestIndex = i"
+            [attr.aria-label]="'Go to latest slide ' + (i+1)">
+          </button>
+        </div>
+      </div>
+
+      <!-- Recommended Content section -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>Recommended Content</h2>
+          <a routerLink="/search" class="view-all">View All</a>
+        </div>
+
+        <div class="cards-grid">
+          <mat-card *ngFor="let content of visibleRecommended" class="content-card">
+            <div class="card-badge" *ngIf="content.status === 'review'">NEEDS REVIEW</div>
+            <div class="card-badge approved" *ngIf="content.status === 'approved'">APPROVED</div>
+            <div class="card-badge published" *ngIf="content.status === 'published'">PUBLISHED</div>
+
+            <mat-card-content>
+              <div class="card-track">{{ content.track }}</div>
+              <h3 class="card-title">{{ content.title }}</h3>
+              <p class="card-description">{{ content.description | slice:0:120 }}{{ content.description.length > 120 ? '...' : '' }}</p>
+
+              <div class="card-meta">
+                <div class="presenters">
+                  <div *ngFor="let presenter of content.presenters.slice(0, 2)" class="presenter">
+                    <span class="presenter-name">{{ presenter.name }}</span>
+                    <span class="presenter-company" *ngIf="presenter.title">{{ presenter.title }}, </span>
+                    <span class="presenter-company">{{ presenter.company }}</span>
+                  </div>
+                  <div *ngIf="content.presenters.length > 2" class="presenter-more">
+                    +{{ content.presenters.length - 2 }} more
+                  </div>
+                </div>
+
+                <div class="card-date">
+                  {{ content.dateModified | date:'mediumDate' }}
+                </div>
+              </div>
+
+              <div class="card-tags">
+                <mat-chip-listbox aria-label="Tags" class="tag-list">
+                  <mat-chip-option *ngFor="let tag of content.tags.slice(0, 3)" disableRipple selected="false" disabled>
+                    {{ tag }}
+                  </mat-chip-option>
+                  <mat-chip-option *ngIf="content.tags.length > 3" disableRipple selected="false" disabled>
+                    +{{ content.tags.length - 3 }}
+                  </mat-chip-option>
+                </mat-chip-listbox>
+              </div>
+            </mat-card-content>
+
+            <mat-card-actions>
+              <button mat-button color="primary" [routerLink]="['/content-management/content', content.id]">VIEW DETAILS</button>
+              <button mat-button color="accent" *ngIf="content.status === 'review'" [routerLink]="['/content-management/review']">REVIEW</button>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+      </div>
+    </mat-drawer-content>
+  </mat-drawer-container>
+</div>
