@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -20,43 +21,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTabsModule } from '@angular/material/tabs';
 
-interface Content {
-  id: string;
-  title: string;
-  description: string;
-  track: string;
-  tags: string[];
-  sessionType: string;
-  sessionDate?: string;
-  thumbnail?: string;
-  learningLevel?: string;
-  topic?: string;
-  presenters: Presenter[];
-  dateCreated: Date;
-  dateModified: Date;
-  status: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
-}
-
-interface Presenter {
-  id: string;
-  name: string;
-  company: string;
-  title?: string;
-  photoUrl?: string;
-}
-
-interface Filter {
-  name: string;
-  options: FilterOption[];
-  expanded: boolean;
-}
-
-interface FilterOption {
-  value: string;
-  label: string;
-  selected: boolean;
-  count: number;
-}
+import { Content, Filter } from '../../shared/models/content.model';
+import { ContentService } from '../../core/services/content.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -71,6 +38,7 @@ interface FilterOption {
     MatChipsModule,
     MatBadgeModule,
     MatProgressBarModule,
+    MatProgressSpinnerModule,
     MatSidenavModule,
     MatCheckboxModule,
     MatExpansionModule,
@@ -86,15 +54,13 @@ interface FilterOption {
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   // Make Math available to the template
   Math = Math;
 
   showFilters = false;
   searchQuery = '';
-  selectedCarouselIndex = 0;
   selectedLatestIndex = 0;
-  carouselAutoplayInterval: any;
   latestAutoplayInterval: any;
   sortDropdownOpen = false;
 
@@ -105,111 +71,20 @@ export class HomeComponent implements OnInit {
   // Items per page
   itemsPerPage = 3;
 
-  // Featured content for carousel
-  featuredContent = [
-    {
-      id: 'f1',
-      title: 'Google Cloud Next Keynote',
-      description: 'Join us for the opening keynote to hear about the latest innovations in cloud technology',
-      image: 'assets/content-thumbnails/default-thumbnail.jpg',
-      track: 'Keynote',
-      status: 'published',
-      tags: ['Cloud', 'Innovation', 'Keynote'],
-      presenters: [
-        {
-          id: 'p1',
-          name: 'Sundar Pichai',
-          company: 'Google',
-          title: 'CEO'
-        }
-      ],
-      dateModified: new Date('2023-06-15')
-    },
-    {
-      id: 'f2',
-      title: 'AI Summit',
-      description: 'Explore the latest in artificial intelligence and machine learning with hands-on workshops and expert speakers',
-      image: 'assets/content-thumbnails/default-thumbnail.jpg',
-      track: 'AI & Machine Learning',
-      status: 'approved',
-      tags: ['AI', 'ML', 'Workshops'],
-      presenters: [
-        {
-          id: 'p2',
-          name: 'Sarah Chen',
-          company: 'Google',
-          title: 'AI/ML Product Lead'
-        },
-        {
-          id: 'p3',
-          name: 'Michael Johnson',
-          company: 'Google',
-          title: 'Senior Engineer'
-        }
-      ],
-      dateModified: new Date('2023-06-10')
-    },
-    {
-      id: 'f3',
-      title: 'Developer Workshops',
-      description: 'Hands-on sessions for developers to build with Google Cloud and learn best practices from experts',
-      image: 'assets/content-thumbnails/default-thumbnail.jpg',
-      track: 'Developer Tools',
-      status: 'review',
-      tags: ['Dev Tools', 'Best Practices', 'Hands-on'],
-      presenters: [
-        {
-          id: 'p4',
-          name: 'David Kim',
-          company: 'Google',
-          title: 'Cloud Architect'
-        }
-      ],
-      dateModified: new Date('2023-06-08')
-    },
-    {
-      id: 'f4',
-      title: 'Cloud Security Summit',
-      description: 'Deep-dive into the latest security features and best practices for protecting your cloud environment',
-      image: 'assets/content-thumbnails/default-thumbnail.jpg',
-      track: 'Security',
-      status: 'published',
-      tags: ['Security', 'Best Practices', 'Cloud'],
-      presenters: [
-        {
-          id: 'p5',
-          name: 'Jennifer Lopez',
-          company: 'Google',
-          title: 'Security Specialist'
-        },
-        {
-          id: 'p6',
-          name: 'Mark Davis',
-          company: 'Google',
-          title: 'Solutions Architect'
-        }
-      ],
-      dateModified: new Date('2023-06-05')
-    },
-    {
-      id: 'f5',
-      title: 'Data & Analytics',
-      description: 'Learn how to leverage BigQuery, Looker, and other Google Cloud data tools to drive insights',
-      image: 'assets/content-thumbnails/default-thumbnail.jpg',
-      track: 'Data & Analytics',
-      status: 'approved',
-      tags: ['BigQuery', 'Looker', 'Analytics'],
-      presenters: [
-        {
-          id: 'p7',
-          name: 'Robert Chen',
-          company: 'Google',
-          title: 'BigQuery Specialist'
-        }
-      ],
-      dateModified: new Date('2023-06-01')
-    }
-  ];
+  // Content data
+  latestUpdates: Content[] = [];
+  visibleLatestUpdates: Content[] = [];
+  recommendedContent: Content[] = [];
+  visibleRecommended: Content[] = [];
+
+  // Loading state
+  loading = {
+    latest: true,
+    recommended: true
+  };
+
+  // Subscriptions to clean up
+  private subscriptions: Subscription[] = [];
 
   // Filter configurations
   filters: Filter[] = [
@@ -256,38 +131,52 @@ export class HomeComponent implements OnInit {
     }
   ];
 
-  // Latest updates data (mock)
-  latestUpdates: Content[] = [];
-  visibleLatestUpdates: Content[] = [];
-
-  // Recommended content data (mock)
-  recommendedContent: Content[] = [];
-  visibleRecommended: Content[] = [];
-
-  constructor() {}
+  constructor(
+    private contentService: ContentService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-    this.generateMockData();
-    this.updateVisibleItems();
-    this.startCarouselAutoplay();
+    this.loadContent();
     this.startLatestAutoplay();
   }
 
   ngOnDestroy(): void {
-    this.stopCarouselAutoplay();
     this.stopLatestAutoplay();
+    
+    // Clean up all subscriptions
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
-  startCarouselAutoplay(): void {
-    this.carouselAutoplayInterval = setInterval(() => {
-      this.nextCarouselSlide();
-    }, 5000);
-  }
-
-  stopCarouselAutoplay(): void {
-    if (this.carouselAutoplayInterval) {
-      clearInterval(this.carouselAutoplayInterval);
-    }
+  loadContent(): void {
+    // Load latest updates
+    const latestSub = this.contentService.getLatestUpdates().subscribe({
+      next: (data) => {
+        this.latestUpdates = data;
+        this.updateVisibleItems();
+        this.loading.latest = false;
+      },
+      error: (err) => {
+        console.error('Error loading latest updates:', err);
+        this.loading.latest = false;
+      }
+    });
+    
+    // Load recommended content
+    const recommendedSub = this.contentService.getRecommendedContent().subscribe({
+      next: (data) => {
+        this.recommendedContent = data;
+        this.updateVisibleItems();
+        this.loading.recommended = false;
+      },
+      error: (err) => {
+        console.error('Error loading recommended content:', err);
+        this.loading.recommended = false;
+      }
+    });
+    
+    // Store subscriptions for cleanup
+    this.subscriptions.push(latestSub, recommendedSub);
   }
 
   startLatestAutoplay(): void {
@@ -300,20 +189,6 @@ export class HomeComponent implements OnInit {
     if (this.latestAutoplayInterval) {
       clearInterval(this.latestAutoplayInterval);
     }
-  }
-
-  onCarouselTabChange(index: number): void {
-    this.selectedCarouselIndex = index;
-    this.stopCarouselAutoplay();
-    this.startCarouselAutoplay();
-  }
-
-  nextCarouselSlide(): void {
-    this.selectedCarouselIndex = (this.selectedCarouselIndex + 1) % this.featuredContent.length;
-  }
-
-  prevCarouselSlide(): void {
-    this.selectedCarouselIndex = (this.selectedCarouselIndex - 1 + this.featuredContent.length) % this.featuredContent.length;
   }
 
   nextLatestSlide(): void {
@@ -361,9 +236,6 @@ export class HomeComponent implements OnInit {
     console.log('Applied filters:', selectedFilters);
     console.log('Search query:', this.searchQuery);
 
-    // In a real implementation, this would filter the actual data using the API
-    // Instead of '/api/search' it should be '/api/content/search'
-
     // Reset pagination when filters are applied
     this.latestPage = 0;
     this.recommendedPage = 0;
@@ -378,16 +250,14 @@ export class HomeComponent implements OnInit {
   }
 
   updateFilteredContent(selectedFilters: any[]): void {
-    // In a real implementation, this would be handled by the API
-    // For demo purposes, we'll just do basic client-side filtering
-
     // Filter both content lists based on selected filters
     const filteredLatest = this.filterContent(this.latestUpdates, selectedFilters);
     const filteredRecommended = this.filterContent(this.recommendedContent, selectedFilters);
 
     // Update visible content
-    this.visibleLatestUpdates = filteredLatest.slice(0, this.itemsPerPage);
-    this.visibleRecommended = filteredRecommended.slice(0, this.itemsPerPage);
+    this.latestUpdates = filteredLatest;
+    this.recommendedContent = filteredRecommended;
+    this.updateVisibleItems();
   }
 
   filterContent(items: Content[], selectedFilters: any[]): Content[] {
@@ -449,8 +319,17 @@ export class HomeComponent implements OnInit {
 
     // Simple sorting implementation
     if (sortOption === 'newest') {
-      this.latestUpdates.sort((a, b) => b.dateCreated.getTime() - a.dateCreated.getTime());
-      this.recommendedContent.sort((a, b) => b.dateCreated.getTime() - a.dateCreated.getTime());
+      this.latestUpdates.sort((a, b) => {
+        const dateA = new Date(b.dateModified).getTime();
+        const dateB = new Date(a.dateModified).getTime();
+        return dateA - dateB;
+      });
+      
+      this.recommendedContent.sort((a, b) => {
+        const dateA = new Date(b.dateModified).getTime();
+        const dateB = new Date(a.dateModified).getTime();
+        return dateA - dateB;
+      });
     } else if (sortOption === 'title') {
       this.latestUpdates.sort((a, b) => a.title.localeCompare(b.title));
       this.recommendedContent.sort((a, b) => a.title.localeCompare(b.title));
@@ -483,7 +362,7 @@ export class HomeComponent implements OnInit {
     this.updateVisibleItems();
   }
 
-  isNew(item: any): boolean {
+  isNew(item: Content): boolean {
     // Consider an item "new" if it's less than 7 days old
     const now = new Date();
     const itemDate = new Date(item.dateCreated);
@@ -492,197 +371,17 @@ export class HomeComponent implements OnInit {
     return diffDays <= 7;
   }
 
-  isRecommended(item: any): boolean {
-    // This could be based on a property from the backend
-    // For now, let's mark some items as recommended based on some criteria
-    return item.tags.some((tag: string) =>
-      ['Recommended', 'Featured', 'Popular'].includes(tag)
+  isRecommended(item: Content): boolean {
+    // Check if item has recommended flag or tag
+    if (item.recommended) return true;
+    return item.tags.some(tag => 
+      tag.toLowerCase() === 'recommended' || 
+      tag.toLowerCase() === 'featured' || 
+      tag.toLowerCase() === 'popular'
     );
   }
 
-  generateMockData(): void {
-    // Generate latest updates that match the wireframe
-    this.latestUpdates = [
-      {
-        id: 'lu1',
-        title: 'Build the future of global carbon market analytics in Google Cloud',
-        description: 'This session talks about two rising startups in carbon credit market, Perennial and Pachama, and their approach to building scalable solutions.',
-        track: 'Cloud',
-        tags: ['New', 'AI', 'Cloud', 'Data Analytics'],
-        sessionType: 'workshop',
-        learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/carbon-analytics.jpg',
-        presenters: [
-          {
-            id: 'p1',
-            name: 'Sarah Chen',
-            company: 'Google',
-            title: 'Product Lead',
-            photoUrl: 'assets/avatars/sarah-chen.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-04-10'),
-        dateModified: new Date('2023-04-10'),
-        status: 'published'
-      },
-      {
-        id: 'lu2',
-        title: 'Migrating Spark and Hadoop to Dataproc',
-        description: 'Learn how Dataproc can support your hybrid multicloud strategy and help you meet your business goals for your big data workloads.',
-        track: 'Big Data',
-        tags: ['New', 'AI', 'Big Data', 'Advanced Technical'],
-        sessionType: 'breakout',
-        learningLevel: 'advanced',
-        thumbnail: 'assets/content-thumbnails/dataproc.jpg',
-        presenters: [
-          {
-            id: 'p3',
-            name: 'David Kim',
-            company: 'Google',
-            title: 'Cloud Architect',
-            photoUrl: 'assets/avatars/david-kim.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-04-03'),
-        dateModified: new Date('2023-04-03'),
-        status: 'published'
-      },
-      {
-        id: 'lu3',
-        title: 'Advanced productivity for data science',
-        description: 'This session will explore how Vertex AI can help data scientists be more productive.',
-        track: 'Data Analytics',
-        tags: ['New', 'Data Analytics', 'Advanced Technical', 'BigQuery', 'Vertex AI'],
-        sessionType: 'workshop',
-        learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/data-science.jpg',
-        presenters: [
-          {
-            id: 'p4',
-            name: 'Jennifer Lopez',
-            company: 'Google',
-            title: 'Data Science Lead',
-            photoUrl: 'assets/avatars/jennifer-lopez.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-03-27'),
-        dateModified: new Date('2023-03-27'),
-        status: 'published'
-      },
-      {
-        id: 'lu4',
-        title: 'Introduction to BigQuery ML for predictive analytics',
-        description: 'Learn how to use BigQuery ML to build machine learning models directly in BigQuery without moving your data.',
-        track: 'Data Analytics',
-        tags: ['New', 'Data Analytics', 'BigQuery', 'ML'],
-        sessionType: 'workshop',
-        learningLevel: 'beginner',
-        thumbnail: 'assets/content-thumbnails/bigquery-ml.jpg',
-        presenters: [
-          {
-            id: 'p5',
-            name: 'Robert Chen',
-            company: 'Google',
-            title: 'BigQuery Specialist',
-            photoUrl: 'assets/avatars/robert-chen.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-03-20'),
-        dateModified: new Date('2023-03-22'),
-        status: 'published'
-      }
-    ];
-
-    // Generate recommended content that matches the wireframe
-    this.recommendedContent = [
-      {
-        id: 'rc1',
-        title: 'Founder series panel: How to get $100 million in funding',
-        description: 'This session talks about how disruptive Generative AI startups secured over $100M in funding. Founders share their investment stories and insights.',
-        track: 'Technology & Leadership',
-        tags: ['Recommended', 'Technology & Leadership', 'Startup'],
-        sessionType: 'panel',
-        learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/founder-series.jpg',
-        presenters: [
-          {
-            id: 'p8',
-            name: 'Thomas Lee',
-            company: 'Venture Capital',
-            title: 'Partner',
-            photoUrl: 'assets/avatars/thomas-lee.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-04-01'),
-        dateModified: new Date('2023-04-01'),
-        status: 'published'
-      },
-      {
-        id: 'rc2',
-        title: 'How the cloud and digital packaging deliver elevated brand experiences',
-        description: 'This session talks about how Germany\'s Koenig & Bauer, the world\'s oldest printing press manufacturer, teamed with Deloitte and Google Cloud to transform their business.',
-        track: 'Technology',
-        tags: ['Recommended', 'Technology', 'Manufacturing'],
-        sessionType: 'breakout',
-        learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/packaging.jpg',
-        presenters: [
-          {
-            id: 'p10',
-            name: 'Koenig & Bauer',
-            company: 'Manufacturing',
-            title: 'CTO',
-            photoUrl: 'assets/avatars/koenig.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-03-10'),
-        dateModified: new Date('2023-03-10'),
-        status: 'published'
-      },
-      {
-        id: 'rc3',
-        title: 'Useful applications of Imagen for image generation and customization',
-        description: 'This session focuses on how to use Imagen on Vertex AI to assist in the creative process across multiple applications, such as product ads.',
-        track: 'Technology',
-        tags: ['Recommended', 'Technology', 'Vertex AI', 'App Dev'],
-        sessionType: 'demo',
-        learningLevel: 'advanced',
-        thumbnail: 'assets/content-thumbnails/imagen.jpg',
-        presenters: [
-          {
-            id: 'p11',
-            name: 'Jessica Brown',
-            company: 'Google',
-            title: 'AI Specialist',
-            photoUrl: 'assets/avatars/jessica-brown.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-03-12'),
-        dateModified: new Date('2023-03-15'),
-        status: 'published'
-      },
-      {
-        id: 'rc4',
-        title: 'Generative AI for enterprise knowledge management',
-        description: 'Learn how to use generative AI to improve knowledge discovery and management within your organization.',
-        track: 'AI & Machine Learning',
-        tags: ['Recommended', 'GenAI', 'Enterprise'],
-        sessionType: 'workshop',
-        learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/genai-km.jpg',
-        presenters: [
-          {
-            id: 'p12',
-            name: 'Mark Davis',
-            company: 'Google',
-            title: 'Solutions Architect',
-            photoUrl: 'assets/avatars/mark-davis.jpg'
-          }
-        ],
-        dateCreated: new Date('2023-03-08'),
-        dateModified: new Date('2023-03-10'),
-        status: 'published'
-      }
-    ];
+  navigateToContent(contentId: string): void {
+    this.router.navigate(['/content', contentId]);
   }
 }

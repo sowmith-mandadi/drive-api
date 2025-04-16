@@ -22,6 +22,10 @@ export const routes: Routes = [
     component: ContentViewComponent
   },
   {
+    path: 'content/:contentId',
+    component: ContentViewComponent
+  },
+  {
     path: 'content-management',
     children: [
       {

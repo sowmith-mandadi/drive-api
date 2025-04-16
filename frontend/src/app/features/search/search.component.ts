@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,46 +23,9 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
-interface Asset {
-  type: string;
-  name: string;
-  url: string;
-}
-
-interface ContentItem {
-  id: string;
-  title: string;
-  tags: string[];
-  abstract: string;
-  type: string;
-  track: string;
-  author: string;
-  dateModified: string;
-  dateCreated: string;
-  thumbUrl?: string;
-  assets?: Asset[];
-  priority?: boolean;
-  recommended?: boolean;
-  bookmarked?: boolean;
-}
-
-interface SearchResult {
-  items: ContentItem[];
-  total: number;
-}
-
-interface FilterOption {
-  value: string;
-  label: string;
-  selected: boolean;
-  count: number;
-}
-
-interface Filter {
-  name: string;
-  options: FilterOption[];
-  expanded: boolean;
-}
+// Update imports to use our shared models
+import { Content, Asset, SearchResult, Filter, FilterOption } from '../../shared/models/content.model';
+import { ContentService } from '../../core/services/content.service';
 
 @Component({
   selector: 'app-search',
@@ -168,8 +131,8 @@ interface Filter {
         </div>
 
         <div class="results-grid" *ngIf="results().length > 0">
-          <div class="result-card" *ngFor="let item of results(); let i = index">
-            <button class="bookmark-button" [class.bookmarked]="item.bookmarked">
+          <div class="result-card" *ngFor="let item of results(); let i = index" (click)="navigateToContent(item.id)">
+            <button class="bookmark-button" [class.bookmarked]="item.bookmarked" (click)="toggleBookmark($event, item)">
               <mat-icon>{{ item.bookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
             </button>
 
@@ -178,10 +141,10 @@ interface Filter {
             <div class="card-labels">
               <div class="label priority" *ngIf="item.priority">Priority</div>
               <div class="label recommended" *ngIf="item.recommended">Recommended</div>
-              <div class="label new" *ngIf="item.type === 'New'">New</div>
+              <div class="label new" *ngIf="isNewContent(item)">New</div>
             </div>
 
-            <div class="ai-summary" *ngIf="item.type === 'AI Summary'">
+            <div class="ai-summary" *ngIf="hasAiSummary(item)">
               <div class="ai-icon">
                 <mat-icon>smart_toy</mat-icon>
               </div>
@@ -196,7 +159,7 @@ interface Filter {
                 *ngIf="shouldShowMoreButton(item, i)"
                 type="button"
                 class="show-more-btn"
-                (click)="toggleShowMore(i)">
+                (click)="toggleShowMore($event, i)">
                 {{ expandedAbstracts[i] ? 'Show less' : 'Show more' }}
               </button>
             </div>
@@ -208,7 +171,8 @@ interface Filter {
                   *ngFor="let asset of item.assets"
                   [href]="asset.url"
                   target="_blank"
-                  class="asset-link">
+                  class="asset-link"
+                  (click)="$event.stopPropagation()">
                   <div class="asset-icon-wrapper" [class]="asset.type.toLowerCase()">
                     <mat-icon>{{ getAssetIcon(asset.type) }}</mat-icon>
                   </div>
@@ -507,6 +471,7 @@ interface Filter {
       border: 1px solid #dadce0;
       padding: 24px;
       transition: box-shadow 0.2s;
+      cursor: pointer;
     }
 
     .result-card:hover {
@@ -523,6 +488,7 @@ interface Filter {
       padding: 4px;
       color: #dadce0;
       transition: color 0.2s;
+      z-index: 1;
     }
 
     .bookmark-button:hover {
@@ -610,6 +576,8 @@ interface Filter {
       font-size: 14px;
       cursor: pointer;
       font-weight: 500;
+      z-index: 2;
+      position: relative;
     }
 
     .show-more-btn:hover {
@@ -641,6 +609,8 @@ interface Filter {
       color: #1a73e8;
       font-size: 14px;
       font-weight: 500;
+      z-index: 2;
+      position: relative;
     }
 
     .asset-link:hover {
@@ -965,11 +935,16 @@ export class SearchComponent {
 
   // Signals
   isLoading = signal(false);
-  results = signal<ContentItem[]>([]);
+  results = signal<Content[]>([]);
   resultsTotal = signal(0);
   hasSearched = signal(false);
 
-  constructor(private fb: FormBuilder, private http: HttpClient) {
+  constructor(
+    private fb: FormBuilder, 
+    private http: HttpClient,
+    private router: Router,
+    private contentService: ContentService
+  ) {
     this.searchForm = this.fb.group({
       query: ['AI']
     });
@@ -1030,27 +1005,44 @@ export class SearchComponent {
       ...this.searchForm.value,
       page: this.pageIndex,
       size: this.pageSize,
-      sort: this.sortField
+      sort: this.sortField,
+      filters: this.getSelectedFilters()
     };
 
-    this.http.post<SearchResult>('/api/content/search', params)
-      .pipe(
-        catchError(err => {
-          console.error('Search error', err);
-          this.isLoading.set(false);
-          // For demo, return mock data
-          return of(this.getMockSearchResults(params));
-        })
-      )
-      .subscribe(data => {
+    // Use ContentService instead of direct HTTP request
+    this.contentService.searchContent(params).subscribe({
+      next: (data) => {
         this.results.set(data.items);
         this.resultsTotal.set(data.total);
         this.isLoading.set(false);
-      });
+      },
+      error: (err) => {
+        console.error('Search error', err);
+        this.isLoading.set(false);
+      }
+    });
   }
 
-  getAbstractToShow(item: ContentItem, index: number): string {
-    if (!item.abstract) return '';
+  getSelectedFilters(): any {
+    const filters: any = {};
+    
+    this.filters.forEach(filter => {
+      const selected = filter.options
+        .filter(option => option.selected)
+        .map(option => option.value);
+      
+      if (selected.length > 0) {
+        // Convert filter name to camelCase for API parameters
+        const key = filter.name.toLowerCase().replace(/\s(.)/g, ($1) => $1.toUpperCase()).replace(/\s/g, '');
+        filters[key] = selected;
+      }
+    });
+    
+    return filters;
+  }
+
+  getAbstractToShow(item: Content, index: number): string {
+    if (!item.abstract) return item.description;
 
     if (this.expandedAbstracts[index] || item.abstract.length <= this.abstractMaxLength) {
       return item.abstract;
@@ -1059,12 +1051,20 @@ export class SearchComponent {
     return item.abstract.substring(0, this.abstractMaxLength) + '...';
   }
 
-  shouldShowMoreButton(item: ContentItem, index: number): boolean {
-    return !!(item.abstract && item.abstract.length > this.abstractMaxLength);
+  shouldShowMoreButton(item: Content, index: number): boolean {
+    const text = item.abstract || item.description;
+    return !!(text && text.length > this.abstractMaxLength);
   }
 
-  toggleShowMore(index: number): void {
+  toggleShowMore(event: Event, index: number): void {
+    event.stopPropagation(); // Prevent navigation
     this.expandedAbstracts[index] = !this.expandedAbstracts[index];
+  }
+
+  toggleBookmark(event: Event, item: Content): void {
+    event.stopPropagation(); // Prevent navigation
+    item.bookmarked = !item.bookmarked;
+    // In a real app, this would also call an API to save the bookmark state
   }
 
   getAssetIcon(assetType: string): string {
@@ -1079,12 +1079,10 @@ export class SearchComponent {
         return 'code';
       case 'github':
         return 'code';
-      case 'slide':
-        return 'slideshow';
       case 'youtube':
         return 'smart_display';
-      case 'pdf':
-        return 'picture_as_pdf';
+      case 'notebook':
+        return 'book';
       default:
         return 'insert_drive_file';
     }
@@ -1095,108 +1093,21 @@ export class SearchComponent {
     this.search();
   }
 
-  // Mock data for demo that matches the screenshot
-  private getMockSearchResults(params: any): SearchResult {
-    const mockData: ContentItem[] = [
-      {
-        id: '1',
-        title: 'AI for Banking: Streamline core banking services and personalize customer experiences',
-        tags: ['Finance', 'Banking'],
-        abstract: 'This session talks about how Generative AI is transforming the way we live, work, bank, and invest. It covers Google Cloud\'s insights, real-world use cases for boosting productivity in banking, and features success stories from industry leaders leveraging AI for innovation. Attendees will gain a deeper understanding of how AI is reshaping financial services.',
-        type: 'Technical Session',
-        track: 'Finance',
-        author: 'Google Cloud',
-        dateCreated: '2023-05-15T10:30:00Z',
-        dateModified: '2023-05-15T10:30:00Z',
-        recommended: true,
-        assets: [
-          { type: 'Slide', name: 'Presentation Slides', url: '#' },
-          { type: 'YouTube', name: 'Video Recording', url: '#' }
-        ]
-      },
-      {
-        id: '2',
-        title: 'AI for media: How Paramount+ uses artificial intelligence to streamline and personalize video',
-        tags: ['Media', 'Entertainment'],
-        abstract: 'This session talks about how Generative AI is transforming the way we live, work, bank, and invest. It covers Google Cloud\'s insights, real-world use cases for boosting productivity in banking, and features success stories from industry leaders leveraging AI for innovation.',
-        type: 'New',
-        track: 'Media & Entertainment',
-        author: 'Paramount+',
-        dateCreated: '2023-06-01T14:00:00Z',
-        dateModified: '2023-06-02T09:30:00Z',
-        assets: [
-          { type: 'Slide', name: 'Presentation Slides', url: '#' },
-          { type: 'PDF', name: 'Case Study Document', url: '#' }
-        ]
-      },
-      {
-        id: '3',
-        title: 'AI for healthcare: Efficient care delivery and drug discovery',
-        tags: ['Healthcare', 'Life Sciences'],
-        abstract: 'This session talks about how AI is poised to revolutionize the way we conduct research, leading to groundbreaking discoveries and transformative advancements in healthcare sector.',
-        type: 'AI Summary',
-        track: 'Healthcare & Life Sciences',
-        author: 'Medical AI Team',
-        dateCreated: '2023-05-20T11:15:00Z',
-        dateModified: '2023-05-25T16:20:00Z',
-        priority: true,
-        assets: [
-          { type: 'Slide', name: 'Presentation Slides', url: '#' },
-          { type: 'YouTube', name: 'Demo Recording', url: '#' }
-        ]
-      },
-      {
-        id: '4',
-        title: 'AI for telecommunications: Transform customer interactions and network operations',
-        tags: ['Telecommunications', 'Customer Service'],
-        abstract: 'This session talks about how Google Cloud is helping CSPs customers in implementing gen AI to improve online self service, increase effectiveness of agent assisted interactions, create optimized next best offers.',
-        type: 'Technical Session',
-        track: 'Healthcare & Life Sciences',
-        author: 'Telecom Innovation Team',
-        dateCreated: '2023-04-10T09:00:00Z',
-        dateModified: '2023-04-15T13:45:00Z',
-        priority: true,
-        assets: [
-          { type: 'Slide', name: 'Presentation Slides', url: '#' },
-          { type: 'YouTube', name: 'Video Recording', url: '#' }
-        ]
-      }
-    ];
-
-    // Apply search filter if query exists
-    let filtered = [...mockData];
-    if (params.query && params.query !== 'AI') {
-      const query = params.query.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.abstract.toLowerCase().includes(query) ||
-        item.tags.some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // Sort
-    switch(params.sort) {
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.dateModified).getTime() - new Date(a.dateModified).getTime());
-        break;
-      case 'title':
-        filtered.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      // For relevance, we'll just keep the current order in this mock
-    }
-
-    // Pagination
-    const total = filtered.length;
-    const startIndex = params.page * params.size;
-    const paginatedItems = filtered.slice(startIndex, startIndex + params.size);
-
-    return {
-      items: paginatedItems,
-      total: total
-    };
+  navigateToContent(contentId: string): void {
+    this.router.navigate(['/content', contentId]);
   }
 
   get queryControl(): FormControl {
     return this.searchForm.get('query') as FormControl;
+  }
+
+  isNewContent(item: Content): boolean {
+    // Check if the item has a 'New' tag
+    return item.tags?.some(tag => tag === 'New');
+  }
+
+  hasAiSummary(item: Content): boolean {
+    // Check if item has an AI summary or an AI tag
+    return !!item.aiSummary || item.tags?.some(tag => tag.includes('AI'));
   }
 }

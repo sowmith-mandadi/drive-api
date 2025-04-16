@@ -1,0 +1,197 @@
+[
+  {
+    "id": "rc1",
+    "title": "Founder series panel: How to get $100 million in funding",
+    "description": "This session talks about how disruptive Generative AI startups secured over $100M in funding. Founders share their investment stories and insights.",
+    "abstract": "Join this exclusive panel discussion where successful AI startup founders share their journey to securing significant funding and the lessons they learned along the way.",
+    "track": "Technology & Leadership",
+    "tags": ["Recommended", "Technology & Leadership", "Startup"],
+    "sessionType": "panel",
+    "sessionDate": "2023-09-20T11:00:00Z",
+    "thumbnail": "assets/content-thumbnails/founder-series.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-04-01T14:30:00Z",
+    "dateModified": "2023-04-01T14:30:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p8",
+        "name": "Thomas Lee",
+        "company": "Venture Capital",
+        "title": "Partner",
+        "photoUrl": "assets/avatars/thomas-lee.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Panel Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Panel Recording",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc2",
+    "title": "How the cloud and digital packaging deliver elevated brand experiences",
+    "description": "This session talks about how Germany's Koenig & Bauer, the world's oldest printing press manufacturer, teamed with Deloitte and Google Cloud to transform their business.",
+    "abstract": "Discover how traditional manufacturing businesses are leveraging cloud technology to transform their operations and create innovative customer experiences.",
+    "track": "Technology",
+    "tags": ["Recommended", "Technology", "Manufacturing"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-21T13:30:00Z",
+    "thumbnail": "assets/content-thumbnails/packaging.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-10T10:15:00Z",
+    "dateModified": "2023-03-10T10:15:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p10",
+        "name": "Koenig & Bauer",
+        "company": "Manufacturing",
+        "title": "CTO",
+        "photoUrl": "assets/avatars/koenig.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Case Study",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc3",
+    "title": "Useful applications of Imagen for image generation and customization",
+    "description": "This session focuses on how to use Imagen on Vertex AI to assist in the creative process across multiple applications, such as product ads.",
+    "abstract": "Explore practical applications of Imagen in Vertex AI for creative workflows, from generating product imagery to customizing visual content for various marketing channels.",
+    "track": "Technology",
+    "tags": ["Recommended", "Technology", "Vertex AI", "App Dev"],
+    "sessionType": "demo",
+    "sessionDate": "2023-09-22T15:00:00Z",
+    "thumbnail": "assets/content-thumbnails/imagen.jpg",
+    "learningLevel": "advanced",
+    "status": "published",
+    "dateCreated": "2023-03-12T11:30:00Z",
+    "dateModified": "2023-03-15T09:45:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p11",
+        "name": "Jessica Brown",
+        "company": "Google",
+        "title": "AI Specialist",
+        "photoUrl": "assets/avatars/jessica-brown.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Demo Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Demo Recording",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Code",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc4",
+    "title": "Generative AI for enterprise knowledge management",
+    "description": "Learn how to use generative AI to improve knowledge discovery and management within your organization.",
+    "abstract": "This session explores how generative AI can transform enterprise knowledge management, making information more accessible, discoverable, and actionable.",
+    "track": "AI & Machine Learning",
+    "tags": ["Recommended", "GenAI", "Enterprise"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-23T10:30:00Z",
+    "thumbnail": "assets/content-thumbnails/genai-km.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-08T15:45:00Z",
+    "dateModified": "2023-03-10T14:30:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p12",
+        "name": "Mark Davis",
+        "company": "Google",
+        "title": "Solutions Architect",
+        "photoUrl": "assets/avatars/mark-davis.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Implementation Guide",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc5",
+    "title": "Building responsive AI chatbots with Dialogflow CX",
+    "description": "Learn how to create sophisticated, contextually aware conversational interfaces using Google's Dialogflow CX.",
+    "abstract": "This hands-on workshop will walk you through creating advanced conversational agents using Dialogflow CX, with integration to backend systems and GenAI capabilities.",
+    "track": "AI & Machine Learning",
+    "tags": ["Recommended", "Conversational AI", "Dialogflow"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-24T13:00:00Z",
+    "thumbnail": "assets/content-thumbnails/dialogflow.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-05T10:30:00Z",
+    "dateModified": "2023-03-07T11:45:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p13",
+        "name": "Alex Johnson",
+        "company": "Google",
+        "title": "Conversational AI Lead",
+        "photoUrl": "assets/avatars/alex-johnson.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Agent",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Workshop Guide",
+        "url": "#"
+      }
+    ]
+  }
+] 

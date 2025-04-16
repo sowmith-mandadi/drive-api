@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,7 +6,10 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTableModule } from '@angular/material/table';
-import { RouterLink } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ContentService } from '../../../../core/services/content.service';
+import { Content, Asset } from '../../../../shared/models/content.model';
 
 @Component({
   selector: 'app-content-view',
@@ -19,93 +22,74 @@ import { RouterLink } from '@angular/router';
     MatChipsModule,
     MatDividerModule,
     MatTableModule,
-    RouterLink
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="content-view-container">
       <div class="back-link">
-        <button mat-icon-button routerLink="/search">
+        <button mat-icon-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>
         </button>
-        <span>Back to search results</span>
+        <span>Back to {{ referrer || 'previous page' }}</span>
       </div>
 
-      <div class="content-main">
+      <div class="loading-spinner" *ngIf="loading">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+
+      <div class="error-message" *ngIf="error">
+        <h2>Error loading content</h2>
+        <p>{{ error }}</p>
+        <button mat-raised-button color="primary" (click)="goBack()">Go Back</button>
+      </div>
+
+      <div class="content-main" *ngIf="!loading && !error && content">
         <div class="content-left">
           <div class="content-header">
-            <h1>AI for Banking: Streamline core banking services and personalize customer experiences</h1>
+            <h1>{{ content.title }}</h1>
 
             <div class="tags-container">
-              <div class="tag recommended">Recommended</div>
-              <div class="tag ai">AI</div>
-              <div class="tag finance">Finance</div>
-              <div class="tag banking">Banking</div>
+              <div class="tag recommended" *ngIf="content.recommended">Recommended</div>
+              <div class="tag priority" *ngIf="content.priority">Priority</div>
+              <ng-container *ngFor="let tag of content.tags">
+                <div class="tag" [ngClass]="getTagClass(tag)">{{ tag }}</div>
+              </ng-container>
             </div>
           </div>
 
-          <div class="abstract">
+          <div class="abstract" *ngIf="content.abstract || content.description">
             <h2>Abstract</h2>
             <p>
-              Generative AI has the potential to transform the way we live, work, bank, and invest. In
-              this session, we will share Google Cloud's perspective and specific use cases that can
-              boost productivity and operational efficiency in banking. The session will also feature
-              customer success stories and a discussion with banking executives at the forefront of
-              using generative AI.
+              {{ content.abstract || content.description }}
             </p>
           </div>
 
-          <div class="assets-section">
+          <div class="assets-section" *ngIf="content.assets && content.assets.length > 0">
             <h2>Assets</h2>
             <div class="assets-table-wrapper">
               <table class="assets-table">
                 <thead>
                   <tr>
                     <th class="asset-column">Asset</th>
-                    <th class="format-column">Format</th>
-                    <th class="type-column">Asset Type</th>
+                    <th class="type-column">Type</th>
                     <th class="actions-column"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td class="asset-column">AIML100 Gemini at Work Summit '24</td>
-                    <td class="format-column">Keynote</td>
-                    <td class="type-column">Slide</td>
+                  <tr *ngFor="let asset of content.assets">
+                    <td class="asset-column">{{ asset.name }}</td>
+                    <td class="type-column">{{ asset.type }}</td>
                     <td class="actions-column">
-                      <button mat-icon-button>
-                        <mat-icon>bookmark_border</mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="asset-column">AIML100_final preview</td>
-                    <td class="format-column">Animation</td>
-                    <td class="type-column">MP4</td>
-                    <td class="actions-column">
-                      <button mat-icon-button>
-                        <mat-icon>bookmark_border</mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="asset-column">AI for Banking - 2024</td>
-                    <td class="format-column">eBook</td>
-                    <td class="type-column">PDF</td>
-                    <td class="actions-column">
-                      <button mat-icon-button>
+                      <a [href]="asset.url" target="_blank" *ngIf="asset.url && asset.url !== '#'" mat-icon-button>
+                        <mat-icon>open_in_new</mat-icon>
+                      </a>
+                      <button mat-icon-button *ngIf="!asset.url || asset.url === '#'">
                         <mat-icon>bookmark_border</mat-icon>
                       </button>
                     </td>
                   </tr>
                 </tbody>
               </table>
-            </div>
-
-            <div class="notes-comments">
-              <h3>Notes/Comments</h3>
-              <p>
-                Any comments or notes put by the content creator that can help end users understand where the crucial points of the asset are, or any other piece of information that can be useful.
-              </p>
             </div>
           </div>
         </div>
@@ -117,80 +101,56 @@ import { RouterLink } from '@angular/router';
             </div>
             <div class="info-card-content">
               <div class="info-row">
-                <div class="info-label">Session ID</div>
-                <div class="info-value">AIML100</div>
+                <div class="info-label">ID</div>
+                <div class="info-value">{{ content.id }}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Date of Creation</div>
-                <div class="info-value">Mar 10, 2025</div>
+                <div class="info-label">Track</div>
+                <div class="info-value">{{ content.track }}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Industry</div>
-                <div class="info-value">FSI</div>
+                <div class="info-label">Session Type</div>
+                <div class="info-value">{{ content.sessionType }}</div>
+              </div>
+              <div class="info-row" *ngIf="content.sessionDate">
+                <div class="info-label">Session Date</div>
+                <div class="info-value">{{ formatDate(content.sessionDate) }}</div>
+              </div>
+              <div class="info-row" *ngIf="content.learningLevel">
+                <div class="info-label">Learning Level</div>
+                <div class="info-value">{{ content.learningLevel }}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Featured Products</div>
-                <div class="info-value">Looker, Vertex AI, Google Ads, Workspace</div>
+                <div class="info-label">Status</div>
+                <div class="info-value">{{ content.status }}</div>
               </div>
-              <div class="info-row">
-                <div class="info-label">POC</div>
-                <div class="info-value">
-                  Melanie Ratchford, Andrew Colebrook
-                </div>
+            </div>
+          </div>
+
+          <div class="info-card" *ngIf="content.presenters && content.presenters.length > 0">
+            <div class="info-card-header">
+              <h3>Presenters</h3>
+            </div>
+            <div class="info-card-content">
+              <div class="presenter" *ngFor="let presenter of content.presenters">
+                <div class="presenter-name">{{ presenter.name }}</div>
+                <div class="presenter-details">{{ presenter.title }}, {{ presenter.company }}</div>
               </div>
             </div>
           </div>
 
           <div class="info-card">
             <div class="info-card-header">
-              <h3>Additional Information</h3>
+              <h3>Dates</h3>
             </div>
             <div class="info-card-content">
               <div class="info-row">
-                <div class="info-label">Beat Sheet (Yes/No)</div>
-                <div class="info-value">Yes</div>
+                <div class="info-label">Created</div>
+                <div class="info-value">{{ formatDate(content.dateCreated) }}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Speaker Notes (Yes/No)</div>
-                <div class="info-value">Yes</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Language</div>
-                <div class="info-value">English</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Origination</div>
-                <div class="info-value">NorthAm</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Applicability</div>
-                <div class="info-value">Global</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-card">
-            <div class="info-card-header">
-              <h3>Resources/Supplementals</h3>
-            </div>
-            <div class="info-card-content">
-              <div class="resource-link">
-                <a href="#" target="_blank">
-                  Keynote Visuals: GAW2024
-                  <mat-icon class="external-link-icon">open_in_new</mat-icon>
-                </a>
-              </div>
-              <div class="resource-link">
-                <a href="#" target="_blank">
-                  ROI of Gen AI Core Asset Kit
-                  <mat-icon class="external-link-icon">open_in_new</mat-icon>
-                </a>
-              </div>
-              <div class="resource-link">
-                <a href="#" target="_blank">
-                  2025 AI Trends x FSI
-                  <mat-icon class="external-link-icon">open_in_new</mat-icon>
-                </a>
+                <div class="info-label">Last Modified</div>
+                <div class="info-value">{{ formatDate(content.dateModified) }}</div>
               </div>
             </div>
           </div>
@@ -220,10 +180,32 @@ import { RouterLink } from '@angular/router';
       margin-bottom: 24px;
       color: #5f6368;
       font-size: 14px;
+      cursor: pointer;
     }
 
     .back-link button {
       margin-right: 8px;
+    }
+
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      padding: 80px 0;
+    }
+
+    .error-message {
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .error-message h2 {
+      color: #d93025;
+      margin-bottom: 16px;
+    }
+
+    .error-message p {
+      margin-bottom: 24px;
+      color: #5f6368;
     }
 
     .content-main {
@@ -283,6 +265,8 @@ import { RouterLink } from '@angular/router';
       border-radius: 12px;
       letter-spacing: 0.2px;
       font-weight: 500;
+      background-color: #f1f3f4;
+      color: #5f6368;
     }
 
     .tag.recommended {
@@ -290,14 +274,24 @@ import { RouterLink } from '@angular/router';
       color: #137333;
     }
 
-    .tag.ai {
+    .tag.priority {
+      background-color: #fce8e6;
+      color: #c5221f;
+    }
+
+    .tag.ai, .tag.ml, .tag.genai {
       background-color: #e8f0fe;
       color: #1a73e8;
     }
 
-    .tag.finance, .tag.banking {
-      background-color: #f1f3f4;
-      color: #5f6368;
+    .tag.cloud {
+      background-color: #e6f4ea;
+      color: #137333;
+    }
+
+    .tag.security {
+      background-color: #fce8e6;
+      color: #c5221f;
     }
 
     .abstract {
@@ -350,32 +344,24 @@ import { RouterLink } from '@angular/router';
       font-weight: 500;
     }
 
-    .resource-link {
+    .presenter {
       margin-bottom: 16px;
     }
 
-    .resource-link:last-child {
+    .presenter:last-child {
       margin-bottom: 0;
     }
 
-    .resource-link a {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      color: #1a73e8;
+    .presenter-name {
       font-size: 14px;
       font-weight: 500;
+      color: #202124;
+      margin-bottom: 4px;
     }
 
-    .resource-link a:hover {
-      text-decoration: underline;
-    }
-
-    .external-link-icon {
-      font-size: 14px;
-      height: 14px;
-      width: 14px;
-      margin-left: 4px;
+    .presenter-details {
+      font-size: 12px;
+      color: #5f6368;
     }
 
     .assets-section {
@@ -417,30 +403,16 @@ import { RouterLink } from '@angular/router';
     }
 
     .asset-column {
-      width: 40%;
+      width: 70%;
     }
 
-    .format-column, .type-column {
+    .type-column {
       width: 20%;
     }
 
     .actions-column {
       width: 10%;
       text-align: right;
-    }
-
-    .notes-comments {
-      padding: 24px;
-      background-color: #fff;
-      border: 1px solid #dadce0;
-      border-radius: 8px;
-    }
-
-    .notes-comments p {
-      font-size: 14px;
-      line-height: 1.5;
-      color: #5f6368;
-      margin: 0;
     }
 
     @media (max-width: 1024px) {
@@ -468,4 +440,95 @@ import { RouterLink } from '@angular/router';
     }
   `]
 })
-export class ContentViewComponent {}
+export class ContentViewComponent implements OnInit {
+  contentId: string | null = null;
+  content: Content | null = null;
+  loading: boolean = true;
+  error: string | null = null;
+  referrer: string = 'search results';
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private contentService: ContentService
+  ) {}
+
+  ngOnInit(): void {
+    // Get the content ID from the route parameters
+    this.route.paramMap.subscribe(params => {
+      this.contentId = params.get('contentId');
+      if (this.contentId) {
+        this.loadContent(this.contentId);
+      } else {
+        this.error = 'No content ID provided';
+        this.loading = false;
+      }
+    });
+
+    // Try to determine where the user came from
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.previousNavigation) {
+      const previousUrl = navigation.previousNavigation.finalUrl?.toString() || '';
+      if (previousUrl.includes('search')) {
+        this.referrer = 'search results';
+      } else if (previousUrl.includes('home')) {
+        this.referrer = 'home';
+      }
+    }
+  }
+
+  loadContent(id: string): void {
+    this.loading = true;
+    this.error = null;
+
+    this.contentService.getContent(id).subscribe({
+      next: (content) => {
+        this.content = content;
+        this.loading = false;
+        if (!content) {
+          this.error = `Content with ID ${id} not found`;
+        }
+      },
+      error: (err) => {
+        console.error('Error loading content:', err);
+        this.error = 'Failed to load content. Please try again later.';
+        this.loading = false;
+      }
+    });
+  }
+
+  goBack(): void {
+    // Check if there's a previous navigation state to go back to
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Fallback to search page if there's no history
+      this.router.navigate(['/search']);
+    }
+  }
+
+  formatDate(dateString: string | Date): string {
+    if (!dateString) return 'N/A';
+    
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  getTagClass(tag: string): string {
+    const tagLower = tag.toLowerCase();
+    
+    if (tagLower.includes('ai') || tagLower.includes('ml') || tagLower.includes('machine learning')) {
+      return 'ai';
+    } else if (tagLower.includes('cloud')) {
+      return 'cloud';
+    } else if (tagLower.includes('security')) {
+      return 'security';
+    }
+    
+    return '';
+  }
+}

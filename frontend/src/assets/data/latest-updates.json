@@ -1,0 +1,192 @@
+[
+  {
+    "id": "lu1",
+    "title": "Build the future of global carbon market analytics in Google Cloud",
+    "description": "This session talks about two rising startups in carbon credit market, Perennial and Pachama, and their approach to building scalable solutions.",
+    "abstract": "Discover how innovative startups are leveraging Google Cloud to revolutionize carbon market analytics with advanced AI and data processing capabilities.",
+    "track": "Cloud",
+    "tags": ["New", "AI", "Cloud", "Data Analytics"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-15T11:00:00Z",
+    "thumbnail": "assets/content-thumbnails/carbon-analytics.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-04-10T09:15:00Z",
+    "dateModified": "2023-04-10T09:15:00Z",
+    "presenters": [
+      {
+        "id": "p1",
+        "name": "Sarah Chen",
+        "company": "Google",
+        "title": "Product Lead",
+        "photoUrl": "assets/avatars/sarah-chen.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "Demo",
+        "name": "Demo Application",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu2",
+    "title": "Migrating Spark and Hadoop to Dataproc",
+    "description": "Learn how Dataproc can support your hybrid multicloud strategy and help you meet your business goals for your big data workloads.",
+    "abstract": "This technical session covers strategies and best practices for migrating your existing Spark and Hadoop workloads to Dataproc to improve efficiency and reduce costs.",
+    "track": "Big Data",
+    "tags": ["New", "AI", "Big Data", "Advanced Technical"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-16T14:30:00Z",
+    "thumbnail": "assets/content-thumbnails/dataproc.jpg",
+    "learningLevel": "advanced",
+    "status": "published",
+    "dateCreated": "2023-04-03T14:20:00Z",
+    "dateModified": "2023-04-03T14:20:00Z",
+    "presenters": [
+      {
+        "id": "p3",
+        "name": "David Kim",
+        "company": "Google",
+        "title": "Cloud Architect",
+        "photoUrl": "assets/avatars/david-kim.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Migration Scripts",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu3",
+    "title": "Advanced productivity for data science",
+    "description": "This session will explore how Vertex AI can help data scientists be more productive.",
+    "abstract": "Learn how Vertex AI can streamline your data science workflows, from data preparation to model deployment, with powerful tools and integrations.",
+    "track": "Data Analytics",
+    "tags": ["New", "Data Analytics", "Advanced Technical", "BigQuery", "Vertex AI"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-17T10:00:00Z",
+    "thumbnail": "assets/content-thumbnails/data-science.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-27T11:45:00Z",
+    "dateModified": "2023-03-27T11:45:00Z",
+    "presenters": [
+      {
+        "id": "p4",
+        "name": "Jennifer Lopez",
+        "company": "Google",
+        "title": "Data Science Lead",
+        "photoUrl": "assets/avatars/jennifer-lopez.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Demo Recording",
+        "url": "#"
+      },
+      {
+        "type": "Notebook",
+        "name": "Jupyter Notebook",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu4",
+    "title": "Introduction to BigQuery ML for predictive analytics",
+    "description": "Learn how to use BigQuery ML to build machine learning models directly in BigQuery without moving your data.",
+    "abstract": "This beginner-friendly session introduces BigQuery ML and demonstrates how to create and deploy machine learning models using SQL, without leaving your data warehouse.",
+    "track": "Data Analytics",
+    "tags": ["New", "Data Analytics", "BigQuery", "ML"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-18T13:00:00Z",
+    "thumbnail": "assets/content-thumbnails/bigquery-ml.jpg",
+    "learningLevel": "beginner",
+    "status": "published",
+    "dateCreated": "2023-03-20T16:30:00Z",
+    "dateModified": "2023-03-22T10:15:00Z",
+    "presenters": [
+      {
+        "id": "p5",
+        "name": "Robert Chen",
+        "company": "Google",
+        "title": "BigQuery Specialist",
+        "photoUrl": "assets/avatars/robert-chen.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Workshop Guide",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Code",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu5",
+    "title": "Securing cloud workloads with Google Cloud Armor",
+    "description": "Learn how to protect your applications and infrastructure from DDoS attacks and other web threats using Google Cloud Armor.",
+    "abstract": "This session covers the latest features and best practices for implementing Google Cloud Armor to safeguard your web applications and services from various security threats.",
+    "track": "Security",
+    "tags": ["Security", "Cloud", "Best Practices"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-19T15:30:00Z",
+    "thumbnail": "assets/content-thumbnails/security.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-15T09:45:00Z",
+    "dateModified": "2023-03-18T14:30:00Z",
+    "presenters": [
+      {
+        "id": "p6",
+        "name": "Mark Davis",
+        "company": "Google",
+        "title": "Security Engineer",
+        "photoUrl": "assets/avatars/mark-davis.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Security Checklist",
+        "url": "#"
+      }
+    ]
+  }
+] 

@@ -32,9 +32,17 @@
   <div class="content-container" [class.with-filters]="showFilters">
     <section class="content-section">
       <h2>Latest Updates</h2>
+      
+      <div class="loading-spinner" *ngIf="loading.latest">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
 
-      <div class="card-grid">
-        <div class="card" *ngFor="let item of visibleLatestUpdates">
+      <div class="no-results" *ngIf="!loading.latest && visibleLatestUpdates.length === 0">
+        <p>No content available</p>
+      </div>
+
+      <div class="card-grid" *ngIf="!loading.latest && visibleLatestUpdates.length > 0">
+        <div class="card" *ngFor="let item of visibleLatestUpdates" (click)="navigateToContent(item.id)">
           <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
           <h3 class="card-title">{{ item.title }}</h3>
 
@@ -45,13 +53,13 @@
 
           <div class="card-description">{{ item.description }}</div>
 
-          <a class="card-link" [routerLink]="['/content', item.id]">
+          <div class="card-link">
             <mat-icon>arrow_forward</mat-icon>
-          </a>
+          </div>
         </div>
       </div>
 
-      <div class="pagination-controls">
+      <div class="pagination-controls" *ngIf="!loading.latest && latestUpdates.length > itemsPerPage">
         <button mat-icon-button (click)="prevLatestSlide()" [disabled]="latestPage === 0">
           <mat-icon>chevron_left</mat-icon>
         </button>
@@ -63,9 +71,17 @@
 
     <section class="content-section">
       <h2>Recommended</h2>
+      
+      <div class="loading-spinner" *ngIf="loading.recommended">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
 
-      <div class="card-grid">
-        <div class="card" *ngFor="let item of visibleRecommended">
+      <div class="no-results" *ngIf="!loading.recommended && visibleRecommended.length === 0">
+        <p>No content available</p>
+      </div>
+
+      <div class="card-grid" *ngIf="!loading.recommended && visibleRecommended.length > 0">
+        <div class="card" *ngFor="let item of visibleRecommended" (click)="navigateToContent(item.id)">
           <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
           <h3 class="card-title">{{ item.title }}</h3>
 
@@ -76,13 +92,13 @@
 
           <div class="card-description">{{ item.description }}</div>
 
-          <a class="card-link" [routerLink]="['/content', item.id]">
+          <div class="card-link">
             <mat-icon>arrow_forward</mat-icon>
-          </a>
+          </div>
         </div>
       </div>
 
-      <div class="pagination-controls">
+      <div class="pagination-controls" *ngIf="!loading.recommended && recommendedContent.length > itemsPerPage">
         <button mat-icon-button (click)="prevRecommendedSlide()" [disabled]="recommendedPage === 0">
           <mat-icon>chevron_left</mat-icon>
         </button>

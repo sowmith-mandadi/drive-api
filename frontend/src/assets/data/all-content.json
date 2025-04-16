@@ -1,0 +1,585 @@
+[
+  {
+    "id": "f1",
+    "title": "Google Cloud Next Keynote",
+    "description": "Join us for the opening keynote to hear about the latest innovations in cloud technology",
+    "abstract": "Discover the future of cloud computing with our exciting keynote presentation featuring industry leaders and cutting-edge announcements.",
+    "track": "Keynote",
+    "tags": ["Cloud", "Innovation", "Keynote"],
+    "sessionType": "keynote",
+    "sessionDate": "2023-08-15T09:00:00Z",
+    "thumbnail": "assets/content-thumbnails/default-thumbnail.jpg",
+    "learningLevel": "all",
+    "status": "published",
+    "dateCreated": "2023-06-01T14:30:00Z",
+    "dateModified": "2023-06-15T10:15:00Z",
+    "priority": true,
+    "presenters": [
+      {
+        "id": "p1",
+        "name": "Sundar Pichai",
+        "company": "Google",
+        "title": "CEO",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Keynote Presentation",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Keynote Recording",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "f2",
+    "title": "AI Summit",
+    "description": "Explore the latest in artificial intelligence and machine learning with hands-on workshops and expert speakers",
+    "abstract": "Join AI experts for an immersive experience covering the latest advancements in machine learning, generative AI, and practical applications for businesses.",
+    "track": "AI & Machine Learning",
+    "tags": ["AI", "ML", "Workshops"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-08-16T10:30:00Z",
+    "thumbnail": "assets/content-thumbnails/default-thumbnail.jpg",
+    "learningLevel": "intermediate",
+    "status": "approved",
+    "dateCreated": "2023-05-20T09:45:00Z",
+    "dateModified": "2023-06-10T16:20:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p2",
+        "name": "Sarah Chen",
+        "company": "Google",
+        "title": "AI/ML Product Lead",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      },
+      {
+        "id": "p3",
+        "name": "Michael Johnson",
+        "company": "Google",
+        "title": "Senior Engineer",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Workshop Materials",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "f3",
+    "title": "Developer Workshops",
+    "description": "Hands-on sessions for developers to build with Google Cloud and learn best practices from experts",
+    "abstract": "Get your hands dirty with code in these practical workshops designed to help developers master Google Cloud technologies and best practices.",
+    "track": "Developer Tools",
+    "tags": ["Dev Tools", "Best Practices", "Hands-on"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-08-17T13:00:00Z",
+    "thumbnail": "assets/content-thumbnails/default-thumbnail.jpg",
+    "learningLevel": "advanced",
+    "status": "review",
+    "dateCreated": "2023-05-15T11:30:00Z",
+    "dateModified": "2023-06-08T14:45:00Z",
+    "presenters": [
+      {
+        "id": "p4",
+        "name": "David Kim",
+        "company": "Google",
+        "title": "Cloud Architect",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "GitHub",
+        "name": "Workshop Repository",
+        "url": "#"
+      },
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "f4",
+    "title": "Cloud Security Summit",
+    "description": "Deep-dive into the latest security features and best practices for protecting your cloud environment",
+    "abstract": "Learn how to protect your infrastructure and data with the latest cloud security best practices, tools, and strategies.",
+    "track": "Security",
+    "tags": ["Security", "Best Practices", "Cloud"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-08-18T09:30:00Z",
+    "thumbnail": "assets/content-thumbnails/default-thumbnail.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-05-10T10:15:00Z",
+    "dateModified": "2023-06-05T11:30:00Z",
+    "priority": true,
+    "presenters": [
+      {
+        "id": "p5",
+        "name": "Jennifer Lopez",
+        "company": "Google",
+        "title": "Security Specialist",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      },
+      {
+        "id": "p6",
+        "name": "Mark Davis",
+        "company": "Google",
+        "title": "Solutions Architect",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Security Presentation",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Security Whitepaper",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "f5",
+    "title": "Data & Analytics",
+    "description": "Learn how to leverage BigQuery, Looker, and other Google Cloud data tools to drive insights",
+    "abstract": "Discover how to transform your data into actionable insights using Google Cloud's powerful data analytics tools and platforms.",
+    "track": "Data & Analytics",
+    "tags": ["BigQuery", "Looker", "Analytics"],
+    "sessionType": "demo",
+    "sessionDate": "2023-08-19T15:00:00Z",
+    "thumbnail": "assets/content-thumbnails/default-thumbnail.jpg",
+    "learningLevel": "beginner",
+    "status": "approved",
+    "dateCreated": "2023-05-05T08:30:00Z",
+    "dateModified": "2023-06-01T09:45:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p7",
+        "name": "Robert Chen",
+        "company": "Google",
+        "title": "BigQuery Specialist",
+        "photoUrl": "assets/avatars/default-avatar.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Demo",
+        "name": "Live Demo",
+        "url": "#"
+      },
+      {
+        "type": "Slide",
+        "name": "Demo Slides",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu1",
+    "title": "Build the future of global carbon market analytics in Google Cloud",
+    "description": "This session talks about two rising startups in carbon credit market, Perennial and Pachama, and their approach to building scalable solutions.",
+    "abstract": "Discover how innovative startups are leveraging Google Cloud to revolutionize carbon market analytics with advanced AI and data processing capabilities.",
+    "track": "Cloud",
+    "tags": ["New", "AI", "Cloud", "Data Analytics"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-15T11:00:00Z",
+    "thumbnail": "assets/content-thumbnails/carbon-analytics.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-04-10T09:15:00Z",
+    "dateModified": "2023-04-10T09:15:00Z",
+    "presenters": [
+      {
+        "id": "p1",
+        "name": "Sarah Chen",
+        "company": "Google",
+        "title": "Product Lead",
+        "photoUrl": "assets/avatars/sarah-chen.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "Demo",
+        "name": "Demo Application",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu2",
+    "title": "Migrating Spark and Hadoop to Dataproc",
+    "description": "Learn how Dataproc can support your hybrid multicloud strategy and help you meet your business goals for your big data workloads.",
+    "abstract": "This technical session covers strategies and best practices for migrating your existing Spark and Hadoop workloads to Dataproc to improve efficiency and reduce costs.",
+    "track": "Big Data",
+    "tags": ["New", "AI", "Big Data", "Advanced Technical"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-16T14:30:00Z",
+    "thumbnail": "assets/content-thumbnails/dataproc.jpg",
+    "learningLevel": "advanced",
+    "status": "published",
+    "dateCreated": "2023-04-03T14:20:00Z",
+    "dateModified": "2023-04-03T14:20:00Z",
+    "presenters": [
+      {
+        "id": "p3",
+        "name": "David Kim",
+        "company": "Google",
+        "title": "Cloud Architect",
+        "photoUrl": "assets/avatars/david-kim.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Migration Scripts",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu3",
+    "title": "Advanced productivity for data science",
+    "description": "This session will explore how Vertex AI can help data scientists be more productive.",
+    "abstract": "Learn how Vertex AI can streamline your data science workflows, from data preparation to model deployment, with powerful tools and integrations.",
+    "track": "Data Analytics",
+    "tags": ["New", "Data Analytics", "Advanced Technical", "BigQuery", "Vertex AI"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-17T10:00:00Z",
+    "thumbnail": "assets/content-thumbnails/data-science.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-27T11:45:00Z",
+    "dateModified": "2023-03-27T11:45:00Z",
+    "presenters": [
+      {
+        "id": "p4",
+        "name": "Jennifer Lopez",
+        "company": "Google",
+        "title": "Data Science Lead",
+        "photoUrl": "assets/avatars/jennifer-lopez.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Demo Recording",
+        "url": "#"
+      },
+      {
+        "type": "Notebook",
+        "name": "Jupyter Notebook",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu4",
+    "title": "Introduction to BigQuery ML for predictive analytics",
+    "description": "Learn how to use BigQuery ML to build machine learning models directly in BigQuery without moving your data.",
+    "abstract": "This beginner-friendly session introduces BigQuery ML and demonstrates how to create and deploy machine learning models using SQL, without leaving your data warehouse.",
+    "track": "Data Analytics",
+    "tags": ["New", "Data Analytics", "BigQuery", "ML"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-18T13:00:00Z",
+    "thumbnail": "assets/content-thumbnails/bigquery-ml.jpg",
+    "learningLevel": "beginner",
+    "status": "published",
+    "dateCreated": "2023-03-20T16:30:00Z",
+    "dateModified": "2023-03-22T10:15:00Z",
+    "presenters": [
+      {
+        "id": "p5",
+        "name": "Robert Chen",
+        "company": "Google",
+        "title": "BigQuery Specialist",
+        "photoUrl": "assets/avatars/robert-chen.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Workshop Guide",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Code",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "lu5",
+    "title": "Securing cloud workloads with Google Cloud Armor",
+    "description": "Learn how to protect your applications and infrastructure from DDoS attacks and other web threats using Google Cloud Armor.",
+    "abstract": "This session covers the latest features and best practices for implementing Google Cloud Armor to safeguard your web applications and services from various security threats.",
+    "track": "Security",
+    "tags": ["Security", "Cloud", "Best Practices"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-19T15:30:00Z",
+    "thumbnail": "assets/content-thumbnails/security.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-15T09:45:00Z",
+    "dateModified": "2023-03-18T14:30:00Z",
+    "presenters": [
+      {
+        "id": "p6",
+        "name": "Mark Davis",
+        "company": "Google",
+        "title": "Security Engineer",
+        "photoUrl": "assets/avatars/mark-davis.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Security Checklist",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc1",
+    "title": "Founder series panel: How to get $100 million in funding",
+    "description": "This session talks about how disruptive Generative AI startups secured over $100M in funding. Founders share their investment stories and insights.",
+    "abstract": "Join this exclusive panel discussion where successful AI startup founders share their journey to securing significant funding and the lessons they learned along the way.",
+    "track": "Technology & Leadership",
+    "tags": ["Recommended", "Technology & Leadership", "Startup"],
+    "sessionType": "panel",
+    "sessionDate": "2023-09-20T11:00:00Z",
+    "thumbnail": "assets/content-thumbnails/founder-series.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-04-01T14:30:00Z",
+    "dateModified": "2023-04-01T14:30:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p8",
+        "name": "Thomas Lee",
+        "company": "Venture Capital",
+        "title": "Partner",
+        "photoUrl": "assets/avatars/thomas-lee.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Panel Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Panel Recording",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc2",
+    "title": "How the cloud and digital packaging deliver elevated brand experiences",
+    "description": "This session talks about how Germany's Koenig & Bauer, the world's oldest printing press manufacturer, teamed with Deloitte and Google Cloud to transform their business.",
+    "abstract": "Discover how traditional manufacturing businesses are leveraging cloud technology to transform their operations and create innovative customer experiences.",
+    "track": "Technology",
+    "tags": ["Recommended", "Technology", "Manufacturing"],
+    "sessionType": "breakout",
+    "sessionDate": "2023-09-21T13:30:00Z",
+    "thumbnail": "assets/content-thumbnails/packaging.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-10T10:15:00Z",
+    "dateModified": "2023-03-10T10:15:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p10",
+        "name": "Koenig & Bauer",
+        "company": "Manufacturing",
+        "title": "CTO",
+        "photoUrl": "assets/avatars/koenig.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Session Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Case Study",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc3",
+    "title": "Useful applications of Imagen for image generation and customization",
+    "description": "This session focuses on how to use Imagen on Vertex AI to assist in the creative process across multiple applications, such as product ads.",
+    "abstract": "Explore practical applications of Imagen in Vertex AI for creative workflows, from generating product imagery to customizing visual content for various marketing channels.",
+    "track": "Technology",
+    "tags": ["Recommended", "Technology", "Vertex AI", "App Dev"],
+    "sessionType": "demo",
+    "sessionDate": "2023-09-22T15:00:00Z",
+    "thumbnail": "assets/content-thumbnails/imagen.jpg",
+    "learningLevel": "advanced",
+    "status": "published",
+    "dateCreated": "2023-03-12T11:30:00Z",
+    "dateModified": "2023-03-15T09:45:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p11",
+        "name": "Jessica Brown",
+        "company": "Google",
+        "title": "AI Specialist",
+        "photoUrl": "assets/avatars/jessica-brown.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Demo Slides",
+        "url": "#"
+      },
+      {
+        "type": "YouTube",
+        "name": "Demo Recording",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Code",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc4",
+    "title": "Generative AI for enterprise knowledge management",
+    "description": "Learn how to use generative AI to improve knowledge discovery and management within your organization.",
+    "abstract": "This session explores how generative AI can transform enterprise knowledge management, making information more accessible, discoverable, and actionable.",
+    "track": "AI & Machine Learning",
+    "tags": ["Recommended", "GenAI", "Enterprise"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-23T10:30:00Z",
+    "thumbnail": "assets/content-thumbnails/genai-km.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-08T15:45:00Z",
+    "dateModified": "2023-03-10T14:30:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p12",
+        "name": "Mark Davis",
+        "company": "Google",
+        "title": "Solutions Architect",
+        "photoUrl": "assets/avatars/mark-davis.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Implementation Guide",
+        "url": "#"
+      }
+    ]
+  },
+  {
+    "id": "rc5",
+    "title": "Building responsive AI chatbots with Dialogflow CX",
+    "description": "Learn how to create sophisticated, contextually aware conversational interfaces using Google's Dialogflow CX.",
+    "abstract": "This hands-on workshop will walk you through creating advanced conversational agents using Dialogflow CX, with integration to backend systems and GenAI capabilities.",
+    "track": "AI & Machine Learning",
+    "tags": ["Recommended", "Conversational AI", "Dialogflow"],
+    "sessionType": "workshop",
+    "sessionDate": "2023-09-24T13:00:00Z",
+    "thumbnail": "assets/content-thumbnails/dialogflow.jpg",
+    "learningLevel": "intermediate",
+    "status": "published",
+    "dateCreated": "2023-03-05T10:30:00Z",
+    "dateModified": "2023-03-07T11:45:00Z",
+    "recommended": true,
+    "presenters": [
+      {
+        "id": "p13",
+        "name": "Alex Johnson",
+        "company": "Google",
+        "title": "Conversational AI Lead",
+        "photoUrl": "assets/avatars/alex-johnson.jpg"
+      }
+    ],
+    "assets": [
+      {
+        "type": "Slide",
+        "name": "Workshop Slides",
+        "url": "#"
+      },
+      {
+        "type": "GitHub",
+        "name": "Sample Agent",
+        "url": "#"
+      },
+      {
+        "type": "PDF",
+        "name": "Workshop Guide",
+        "url": "#"
+      }
+    ]
+  }
+] 
