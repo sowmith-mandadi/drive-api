@@ -39,9 +39,11 @@
   gap: 12px;
   margin-left: 8px;
 
-  .cloud-logo {
+  .conference-logo {
     height: 32px;
-    width: auto;
+    width: 32px;
+    font-size: 32px;
+    color: var(--primary-color);
   }
 
   .logo-text {
@@ -224,7 +226,7 @@
   flex-shrink: 0;
 }
 
-.cloud-next-footer {
+.conference-footer {
   background-color: #202124;
   color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
@@ -232,4 +234,26 @@
   p {
     margin: 0;
   }
+}
+
+/* Global styles for the app container */
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* Ensure all Angular views can take up full height */
+router-outlet + * {
+  display: block;
+  height: 100%;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+/* Global scrolling behavior */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
 }

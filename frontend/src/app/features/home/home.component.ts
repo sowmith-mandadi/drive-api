@@ -87,12 +87,23 @@ interface FilterOption {
   styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit {
+  // Make Math available to the template
+  Math = Math;
+
   showFilters = false;
   searchQuery = '';
   selectedCarouselIndex = 0;
   selectedLatestIndex = 0;
   carouselAutoplayInterval: any;
   latestAutoplayInterval: any;
+  sortDropdownOpen = false;
+
+  // Current page indices for pagination
+  latestPage = 0;
+  recommendedPage = 0;
+
+  // Items per page
+  itemsPerPage = 3;
 
   // Featured content for carousel
   featuredContent = [
@@ -306,15 +317,19 @@ export class HomeComponent implements OnInit {
   }
 
   nextLatestSlide(): void {
-    this.selectedLatestIndex = (this.selectedLatestIndex + 1) % this.latestUpdates.length;
+    const maxPage = Math.ceil(this.latestUpdates.length / this.itemsPerPage) - 1;
+    this.latestPage = Math.min(this.latestPage + 1, maxPage);
+    this.updateVisibleItems();
   }
 
   prevLatestSlide(): void {
-    this.selectedLatestIndex = (this.selectedLatestIndex - 1 + this.latestUpdates.length) % this.latestUpdates.length;
+    this.latestPage = Math.max(this.latestPage - 1, 0);
+    this.updateVisibleItems();
   }
 
   toggleFilters(): void {
     this.showFilters = !this.showFilters;
+    this.sortDropdownOpen = false;
   }
 
   clearAllFilters(): void {
@@ -338,7 +353,7 @@ export class HomeComponent implements OnInit {
 
     console.log('Applied filters:', selectedFilters);
     console.log('Search query:', this.searchQuery);
-    
+
     // If there's an HTTP call to the search API, it should use the correct endpoint:
     // Instead of '/api/search' it should be '/api/content/search'
   }
@@ -350,56 +365,95 @@ export class HomeComponent implements OnInit {
 
   sortBy(sortOption: string): void {
     console.log('Sorting by:', sortOption);
-    // Implement actual sorting logic here
+    this.sortDropdownOpen = false;
+
+    // Simple sorting implementation
+    if (sortOption === 'newest') {
+      this.latestUpdates.sort((a, b) => b.dateCreated.getTime() - a.dateCreated.getTime());
+      this.recommendedContent.sort((a, b) => b.dateCreated.getTime() - a.dateCreated.getTime());
+    } else if (sortOption === 'title') {
+      this.latestUpdates.sort((a, b) => a.title.localeCompare(b.title));
+      this.recommendedContent.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    // Reset pagination and update visible items
+    this.latestPage = 0;
+    this.recommendedPage = 0;
+    this.updateVisibleItems();
   }
 
   updateVisibleItems(): void {
-    // For now, just show all items
-    this.visibleLatestUpdates = this.latestUpdates.slice(0, 3);
-    this.visibleRecommended = this.recommendedContent.slice(0, 3);
+    // Update visible latest updates based on current page
+    const latestStart = this.latestPage * this.itemsPerPage;
+    this.visibleLatestUpdates = this.latestUpdates.slice(latestStart, latestStart + this.itemsPerPage);
+
+    // Update visible recommended content based on current page
+    const recommendedStart = this.recommendedPage * this.itemsPerPage;
+    this.visibleRecommended = this.recommendedContent.slice(recommendedStart, recommendedStart + this.itemsPerPage);
+  }
+
+  nextRecommendedSlide(): void {
+    const maxPage = Math.ceil(this.recommendedContent.length / this.itemsPerPage) - 1;
+    this.recommendedPage = Math.min(this.recommendedPage + 1, maxPage);
+    this.updateVisibleItems();
+  }
+
+  prevRecommendedSlide(): void {
+    this.recommendedPage = Math.max(this.recommendedPage - 1, 0);
+    this.updateVisibleItems();
+  }
+
+  isNew(item: any): boolean {
+    // Consider an item "new" if it's less than 7 days old
+    const now = new Date();
+    const itemDate = new Date(item.dateCreated);
+    const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  }
+
+  isRecommended(item: any): boolean {
+    // This could be based on a property from the backend
+    // For now, let's mark some items as recommended based on some criteria
+    return item.tags.some((tag: string) =>
+      ['Recommended', 'Featured', 'Popular'].includes(tag)
+    );
   }
 
   generateMockData(): void {
-    // Generate mock latest updates
+    // Generate latest updates that match the wireframe
     this.latestUpdates = [
       {
         id: 'lu1',
-        title: 'Building Enterprise AI Solutions with Gemini',
-        description: 'Learn how to leverage Google\'s Gemini models to build enterprise-grade AI solutions that can transform your business processes.',
-        track: 'AI & Machine Learning',
-        tags: ['Gemini', 'Enterprise AI', 'LLM', 'RAG'],
+        title: 'Build the future of global carbon market analytics in Google Cloud',
+        description: 'This session talks about two rising startups in carbon credit market, Perennial and Pachama, and their approach to building scalable solutions.',
+        track: 'Cloud',
+        tags: ['New', 'AI', 'Cloud', 'Data Analytics'],
         sessionType: 'workshop',
         learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/ai-solutions.jpg',
+        thumbnail: 'assets/content-thumbnails/carbon-analytics.jpg',
         presenters: [
           {
             id: 'p1',
             name: 'Sarah Chen',
             company: 'Google',
-            title: 'AI/ML Product Lead',
+            title: 'Product Lead',
             photoUrl: 'assets/avatars/sarah-chen.jpg'
-          },
-          {
-            id: 'p2',
-            name: 'Michael Johnson',
-            company: 'Google',
-            title: 'Senior Engineer',
-            photoUrl: 'assets/avatars/michael-johnson.jpg'
           }
         ],
-        dateCreated: new Date('2023-06-12'),
-        dateModified: new Date('2023-06-15'),
-        status: 'review'
+        dateCreated: new Date('2023-04-10'),
+        dateModified: new Date('2023-04-10'),
+        status: 'published'
       },
       {
         id: 'lu2',
-        title: 'Scaling Kubernetes in Production: Lessons Learned',
-        description: 'Discover best practices for scaling Kubernetes clusters in production environments, based on real-world experiences from Google Cloud customers.',
-        track: 'Cloud Infrastructure',
-        tags: ['Kubernetes', 'GKE', 'DevOps', 'Scalability'],
+        title: 'Migrating Spark and Hadoop to Dataproc',
+        description: 'Learn how Dataproc can support your hybrid multicloud strategy and help you meet your business goals for your big data workloads.',
+        track: 'Big Data',
+        tags: ['New', 'AI', 'Big Data', 'Advanced Technical'],
         sessionType: 'breakout',
         learningLevel: 'advanced',
-        thumbnail: 'assets/content-thumbnails/kubernetes.jpg',
+        thumbnail: 'assets/content-thumbnails/dataproc.jpg',
         presenters: [
           {
             id: 'p3',
@@ -409,19 +463,19 @@ export class HomeComponent implements OnInit {
             photoUrl: 'assets/avatars/david-kim.jpg'
           }
         ],
-        dateCreated: new Date('2023-06-10'),
-        dateModified: new Date('2023-06-14'),
-        status: 'approved'
+        dateCreated: new Date('2023-04-03'),
+        dateModified: new Date('2023-04-03'),
+        status: 'published'
       },
       {
         id: 'lu3',
-        title: 'BigQuery ML: From Data to Predictions',
-        description: 'A comprehensive guide to implementing machine learning models directly in BigQuery, enabling data teams to build and deploy ML solutions without moving data.',
-        track: 'Data & Analytics',
-        tags: ['BigQuery', 'ML', 'Data Analytics'],
+        title: 'Advanced productivity for data science',
+        description: 'This session will explore how Vertex AI can help data scientists be more productive.',
+        track: 'Data Analytics',
+        tags: ['New', 'Data Analytics', 'Advanced Technical', 'BigQuery', 'Vertex AI'],
         sessionType: 'workshop',
         learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/bigquery-ml.jpg',
+        thumbnail: 'assets/content-thumbnails/data-science.jpg',
         presenters: [
           {
             id: 'p4',
@@ -429,7 +483,22 @@ export class HomeComponent implements OnInit {
             company: 'Google',
             title: 'Data Science Lead',
             photoUrl: 'assets/avatars/jennifer-lopez.jpg'
-          },
+          }
+        ],
+        dateCreated: new Date('2023-03-27'),
+        dateModified: new Date('2023-03-27'),
+        status: 'published'
+      },
+      {
+        id: 'lu4',
+        title: 'Introduction to BigQuery ML for predictive analytics',
+        description: 'Learn how to use BigQuery ML to build machine learning models directly in BigQuery without moving your data.',
+        track: 'Data Analytics',
+        tags: ['New', 'Data Analytics', 'BigQuery', 'ML'],
+        sessionType: 'workshop',
+        learningLevel: 'beginner',
+        thumbnail: 'assets/content-thumbnails/bigquery-ml.jpg',
+        presenters: [
           {
             id: 'p5',
             name: 'Robert Chen',
@@ -438,82 +507,90 @@ export class HomeComponent implements OnInit {
             photoUrl: 'assets/avatars/robert-chen.jpg'
           }
         ],
-        dateCreated: new Date('2023-06-08'),
-        dateModified: new Date('2023-06-13'),
+        dateCreated: new Date('2023-03-20'),
+        dateModified: new Date('2023-03-22'),
         status: 'published'
       }
     ];
 
-    // Generate mock recommended content
+    // Generate recommended content that matches the wireframe
     this.recommendedContent = [
       {
         id: 'rc1',
-        title: 'Vertex AI: End-to-End ML Development',
-        description: 'A comprehensive overview of Vertex AI and how it can streamline your machine learning development lifecycle.',
-        track: 'AI & Machine Learning',
-        tags: ['Vertex AI', 'ML Ops', 'AutoML'],
-        sessionType: 'workshop',
+        title: 'Founder series panel: How to get $100 million in funding',
+        description: 'This session talks about how disruptive Generative AI startups secured over $100M in funding. Founders share their investment stories and insights.',
+        track: 'Technology & Leadership',
+        tags: ['Recommended', 'Technology & Leadership', 'Startup'],
+        sessionType: 'panel',
         learningLevel: 'intermediate',
-        thumbnail: 'assets/content-thumbnails/vertex-ai.jpg',
+        thumbnail: 'assets/content-thumbnails/founder-series.jpg',
         presenters: [
           {
             id: 'p8',
             name: 'Thomas Lee',
-            company: 'Google',
-            title: 'ML Engineer',
+            company: 'Venture Capital',
+            title: 'Partner',
             photoUrl: 'assets/avatars/thomas-lee.jpg'
-          },
-          {
-            id: 'p9',
-            name: 'Sophia Williams',
-            company: 'Google',
-            title: 'Product Manager',
-            photoUrl: 'assets/avatars/sophia-williams.jpg'
           }
         ],
-        dateCreated: new Date('2023-05-28'),
-        dateModified: new Date('2023-06-02'),
+        dateCreated: new Date('2023-04-01'),
+        dateModified: new Date('2023-04-01'),
         status: 'published'
       },
       {
         id: 'rc2',
-        title: 'Spanner: Building Global-Scale Applications',
-        description: 'Learn how to design and implement applications using Cloud Spanner for global scalability, strong consistency, and high availability.',
-        track: 'Data & Analytics',
-        tags: ['Spanner', 'Databases', 'Global Scale'],
+        title: 'How the cloud and digital packaging deliver elevated brand experiences',
+        description: 'This session talks about how Germany\'s Koenig & Bauer, the world\'s oldest printing press manufacturer, teamed with Deloitte and Google Cloud to transform their business.',
+        track: 'Technology',
+        tags: ['Recommended', 'Technology', 'Manufacturing'],
         sessionType: 'breakout',
-        learningLevel: 'advanced',
-        thumbnail: 'assets/content-thumbnails/spanner.jpg',
+        learningLevel: 'intermediate',
+        thumbnail: 'assets/content-thumbnails/packaging.jpg',
         presenters: [
           {
             id: 'p10',
-            name: 'Rajiv Patel',
-            company: 'Google',
-            title: 'Database Engineer',
-            photoUrl: 'assets/avatars/rajiv-patel.jpg'
+            name: 'Koenig & Bauer',
+            company: 'Manufacturing',
+            title: 'CTO',
+            photoUrl: 'assets/avatars/koenig.jpg'
           }
         ],
-        dateCreated: new Date('2023-05-25'),
-        dateModified: new Date('2023-05-30'),
-        status: 'approved'
+        dateCreated: new Date('2023-03-10'),
+        dateModified: new Date('2023-03-10'),
+        status: 'published'
       },
       {
         id: 'rc3',
-        title: 'Cloud Asset Inventory: Track Your Resources',
-        description: 'Discover how to use Cloud Asset Inventory to track, monitor, and analyze all your Google Cloud and Anthos assets.',
-        track: 'Security',
-        tags: ['Asset Management', 'Compliance', 'Inventory'],
+        title: 'Useful applications of Imagen for image generation and customization',
+        description: 'This session focuses on how to use Imagen on Vertex AI to assist in the creative process across multiple applications, such as product ads.',
+        track: 'Technology',
+        tags: ['Recommended', 'Technology', 'Vertex AI', 'App Dev'],
         sessionType: 'demo',
-        learningLevel: 'beginner',
-        thumbnail: 'assets/content-thumbnails/asset-inventory.jpg',
+        learningLevel: 'advanced',
+        thumbnail: 'assets/content-thumbnails/imagen.jpg',
         presenters: [
           {
             id: 'p11',
             name: 'Jessica Brown',
             company: 'Google',
-            title: 'Security Specialist',
+            title: 'AI Specialist',
             photoUrl: 'assets/avatars/jessica-brown.jpg'
-          },
+          }
+        ],
+        dateCreated: new Date('2023-03-12'),
+        dateModified: new Date('2023-03-15'),
+        status: 'published'
+      },
+      {
+        id: 'rc4',
+        title: 'Generative AI for enterprise knowledge management',
+        description: 'Learn how to use generative AI to improve knowledge discovery and management within your organization.',
+        track: 'AI & Machine Learning',
+        tags: ['Recommended', 'GenAI', 'Enterprise'],
+        sessionType: 'workshop',
+        learningLevel: 'intermediate',
+        thumbnail: 'assets/content-thumbnails/genai-km.jpg',
+        presenters: [
           {
             id: 'p12',
             name: 'Mark Davis',
@@ -522,9 +599,9 @@ export class HomeComponent implements OnInit {
             photoUrl: 'assets/avatars/mark-davis.jpg'
           }
         ],
-        dateCreated: new Date('2023-05-20'),
-        dateModified: new Date('2023-05-28'),
-        status: 'review'
+        dateCreated: new Date('2023-03-08'),
+        dateModified: new Date('2023-03-10'),
+        status: 'published'
       }
     ];
   }

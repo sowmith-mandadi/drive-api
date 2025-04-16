@@ -83,45 +83,45 @@ interface SearchResult {
             <div class="search-icon">
               <mat-icon>search</mat-icon>
             </div>
-            <input 
-              type="text" 
-              formControlName="query" 
-              placeholder="AI" 
+            <input
+              type="text"
+              formControlName="query"
+              placeholder="AI"
               class="search-input"
               [formControl]="queryControl"
             >
-            <button 
-              *ngIf="searchForm.get('query')?.value" 
-              class="clear-button" 
+            <button
+              *ngIf="searchForm.get('query')?.value"
+              class="clear-button"
               type="button"
               (click)="clearSearch()"
             >
               <mat-icon>close</mat-icon>
             </button>
           </div>
-          
+
           <div class="sort-filters-wrapper">
             <div class="sort-by-button" (click)="toggleSortDropdown()">
               <span>Sort by</span>
               <span class="sort-value">{{ sortField | titlecase }}</span>
               <div class="sort-dropdown" *ngIf="sortDropdownOpen">
-                <div 
-                  class="sort-option" 
-                  [class.active]="sortField === 'newest'" 
+                <div
+                  class="sort-option"
+                  [class.active]="sortField === 'newest'"
                   (click)="setSortField('newest')"
                 >
                   Newest
                 </div>
-                <div 
-                  class="sort-option" 
-                  [class.active]="sortField === 'relevance'" 
+                <div
+                  class="sort-option"
+                  [class.active]="sortField === 'relevance'"
                   (click)="setSortField('relevance')"
                 >
                   Relevance
                 </div>
-                <div 
-                  class="sort-option" 
-                  [class.active]="sortField === 'title'" 
+                <div
+                  class="sort-option"
+                  [class.active]="sortField === 'title'"
                   (click)="setSortField('title')"
                 >
                   Title
@@ -157,9 +157,9 @@ interface SearchResult {
             <button class="bookmark-button" [class.bookmarked]="item.bookmarked">
               <mat-icon>{{ item.bookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
             </button>
-            
+
             <h3 class="card-title">{{ item.title }}</h3>
-              
+
             <div class="card-labels">
               <div class="label priority" *ngIf="item.priority">Priority</div>
               <div class="label recommended" *ngIf="item.recommended">Recommended</div>
@@ -536,7 +536,7 @@ interface SearchResult {
       border-top: 1px solid #f1f3f4;
       padding-top: 16px;
     }
-    
+
     .assets-label {
       font-size: 12px;
       color: #5f6368;
