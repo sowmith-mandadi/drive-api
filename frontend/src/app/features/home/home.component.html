@@ -29,65 +29,126 @@
     </div>
   </div>
 
-  <section class="content-section">
-    <h2>Latest Updates</h2>
+  <div class="content-container" [class.with-filters]="showFilters">
+    <section class="content-section">
+      <h2>Latest Updates</h2>
 
-    <div class="card-grid">
-      <div class="card" *ngFor="let item of visibleLatestUpdates">
-        <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
-        <h3 class="card-title">{{ item.title }}</h3>
+      <div class="card-grid">
+        <div class="card" *ngFor="let item of visibleLatestUpdates">
+          <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
+          <h3 class="card-title">{{ item.title }}</h3>
 
-        <div class="card-tags">
-          <div class="tag new" *ngIf="isNew(item)">New</div>
-          <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+          <div class="card-tags">
+            <div class="tag new" *ngIf="isNew(item)">New</div>
+            <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+          </div>
+
+          <div class="card-description">{{ item.description }}</div>
+
+          <a class="card-link" [routerLink]="['/content', item.id]">
+            <mat-icon>arrow_forward</mat-icon>
+          </a>
+        </div>
+      </div>
+
+      <div class="pagination-controls">
+        <button mat-icon-button (click)="prevLatestSlide()" [disabled]="latestPage === 0">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <button mat-icon-button (click)="nextLatestSlide()" [disabled]="latestPage >= Math.ceil(latestUpdates.length / itemsPerPage) - 1">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <h2>Recommended</h2>
+
+      <div class="card-grid">
+        <div class="card" *ngFor="let item of visibleRecommended">
+          <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
+          <h3 class="card-title">{{ item.title }}</h3>
+
+          <div class="card-tags">
+            <div class="tag recommended" *ngIf="isRecommended(item)">Recommended</div>
+            <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+          </div>
+
+          <div class="card-description">{{ item.description }}</div>
+
+          <a class="card-link" [routerLink]="['/content', item.id]">
+            <mat-icon>arrow_forward</mat-icon>
+          </a>
+        </div>
+      </div>
+
+      <div class="pagination-controls">
+        <button mat-icon-button (click)="prevRecommendedSlide()" [disabled]="recommendedPage === 0">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <button mat-icon-button (click)="nextRecommendedSlide()" [disabled]="recommendedPage >= Math.ceil(recommendedContent.length / itemsPerPage) - 1">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Filter sidebar -->
+  <div class="filter-sidebar" [class.open]="showFilters">
+    <div class="filter-header">
+      <h2>Filters</h2>
+      <button type="button" class="close-filters-button" (click)="toggleFilters()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="filter-body">
+      <div class="filter-section" *ngFor="let filter of filters">
+        <div
+          class="filter-section-header"
+          (click)="filter.expanded = !filter.expanded"
+        >
+          <h3>{{ filter.name }}</h3>
+          <mat-icon>{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
         </div>
 
-        <div class="card-description">{{ item.description }}</div>
-
-        <a class="card-link" [routerLink]="['/content', item.id]">
-          <mat-icon>arrow_forward</mat-icon>
-        </a>
+        <div class="filter-options" *ngIf="filter.expanded">
+          <div class="filter-option" *ngFor="let option of filter.options">
+            <mat-checkbox
+              [checked]="option.selected"
+              (change)="option.selected = !option.selected"
+              [ngStyle]="{'color': '#202124', 'font-weight': '400'}"
+            >
+              {{ option.label }}
+            </mat-checkbox>
+            <span class="option-count">{{ option.count }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="pagination-controls">
-      <button mat-icon-button (click)="prevLatestSlide()" [disabled]="latestPage === 0">
-        <mat-icon>chevron_left</mat-icon>
+    <div class="filter-actions">
+      <button
+        type="button"
+        class="clear-filters-button"
+        (click)="clearAllFilters()"
+      >
+        Clear all
       </button>
-      <button mat-icon-button (click)="nextLatestSlide()" [disabled]="latestPage >= Math.ceil(latestUpdates.length / itemsPerPage) - 1">
-        <mat-icon>chevron_right</mat-icon>
-      </button>
-    </div>
-  </section>
-
-  <section class="content-section">
-    <h2>Recommended</h2>
-
-    <div class="card-grid">
-      <div class="card" *ngFor="let item of visibleRecommended">
-        <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
-        <h3 class="card-title">{{ item.title }}</h3>
-
-        <div class="card-tags">
-          <div class="tag recommended" *ngIf="isRecommended(item)">Recommended</div>
-          <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
-        </div>
-
-        <div class="card-description">{{ item.description }}</div>
-
-        <a class="card-link" [routerLink]="['/content', item.id]">
-          <mat-icon>arrow_forward</mat-icon>
-        </a>
-      </div>
-    </div>
-
-    <div class="pagination-controls">
-      <button mat-icon-button (click)="prevRecommendedSlide()" [disabled]="recommendedPage === 0">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-      <button mat-icon-button (click)="nextRecommendedSlide()" [disabled]="recommendedPage >= Math.ceil(recommendedContent.length / itemsPerPage) - 1">
-        <mat-icon>chevron_right</mat-icon>
+      <button
+        type="button"
+        class="apply-filters-button"
+        (click)="applyFilters()"
+      >
+        Apply
       </button>
     </div>
-  </section>
+  </div>
+
+  <!-- Overlay to close filters when clicking outside -->
+  <div
+    class="filters-overlay"
+    *ngIf="showFilters"
+    (click)="toggleFilters()"
+  ></div>
 </div>

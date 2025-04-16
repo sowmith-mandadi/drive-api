@@ -330,6 +330,13 @@ export class HomeComponent implements OnInit {
   toggleFilters(): void {
     this.showFilters = !this.showFilters;
     this.sortDropdownOpen = false;
+
+    // Add class to body to prevent scrolling when filter panel is open
+    if (this.showFilters) {
+      document.body.classList.add('filters-open');
+    } else {
+      document.body.classList.remove('filters-open');
+    }
   }
 
   clearAllFilters(): void {
@@ -339,23 +346,96 @@ export class HomeComponent implements OnInit {
       });
     });
     this.searchQuery = '';
-    this.applyFilters();
+    // Don't auto-apply filters, let the user click Apply button
   }
 
   applyFilters(): void {
-    // In a real implementation, this would filter the actual data using the API
+    // Get selected filter values
     const selectedFilters = this.filters
       .map(filter => ({
         name: filter.name,
-        selected: filter.options.filter(option => option.selected).map(option => option.label)
+        selected: filter.options.filter(option => option.selected).map(option => option.value)
       }))
       .filter(filter => filter.selected.length > 0);
 
     console.log('Applied filters:', selectedFilters);
     console.log('Search query:', this.searchQuery);
 
-    // If there's an HTTP call to the search API, it should use the correct endpoint:
+    // In a real implementation, this would filter the actual data using the API
     // Instead of '/api/search' it should be '/api/content/search'
+
+    // Reset pagination when filters are applied
+    this.latestPage = 0;
+    this.recommendedPage = 0;
+
+    // Update content
+    this.updateFilteredContent(selectedFilters);
+
+    // Close filter panel on mobile devices
+    if (window.innerWidth <= 768) {
+      this.showFilters = false;
+    }
+  }
+
+  updateFilteredContent(selectedFilters: any[]): void {
+    // In a real implementation, this would be handled by the API
+    // For demo purposes, we'll just do basic client-side filtering
+
+    // Filter both content lists based on selected filters
+    const filteredLatest = this.filterContent(this.latestUpdates, selectedFilters);
+    const filteredRecommended = this.filterContent(this.recommendedContent, selectedFilters);
+
+    // Update visible content
+    this.visibleLatestUpdates = filteredLatest.slice(0, this.itemsPerPage);
+    this.visibleRecommended = filteredRecommended.slice(0, this.itemsPerPage);
+  }
+
+  filterContent(items: Content[], selectedFilters: any[]): Content[] {
+    if (selectedFilters.length === 0 && !this.searchQuery) {
+      return items;
+    }
+
+    return items.filter(item => {
+      // Apply search filter if query exists
+      if (this.searchQuery &&
+         !item.title.toLowerCase().includes(this.searchQuery.toLowerCase()) &&
+         !item.description.toLowerCase().includes(this.searchQuery.toLowerCase()) &&
+         !item.tags.some(tag => tag.toLowerCase().includes(this.searchQuery.toLowerCase()))) {
+        return false;
+      }
+
+      // Check if item matches all selected filter criteria
+      for (const filter of selectedFilters) {
+        if (filter.name === 'Track' && filter.selected.length > 0) {
+          const trackValue = item.track.toLowerCase().replace(/\s+/g, '-');
+          if (!filter.selected.includes(trackValue)) {
+            return false;
+          }
+        }
+
+        if (filter.name === 'Session Type' && filter.selected.length > 0) {
+          const sessionTypeValue = item.sessionType.toLowerCase().replace(/\s+/g, '-');
+          if (!filter.selected.includes(sessionTypeValue)) {
+            return false;
+          }
+        }
+
+        if (filter.name === 'Learning Level' && filter.selected.length > 0) {
+          const levelValue = item.learningLevel ? item.learningLevel.toLowerCase() : '';
+          if (!filter.selected.includes(levelValue)) {
+            return false;
+          }
+        }
+
+        if (filter.name === 'Status' && filter.selected.length > 0) {
+          if (!filter.selected.includes(item.status)) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
   }
 
   saveFilterPreset(): void {

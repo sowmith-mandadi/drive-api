@@ -134,8 +134,19 @@ html, body {
   height: 18px;
 }
 
-.content-section {
+.content-container {
+  transition: width 0.3s ease, padding 0.3s ease;
+  width: 100%;
   max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.content-container.with-filters {
+  padding-right: 320px;
+}
+
+.content-section {
   margin: 0 auto 60px; /* Increased bottom margin */
   padding: 0 24px;
 }
@@ -258,6 +269,188 @@ html, body {
   background-color: #f1f3f4;
 }
 
+/* Filter Sidebar Styles */
+.filter-sidebar {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 320px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.filter-sidebar.open {
+  right: 0;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 1;
+}
+
+.filter-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.close-filters-button {
+  background: none;
+  border: none;
+  color: #5f6368;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: -4px;
+}
+
+.filter-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.filter-section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.filter-options {
+  margin-left: 8px;
+}
+
+.filter-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.filter-option mat-checkbox {
+  color: #202124;
+  font-weight: normal;
+}
+
+/* Override Material checkbox styles to ensure text readability */
+::ng-deep .filter-option .mat-mdc-checkbox {
+  --mdc-checkbox-unselected-hover-icon-color: #5f6368;
+  --mdc-checkbox-unselected-icon-color: #5f6368;
+}
+
+::ng-deep .filter-option .mat-mdc-checkbox .mdc-checkbox .mdc-checkbox__background {
+  border-color: #5f6368 !important;
+}
+
+::ng-deep .filter-option .mat-mdc-checkbox .mdc-checkbox__background {
+  border-width: 2px;
+}
+
+::ng-deep .filter-option .mat-mdc-checkbox.mat-accent {
+  --mdc-checkbox-selected-checkmark-color: #fff;
+  --mdc-checkbox-selected-focus-icon-color: #1a73e8;
+  --mdc-checkbox-selected-hover-icon-color: #1a73e8;
+  --mdc-checkbox-selected-icon-color: #1a73e8;
+  --mdc-checkbox-selected-pressed-icon-color: #1a73e8;
+}
+
+/* Make checkbox label text darker and more readable */
+::ng-deep .filter-option .mdc-form-field {
+  color: #202124 !important;
+}
+
+::ng-deep .filter-option .mdc-label {
+  color: #202124 !important;
+  font-weight: 400 !important;
+}
+
+::ng-deep .filter-option .mat-mdc-checkbox .mdc-label {
+  color: #202124 !important;
+}
+
+.option-count {
+  font-size: 12px;
+  color: #5f6368;
+  margin-left: 8px;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  position: sticky;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 1;
+}
+
+.clear-filters-button {
+  background: none;
+  border: none;
+  color: #5f6368;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 16px;
+}
+
+.apply-filters-button {
+  background-color: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: background-color 0.2s;
+}
+
+.apply-filters-button:hover {
+  background-color: #1765cc;
+}
+
+.filters-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
 /* Ensure the component takes full height */
 :host {
   display: block;
@@ -279,5 +472,13 @@ html, body {
 
   .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .content-container.with-filters {
+    padding-right: 0;
+  }
+
+  .filter-sidebar {
+    width: 280px;
   }
 }

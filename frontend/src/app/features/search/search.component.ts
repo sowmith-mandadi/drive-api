@@ -21,6 +21,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 interface Asset {
   type: string;
@@ -50,6 +51,19 @@ interface SearchResult {
   total: number;
 }
 
+interface FilterOption {
+  value: string;
+  label: string;
+  selected: boolean;
+  count: number;
+}
+
+interface Filter {
+  name: string;
+  options: FilterOption[];
+  expanded: boolean;
+}
+
 @Component({
   selector: 'app-search',
   standalone: true,
@@ -73,7 +87,8 @@ interface SearchResult {
     MatDividerModule,
     MatExpansionModule,
     MatBadgeModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSidenavModule
   ],
   template: `
     <div class="search-container">
@@ -129,7 +144,7 @@ interface SearchResult {
               </div>
             </div>
 
-            <button type="button" class="filters-button">
+            <button type="button" class="filters-button" (click)="toggleFilters()">
               <mat-icon>tune</mat-icon>
               <span>Filters</span>
             </button>
@@ -145,7 +160,7 @@ interface SearchResult {
         <mat-spinner diameter="36" color="accent"></mat-spinner>
       </div>
 
-      <div class="search-results" *ngIf="!isLoading()">
+      <div class="search-results" *ngIf="!isLoading()" [class.with-filters]="showFilters">
         <div class="no-results" *ngIf="results().length === 0 && hasSearched()">
           <mat-icon>search_off</mat-icon>
           <h3>No results found</h3>
@@ -205,6 +220,65 @@ interface SearchResult {
           </div>
         </div>
       </div>
+
+      <!-- Filter sidebar -->
+      <div class="filter-sidebar" [class.open]="showFilters">
+        <div class="filter-header">
+          <h2>Filters</h2>
+          <button type="button" class="close-filters-button" (click)="toggleFilters()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="filter-body">
+          <div class="filter-section" *ngFor="let filter of filters; let i = index">
+            <div
+              class="filter-section-header"
+              (click)="filter.expanded = !filter.expanded"
+            >
+              <h3>{{ filter.name }}</h3>
+              <mat-icon>{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </div>
+
+            <div class="filter-options" *ngIf="filter.expanded">
+              <div class="filter-option" *ngFor="let option of filter.options">
+                <mat-checkbox
+                  [checked]="option.selected"
+                  (change)="option.selected = !option.selected"
+                  [ngStyle]="{'color': '#202124', 'font-weight': '400'}"
+                >
+                  {{ option.label }}
+                </mat-checkbox>
+                <span class="option-count">{{ option.count }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button
+            type="button"
+            class="clear-filters-button"
+            (click)="clearAllFilters()"
+          >
+            Clear all
+          </button>
+          <button
+            type="button"
+            class="apply-filters-button"
+            (click)="applyFilters()"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+
+      <!-- Overlay to close filters when clicking outside -->
+      <div
+        class="filters-overlay"
+        *ngIf="showFilters"
+        (click)="toggleFilters()"
+      ></div>
     </div>
   `,
   styles: [`
@@ -220,6 +294,7 @@ interface SearchResult {
       max-width: 1280px;
       margin: 0 auto;
       padding: 16px 24px;
+      position: relative;
     }
 
     .search-form-container {
@@ -377,6 +452,15 @@ interface SearchResult {
 
     .showing-results p {
       margin: 0;
+    }
+
+    .search-results {
+      transition: padding 0.3s ease;
+      width: 100%;
+    }
+
+    .search-results.with-filters {
+      padding-right: 320px;
     }
 
     .no-results {
@@ -607,6 +691,187 @@ interface SearchResult {
       padding: 48px 0;
     }
 
+    /* Filter Sidebar Styles */
+    .filter-sidebar {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 320px;
+      height: 100%;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1001;
+      transition: right 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .filter-sidebar.open {
+      right: 0;
+    }
+
+    .filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      background-color: #fff;
+      z-index: 1;
+    }
+
+    .filter-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .close-filters-button {
+      background: none;
+      border: none;
+      color: #5f6368;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .filter-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+    }
+
+    .filter-section {
+      margin-bottom: 24px;
+    }
+
+    .filter-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    .filter-section-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .filter-options {
+      margin-left: 8px;
+    }
+
+    .filter-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .filter-option mat-checkbox {
+      color: #202124;
+      font-weight: normal;
+    }
+
+    /* Override Material checkbox styles to ensure text readability */
+    ::ng-deep .filter-option .mat-mdc-checkbox {
+      --mdc-checkbox-unselected-hover-icon-color: #5f6368;
+      --mdc-checkbox-unselected-icon-color: #5f6368;
+    }
+
+    ::ng-deep .filter-option .mat-mdc-checkbox .mdc-checkbox .mdc-checkbox__background {
+      border-color: #5f6368 !important;
+    }
+
+    ::ng-deep .filter-option .mat-mdc-checkbox .mdc-checkbox__background {
+      border-width: 2px;
+    }
+
+    ::ng-deep .filter-option .mat-mdc-checkbox.mat-accent {
+      --mdc-checkbox-selected-checkmark-color: #fff;
+      --mdc-checkbox-selected-focus-icon-color: #1a73e8;
+      --mdc-checkbox-selected-hover-icon-color: #1a73e8;
+      --mdc-checkbox-selected-icon-color: #1a73e8;
+      --mdc-checkbox-selected-pressed-icon-color: #1a73e8;
+    }
+
+    /* Make checkbox label text darker and more readable */
+    ::ng-deep .filter-option .mdc-form-field {
+      color: #202124 !important;
+    }
+
+    ::ng-deep .filter-option .mdc-label {
+      color: #202124 !important;
+      font-weight: 400 !important;
+    }
+
+    ::ng-deep .filter-option .mat-mdc-checkbox .mdc-label {
+      color: #202124 !important;
+    }
+
+    .option-count {
+      font-size: 12px;
+      color: #5f6368;
+      margin-left: 8px;
+    }
+
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid #e0e0e0;
+      position: sticky;
+      bottom: 0;
+      background-color: #fff;
+      z-index: 1;
+    }
+
+    .clear-filters-button {
+      background: none;
+      border: none;
+      color: #5f6368;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 16px;
+    }
+
+    .apply-filters-button {
+      background-color: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 16px;
+      transition: background-color 0.2s;
+    }
+
+    .apply-filters-button:hover {
+      background-color: #1765cc;
+    }
+
+    .filters-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+    }
+
     @media (max-width: 768px) {
       .search-container {
         padding: 16px;
@@ -629,6 +894,14 @@ interface SearchResult {
       .results-grid {
         grid-template-columns: 1fr;
       }
+
+      .filter-sidebar {
+        width: 280px;
+      }
+
+      .search-results.with-filters {
+        padding-right: 0;
+      }
     }
   `]
 })
@@ -638,10 +911,57 @@ export class SearchComponent {
   sortDropdownOpen = false;
   pageSize = 8;
   pageIndex = 0;
+  showFilters = false;
 
   // For managing abstract expansions
   expandedAbstracts: { [key: number]: boolean } = {};
   abstractMaxLength = 150;
+
+  // Filter configurations
+  filters: Filter[] = [
+    {
+      name: 'Track',
+      options: [
+        { value: 'ai-ml', label: 'AI & Machine Learning', selected: false, count: 28 },
+        { value: 'cloud-infrastructure', label: 'Cloud Infrastructure', selected: false, count: 35 },
+        { value: 'data-analytics', label: 'Data & Analytics', selected: false, count: 22 },
+        { value: 'application-modernization', label: 'App Modernization', selected: false, count: 19 },
+        { value: 'security', label: 'Security', selected: false, count: 16 }
+      ],
+      expanded: true
+    },
+    {
+      name: 'Session Type',
+      options: [
+        { value: 'keynote', label: 'Keynote', selected: false, count: 5 },
+        { value: 'workshop', label: 'Workshop', selected: false, count: 32 },
+        { value: 'breakout', label: 'Breakout Session', selected: false, count: 48 },
+        { value: 'panel', label: 'Panel Discussion', selected: false, count: 12 },
+        { value: 'demo', label: 'Demo', selected: false, count: 28 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Learning Level',
+      options: [
+        { value: 'beginner', label: 'Beginner', selected: false, count: 35 },
+        { value: 'intermediate', label: 'Intermediate', selected: false, count: 54 },
+        { value: 'advanced', label: 'Advanced', selected: false, count: 36 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Content Tags',
+      options: [
+        { value: 'ai', label: 'AI', selected: false, count: 42 },
+        { value: 'innovation', label: 'Innovation', selected: false, count: 28 },
+        { value: 'cloud', label: 'Cloud', selected: false, count: 62 },
+        { value: 'security', label: 'Security', selected: false, count: 26 },
+        { value: 'best-practices', label: 'Best Practices', selected: false, count: 43 }
+      ],
+      expanded: false
+    }
+  ];
 
   // Signals
   isLoading = signal(false);
@@ -665,6 +985,39 @@ export class SearchComponent {
     this.sortField = field;
     this.sortDropdownOpen = false;
     this.search();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+    this.sortDropdownOpen = false;
+  }
+
+  clearAllFilters(): void {
+    this.filters.forEach(filter => {
+      filter.options.forEach(option => {
+        option.selected = false;
+      });
+    });
+  }
+
+  applyFilters(): void {
+    // Get selected filter values
+    const selectedFilters = this.filters
+      .map(filter => ({
+        name: filter.name,
+        selected: filter.options.filter(option => option.selected).map(option => option.value)
+      }))
+      .filter(filter => filter.selected.length > 0);
+
+    console.log('Applied filters:', selectedFilters);
+
+    // Search with filters applied
+    this.search();
+
+    // Close filter panel on small screens
+    if (window.innerWidth <= 768) {
+      this.showFilters = false;
+    }
   }
 
   search(): void {
