@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { ContentFormComponent } from './features/content-management/components/content/content-form.component';
 import { ConferenceSchemaComponent } from './features/content-management/components/schema/conference-schema.component';
+import { ContentViewComponent } from './features/content-management/components/content-view/content-view.component';
 
 export const routes: Routes = [
   {
@@ -15,6 +16,10 @@ export const routes: Routes = [
   {
     path: 'search',
     loadComponent: () => import('./features/search/search.component').then(m => m.SearchComponent)
+  },
+  {
+    path: 'content-view',
+    component: ContentViewComponent
   },
   {
     path: 'content-management',
@@ -35,6 +40,10 @@ export const routes: Routes = [
       {
         path: 'content/:contentId',
         component: ContentFormComponent
+      },
+      {
+        path: 'content-view/:contentId',
+        component: ContentViewComponent
       },
       {
         path: 'schemas',
