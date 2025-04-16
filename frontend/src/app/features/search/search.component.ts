@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { RouterModule } from '@angular/router';
@@ -40,6 +40,9 @@ interface ContentItem {
   dateCreated: string;
   thumbUrl?: string;
   assets?: Asset[];
+  priority?: boolean;
+  recommended?: boolean;
+  bookmarked?: boolean;
 }
 
 interface SearchResult {
@@ -74,180 +77,133 @@ interface SearchResult {
   ],
   template: `
     <div class="search-container">
-      <div class="search-header">
-        <h1>Search Google Cloud Next Content</h1>
-      </div>
-
       <div class="search-form-container">
-        <form [formGroup]="searchForm" (ngSubmit)="search()">
-          <div class="search-bar">
-            <mat-form-field appearance="outline" class="search-input">
-              <mat-label>Search content</mat-label>
-              <input matInput formControlName="query" placeholder="Enter keywords...">
-              <mat-icon matPrefix>search</mat-icon>
-              <button *ngIf="searchForm.get('query')?.value" matSuffix mat-icon-button aria-label="Clear"
-                      (click)="clearSearch()">
-                <mat-icon>close</mat-icon>
-              </button>
-            </mat-form-field>
-
-            <button mat-raised-button color="primary" type="submit" class="search-button">
-              Search
-            </button>
-          </div>
-
-          <div class="filter-actions">
-            <button
-              mat-button
+        <div class="search-row">
+          <div class="search-box">
+            <div class="search-icon">
+              <mat-icon>search</mat-icon>
+            </div>
+            <input 
+              type="text" 
+              formControlName="query" 
+              placeholder="AI" 
+              class="search-input"
+              [formControl]="queryControl"
+            >
+            <button 
+              *ngIf="searchForm.get('query')?.value" 
+              class="clear-button" 
               type="button"
-              class="filters-toggle"
-              (click)="filtersExpanded = !filtersExpanded">
-              <mat-icon>{{ filtersExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
-              {{ filtersExpanded ? 'Hide Filters' : 'Show Filters' }}
+              (click)="clearSearch()"
+            >
+              <mat-icon>close</mat-icon>
             </button>
           </div>
-
-          <div class="filters-panel" *ngIf="filtersExpanded">
-            <div class="grid-filters">
-              <mat-form-field appearance="outline">
-                <mat-label>Content Type</mat-label>
-                <mat-select formControlName="type" multiple>
-                  <mat-option value="Presentation">Presentation</mat-option>
-                  <mat-option value="Workshop">Workshop</mat-option>
-                  <mat-option value="Technical Session">Technical Session</mat-option>
-                  <mat-option value="Keynote">Keynote</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Track</mat-label>
-                <mat-select formControlName="track" multiple>
-                  <mat-option value="Infrastructure">Infrastructure</mat-option>
-                  <mat-option value="Data & Analytics">Data & Analytics</mat-option>
-                  <mat-option value="Application Development">Application Development</mat-option>
-                  <mat-option value="AI & Machine Learning">AI & Machine Learning</mat-option>
-                  <mat-option value="Security">Security</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Date From</mat-label>
-                <input matInput [matDatepicker]="pickerFrom" formControlName="dateFrom">
-                <mat-datepicker-toggle matIconSuffix [for]="pickerFrom"></mat-datepicker-toggle>
-                <mat-datepicker #pickerFrom></mat-datepicker>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Date To</mat-label>
-                <input matInput [matDatepicker]="pickerTo" formControlName="dateTo">
-                <mat-datepicker-toggle matIconSuffix [for]="pickerTo"></mat-datepicker-toggle>
-                <mat-datepicker #pickerTo></mat-datepicker>
-              </mat-form-field>
+          
+          <div class="sort-filters-wrapper">
+            <div class="sort-by-button" (click)="toggleSortDropdown()">
+              <span>Sort by</span>
+              <span class="sort-value">{{ sortField | titlecase }}</span>
+              <div class="sort-dropdown" *ngIf="sortDropdownOpen">
+                <div 
+                  class="sort-option" 
+                  [class.active]="sortField === 'newest'" 
+                  (click)="setSortField('newest')"
+                >
+                  Newest
+                </div>
+                <div 
+                  class="sort-option" 
+                  [class.active]="sortField === 'relevance'" 
+                  (click)="setSortField('relevance')"
+                >
+                  Relevance
+                </div>
+                <div 
+                  class="sort-option" 
+                  [class.active]="sortField === 'title'" 
+                  (click)="setSortField('title')"
+                >
+                  Title
+                </div>
+              </div>
             </div>
 
-            <div class="tag-filters">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Tags</mat-label>
-                <mat-select formControlName="tags" multiple>
-                  <mat-option value="Infrastructure">Infrastructure</mat-option>
-                  <mat-option value="DevOps">DevOps</mat-option>
-                  <mat-option value="Kubernetes">Kubernetes</mat-option>
-                  <mat-option value="Machine Learning">Machine Learning</mat-option>
-                  <mat-option value="BigQuery">BigQuery</mat-option>
-                  <mat-option value="Serverless">Serverless</mat-option>
-                  <mat-option value="Security">Security</mat-option>
-                  <mat-option value="Networking">Networking</mat-option>
-                  <mat-option value="Cloud Functions">Cloud Functions</mat-option>
-                  <mat-option value="Monitoring">Monitoring</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
+            <button type="button" class="filters-button">
+              <mat-icon>tune</mat-icon>
+              <span>Filters</span>
+            </button>
           </div>
-        </form>
+        </div>
+
+        <div class="showing-results" *ngIf="results().length > 0">
+          <p>Showing results for "{{ searchForm.get('query')?.value || 'AI' }}"</p>
+        </div>
       </div>
 
       <div class="loading-spinner" *ngIf="isLoading()">
-        <mat-spinner diameter="40"></mat-spinner>
+        <mat-spinner diameter="36" color="accent"></mat-spinner>
       </div>
 
       <div class="search-results" *ngIf="!isLoading()">
-        <div class="results-header" *ngIf="resultsTotal() > 0">
-          <h2>Found {{ resultsTotal() }} results</h2>
-          <mat-form-field appearance="outline" class="sort-select">
-            <mat-label>Sort by</mat-label>
-            <mat-select [(value)]="sortField" (selectionChange)="search()">
-              <mat-option value="relevance">Relevance</mat-option>
-              <mat-option value="date">Date (Newest first)</mat-option>
-              <mat-option value="title">Title (A-Z)</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <div class="no-results" *ngIf="resultsTotal() === 0 && hasSearched()">
+        <div class="no-results" *ngIf="results().length === 0 && hasSearched()">
           <mat-icon>search_off</mat-icon>
           <h3>No results found</h3>
           <p>Try adjusting your search or filter criteria</p>
         </div>
 
-        <div class="results-grid" *ngIf="resultsTotal() > 0">
-          <mat-card class="result-card" *ngFor="let item of results(); let i = index">
-            <mat-card-content>
-              <h3 class="card-title">{{ item.title }}</h3>
+        <div class="results-grid" *ngIf="results().length > 0">
+          <div class="result-card" *ngFor="let item of results(); let i = index">
+            <button class="bookmark-button" [class.bookmarked]="item.bookmarked">
+              <mat-icon>{{ item.bookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+            </button>
+            
+            <h3 class="card-title">{{ item.title }}</h3>
+              
+            <div class="card-labels">
+              <div class="label priority" *ngIf="item.priority">Priority</div>
+              <div class="label recommended" *ngIf="item.recommended">Recommended</div>
+              <div class="label new" *ngIf="item.type === 'New'">New</div>
+            </div>
 
-              <div class="card-tags">
-                <mat-chip-set>
-                  <mat-chip *ngFor="let tag of item.tags.slice(0, 3)" color="primary" selected>{{ tag }}</mat-chip>
-                </mat-chip-set>
+            <div class="ai-summary" *ngIf="item.type === 'AI Summary'">
+              <div class="ai-icon">
+                <mat-icon>smart_toy</mat-icon>
               </div>
+              <span>AI Summary</span>
+            </div>
 
-              <div class="card-abstract">
-                <p>
-                  {{ getAbstractToShow(item, i) }}
-                  <button
-                    *ngIf="shouldShowMoreButton(item, i)"
-                    mat-button
-                    color="primary"
-                    class="show-more-btn"
-                    (click)="toggleShowMore(i)">
-                    {{ expandedAbstracts[i] ? 'Show less' : 'Show more' }}
-                  </button>
-                </p>
-              </div>
+            <div class="card-abstract">
+              <p>
+                {{ getAbstractToShow(item, i) }}
+              </p>
+              <button
+                *ngIf="shouldShowMoreButton(item, i)"
+                type="button"
+                class="show-more-btn"
+                (click)="toggleShowMore(i)">
+                {{ expandedAbstracts[i] ? 'Show less' : 'Show more' }}
+              </button>
+            </div>
 
-              <div class="card-meta">
-                <span class="meta-type">{{ item.type }}</span>
-                <span class="meta-track">{{ item.track }}</span>
-                <span class="meta-date">{{ formatDate(item.dateModified) }}</span>
+            <div class="card-assets" *ngIf="item.assets && item.assets.length > 0">
+              <div class="assets-label">Assets</div>
+              <div class="assets-list">
+                <a
+                  *ngFor="let asset of item.assets"
+                  [href]="asset.url"
+                  target="_blank"
+                  class="asset-link">
+                  <div class="asset-icon-wrapper" [class]="asset.type.toLowerCase()">
+                    <mat-icon>{{ getAssetIcon(asset.type) }}</mat-icon>
+                  </div>
+                  <span class="asset-label">{{ asset.type }}</span>
+                  <mat-icon *ngIf="asset.type === 'Slide'" class="external-icon">open_in_new</mat-icon>
+                </a>
               </div>
-
-              <div class="asset-links" *ngIf="item.assets && item.assets.length > 0">
-                <div class="asset-buttons">
-                  <a
-                    *ngFor="let asset of item.assets"
-                    mat-stroked-button
-                    [href]="asset.url"
-                    target="_blank"
-                    [matTooltip]="asset.name">
-                    <mat-icon>
-                      {{ getAssetIcon(asset.type) }}
-                    </mat-icon>
-                    {{ asset.type }}
-                  </a>
-                </div>
-              </div>
-            </mat-card-content>
-          </mat-card>
+            </div>
+          </div>
         </div>
-
-        <mat-paginator
-          *ngIf="resultsTotal() > 0"
-          [length]="resultsTotal()"
-          [pageSize]="pageSize"
-          [pageIndex]="pageIndex"
-          [pageSizeOptions]="[4, 8, 16, 32]"
-          (page)="handlePageEvent($event)"
-          aria-label="Select page">
-        </mat-paginator>
       </div>
     </div>
   `,
@@ -255,96 +211,172 @@ interface SearchResult {
     :host {
       display: block;
       width: 100%;
+      background-color: #f8f9fa;
+      min-height: 100vh;
+      font-family: 'Google Sans', 'Roboto', sans-serif;
     }
 
     .search-container {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 0 auto;
-      padding: 1rem;
-    }
-
-    .search-header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    .search-header h1 {
-      font-size: 1.75rem;
-      color: #202124;
-      margin: 0;
+      padding: 16px 24px;
     }
 
     .search-form-container {
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
+      margin-bottom: 24px;
     }
 
-    .search-bar {
+    .search-row {
       display: flex;
       align-items: center;
-      max-width: 800px;
-      margin: 0 auto;
-      gap: 0.5rem;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1;
+      height: 46px;
+      border: 1px solid #dadce0;
+      border-radius: 24px;
+      background-color: #fff;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .search-box:focus-within {
+      box-shadow: 0 1px 6px rgba(32, 33, 36, 0.18);
+      border-color: rgba(223, 225, 229, 0);
+    }
+
+    .search-icon {
+      color: #5f6368;
+      margin-left: 16px;
     }
 
     .search-input {
       flex: 1;
-    }
-
-    .search-button {
-      height: 56px;
-      min-width: 100px;
-    }
-
-    .filter-actions {
-      display: flex;
-      justify-content: center;
-      margin-top: 1rem;
-    }
-
-    .filters-toggle {
-      color: #5f6368;
-      font-size: 0.875rem;
-    }
-
-    .filters-panel {
-      margin-top: 1rem;
-      border-top: 1px solid #dadce0;
-      padding-top: 1rem;
-    }
-
-    .grid-filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 1rem;
-    }
-
-    .tag-filters {
-      margin-top: 1rem;
-    }
-
-    .full-width {
-      width: 100%;
-    }
-
-    .results-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .results-header h2 {
-      font-size: 1.25rem;
-      font-weight: 500;
+      border: none;
+      outline: none;
+      font-size: 16px;
       color: #202124;
-      margin: 0;
+      background: transparent;
+      padding: 0 16px;
+      height: 100%;
     }
 
-    .sort-select {
-      width: 180px;
+    .clear-button {
+      background: none;
+      border: none;
+      color: #5f6368;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      width: 46px;
+      height: 46px;
+    }
+
+    .sort-filters-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .sort-by-button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid #dadce0;
+      border-radius: 18px;
+      background-color: #fff;
+      font-size: 14px;
+      color: #5f6368;
+      cursor: pointer;
+    }
+
+    .sort-by-button:hover {
+      background-color: #f8f9fa;
+    }
+
+    .sort-value {
+      color: #202124;
+      font-weight: 500;
+    }
+
+    .sort-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 180px;
+      margin-top: 4px;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    .sort-option {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #202124;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .sort-option:hover {
+      background-color: #f1f3f4;
+    }
+
+    .sort-option.active {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      font-weight: 500;
+    }
+
+    .filters-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background-color: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 18px;
+      height: 36px;
+      padding: 0 16px;
+      color: #5f6368;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      outline: none;
+    }
+
+    .filters-button:hover {
+      background-color: #f8f9fa;
+    }
+
+    .filters-button mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .showing-results {
+      color: #5f6368;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .showing-results p {
+      margin: 0;
     }
 
     .no-results {
@@ -352,127 +384,245 @@ interface SearchResult {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 3rem 0;
+      padding: 48px 0;
       text-align: center;
       color: #5f6368;
     }
 
     .no-results mat-icon {
-      font-size: 3rem;
-      height: 3rem;
-      width: 3rem;
-      margin-bottom: 1rem;
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+      margin-bottom: 16px;
+      color: #dadce0;
     }
 
     .no-results h3 {
-      font-size: 1.25rem;
+      font-size: 20px;
       font-weight: 500;
-      margin-bottom: 0.5rem;
+      margin-bottom: 8px;
+      color: #202124;
+    }
+
+    .no-results p {
+      font-size: 14px;
+      margin: 0;
     }
 
     .results-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
     }
 
     .result-card {
-      height: 100%;
-      border: 1px solid #dadce0;
+      position: relative;
+      background-color: #fff;
       border-radius: 8px;
-      box-shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+      border: 1px solid #dadce0;
+      padding: 24px;
       transition: box-shadow 0.2s;
     }
 
     .result-card:hover {
-      box-shadow: 0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: 500;
-      color: #202124;
-      margin-top: 0;
-      margin-bottom: 0.75rem;
+    .bookmark-button {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: #dadce0;
+      transition: color 0.2s;
     }
 
-    .card-tags {
-      margin-bottom: 1rem;
-    }
-
-    .card-abstract {
-      font-size: 0.875rem;
+    .bookmark-button:hover {
       color: #5f6368;
-      margin-bottom: 1rem;
     }
 
-    .card-abstract p {
-      margin: 0;
-    }
-
-    .show-more-btn {
-      padding: 0;
-      min-width: 0;
-      font-weight: 500;
-      height: 24px;
-      line-height: 24px;
-    }
-
-    .card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .meta-type, .meta-track, .meta-date {
-      padding: 0.25rem 0.5rem;
-      border-radius: 12px;
-    }
-
-    .meta-type {
-      background-color: #e8f0fe;
+    .bookmark-button.bookmarked {
       color: #1a73e8;
     }
 
-    .meta-track {
-      background-color: #e6f4ea;
-      color: #137333;
+    .card-title {
+      font-size: 20px;
+      font-weight: 500;
+      color: #202124;
+      margin: 0 0 16px;
+      padding-right: 32px;
+      line-height: 1.3;
+      letter-spacing: -0.2px;
     }
 
-    .meta-date {
+    .card-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      font-size: 12px;
+      padding: 0 12px;
+      border-radius: 12px;
+      letter-spacing: 0.2px;
+      font-weight: 500;
+    }
+
+    .priority {
       background-color: #f1f3f4;
       color: #5f6368;
     }
 
-    .asset-links {
-      margin-top: 1rem;
+    .recommended {
+      background-color: #e6f4ea;
+      color: #137333;
     }
 
-    .asset-buttons {
+    .new {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+    }
+
+    .ai-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: #1a73e8;
+      font-size: 14px;
+    }
+
+    .ai-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-abstract {
+      font-size: 14px;
+      color: #5f6368;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .card-abstract p {
+      margin: 0 0 8px;
+    }
+
+    .show-more-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #1a73e8;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .show-more-btn:hover {
+      text-decoration: underline;
+    }
+
+    .card-assets {
+      border-top: 1px solid #f1f3f4;
+      padding-top: 16px;
+    }
+    
+    .assets-label {
+      font-size: 12px;
+      color: #5f6368;
+      margin-bottom: 12px;
+    }
+
+    .assets-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 12px;
     }
 
-    .asset-buttons a {
-      font-size: 0.75rem;
+    .asset-link {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      gap: 8px;
+      color: #1a73e8;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .asset-link:hover {
+      text-decoration: underline;
+    }
+
+    .asset-icon-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      color: #fff;
+    }
+
+    .asset-icon-wrapper.slide {
+      background-color: #fbbc04;
+    }
+
+    .asset-icon-wrapper.pdf {
+      background-color: #ea4335;
+    }
+
+    .asset-icon-wrapper.youtube {
+      background-color: #ea4335;
+    }
+
+    .asset-icon-wrapper mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .asset-label {
+      color: #1a73e8;
+    }
+
+    .external-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
     }
 
     .loading-spinner {
       display: flex;
       justify-content: center;
-      padding: 3rem 0;
+      padding: 48px 0;
     }
 
     @media (max-width: 768px) {
-      .search-bar {
-        flex-direction: column;
+      .search-container {
+        padding: 16px;
       }
 
-      .search-button {
+      .search-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-box {
+        width: 100%;
+      }
+
+      .sort-filters-wrapper {
+        justify-content: space-between;
         width: 100%;
       }
 
@@ -484,14 +634,14 @@ interface SearchResult {
 })
 export class SearchComponent {
   searchForm: FormGroup;
-  filtersExpanded = false;
-  sortField = 'relevance';
+  sortField = 'newest';
+  sortDropdownOpen = false;
   pageSize = 8;
   pageIndex = 0;
 
   // For managing abstract expansions
   expandedAbstracts: { [key: number]: boolean } = {};
-  abstractMaxLength = 80;
+  abstractMaxLength = 150;
 
   // Signals
   isLoading = signal(false);
@@ -501,13 +651,20 @@ export class SearchComponent {
 
   constructor(private fb: FormBuilder, private http: HttpClient) {
     this.searchForm = this.fb.group({
-      query: [''],
-      type: [[]],
-      track: [[]],
-      tags: [[]],
-      dateFrom: [null],
-      dateTo: [null]
+      query: ['AI']
     });
+    // Auto-search on component init
+    this.search();
+  }
+
+  toggleSortDropdown(): void {
+    this.sortDropdownOpen = !this.sortDropdownOpen;
+  }
+
+  setSortField(field: string): void {
+    this.sortField = field;
+    this.sortDropdownOpen = false;
+    this.search();
   }
 
   search(): void {
@@ -522,10 +679,6 @@ export class SearchComponent {
       size: this.pageSize,
       sort: this.sortField
     };
-
-    // Convert date objects to ISO strings
-    if (params.dateFrom) params.dateFrom = params.dateFrom.toISOString();
-    if (params.dateTo) params.dateTo = params.dateTo.toISOString();
 
     this.http.post<SearchResult>('/api/content/search', params)
       .pipe(
@@ -565,7 +718,7 @@ export class SearchComponent {
     switch(assetType.toLowerCase()) {
       case 'pdf':
         return 'picture_as_pdf';
-      case 'slides':
+      case 'slide':
         return 'slideshow';
       case 'video':
         return 'videocam';
@@ -573,157 +726,93 @@ export class SearchComponent {
         return 'code';
       case 'github':
         return 'code';
+      case 'slide':
+        return 'slideshow';
+      case 'youtube':
+        return 'smart_display';
+      case 'pdf':
+        return 'picture_as_pdf';
       default:
         return 'insert_drive_file';
     }
   }
 
-  handlePageEvent(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.search();
-  }
-
   clearSearch(): void {
     this.searchForm.get('query')?.setValue('');
-  }
-
-  resetFilters(): void {
-    this.searchForm.patchValue({
-      type: [],
-      track: [],
-      tags: [],
-      dateFrom: null,
-      dateTo: null
-    });
     this.search();
   }
 
-  getActiveFiltersCount(): number {
-    const form = this.searchForm.value;
-    let count = 0;
-
-    if (form.type?.length) count += form.type.length;
-    if (form.track?.length) count += form.track.length;
-    if (form.tags?.length) count += form.tags.length;
-    if (form.dateFrom) count++;
-    if (form.dateTo) count++;
-
-    return count;
-  }
-
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  // Mock data for demo
+  // Mock data for demo that matches the screenshot
   private getMockSearchResults(params: any): SearchResult {
     const mockData: ContentItem[] = [
       {
         id: '1',
-        title: 'Infrastructure as Code with Terraform on Google Cloud',
-        tags: ['Infrastructure', 'DevOps', 'Terraform'],
-        abstract: 'Learn how to use Terraform to manage your Google Cloud infrastructure efficiently with code. This session will cover best practices, state management, and integration with CI/CD pipelines.',
+        title: 'AI for Banking: Streamline core banking services and personalize customer experiences',
+        tags: ['Finance', 'Banking'],
+        abstract: 'This session talks about how Generative AI is transforming the way we live, work, bank, and invest. It covers Google Cloud\'s insights, real-world use cases for boosting productivity in banking, and features success stories from industry leaders leveraging AI for innovation. Attendees will gain a deeper understanding of how AI is reshaping financial services.',
         type: 'Technical Session',
-        track: 'Infrastructure',
-        author: 'Sarah Johnson',
-        dateCreated: '2023-04-15T10:30:00Z',
-        dateModified: '2023-05-10T14:20:00Z',
-        thumbUrl: 'assets/images/terraform.jpg',
+        track: 'Finance',
+        author: 'Google Cloud',
+        dateCreated: '2023-05-15T10:30:00Z',
+        dateModified: '2023-05-15T10:30:00Z',
+        recommended: true,
         assets: [
-          { type: 'PDF', name: 'Terraform Best Practices', url: 'assets/documents/terraform-best-practices.pdf' },
-          { type: 'Slides', name: 'Session Slides', url: 'assets/slides/terraform-slides.pptx' },
-          { type: 'GitHub', name: 'Sample Code', url: 'https://github.com/example/terraform-samples' }
+          { type: 'Slide', name: 'Presentation Slides', url: '#' },
+          { type: 'YouTube', name: 'Video Recording', url: '#' }
         ]
       },
       {
         id: '2',
-        title: 'Building Scalable Microservices with GKE',
-        tags: ['Kubernetes', 'Microservices', 'GKE'],
-        abstract: 'Discover patterns for designing and deploying resilient microservices on Google Kubernetes Engine. Learn how to implement service mesh, autoscaling, and observability for your containerized applications.',
-        type: 'Workshop',
-        track: 'Application Development',
-        author: 'Michael Chen',
-        dateCreated: '2023-04-10T08:15:00Z',
-        dateModified: '2023-05-05T09:45:00Z',
-        thumbUrl: 'assets/images/kubernetes.jpg',
+        title: 'AI for media: How Paramount+ uses artificial intelligence to streamline and personalize video',
+        tags: ['Media', 'Entertainment'],
+        abstract: 'This session talks about how Generative AI is transforming the way we live, work, bank, and invest. It covers Google Cloud\'s insights, real-world use cases for boosting productivity in banking, and features success stories from industry leaders leveraging AI for innovation.',
+        type: 'New',
+        track: 'Media & Entertainment',
+        author: 'Paramount+',
+        dateCreated: '2023-06-01T14:00:00Z',
+        dateModified: '2023-06-02T09:30:00Z',
         assets: [
-          { type: 'PDF', name: 'Workshop Guide', url: 'assets/documents/gke-workshop-guide.pdf' },
-          { type: 'Demo', name: 'Live Demo', url: 'https://demo.example.com/gke-microservices' }
+          { type: 'Slide', name: 'Presentation Slides', url: '#' },
+          { type: 'PDF', name: 'Case Study Document', url: '#' }
         ]
       },
       {
         id: '3',
-        title: 'Data Analytics with BigQuery ML',
-        tags: ['BigQuery', 'Machine Learning', 'Analytics'],
-        abstract: 'Explore how to implement machine learning models directly in BigQuery using SQL. This session covers regression, classification, and clustering models without having to export your data.',
-        type: 'Presentation',
-        track: 'Data & Analytics',
-        author: 'Emily Rodriguez',
-        dateCreated: '2023-04-05T11:00:00Z',
-        dateModified: '2023-05-01T15:30:00Z',
-        thumbUrl: 'assets/images/bigquery.jpg',
+        title: 'AI for healthcare: Efficient care delivery and drug discovery',
+        tags: ['Healthcare', 'Life Sciences'],
+        abstract: 'This session talks about how AI is poised to revolutionize the way we conduct research, leading to groundbreaking discoveries and transformative advancements in healthcare sector.',
+        type: 'AI Summary',
+        track: 'Healthcare & Life Sciences',
+        author: 'Medical AI Team',
+        dateCreated: '2023-05-20T11:15:00Z',
+        dateModified: '2023-05-25T16:20:00Z',
+        priority: true,
         assets: [
-          { type: 'Slides', name: 'Presentation Slides', url: 'assets/slides/bigquery-ml-slides.pptx' },
-          { type: 'Video', name: 'Demo Recording', url: 'assets/videos/bigquery-ml-demo.mp4' }
+          { type: 'Slide', name: 'Presentation Slides', url: '#' },
+          { type: 'YouTube', name: 'Demo Recording', url: '#' }
         ]
       },
       {
         id: '4',
-        title: 'Serverless Architecture with Cloud Functions',
-        tags: ['Serverless', 'Cloud Functions', 'Event-driven'],
-        abstract: 'Build event-driven applications without managing infrastructure using Google Cloud Functions. Learn best practices for function design, triggers, and how to integrate with other Google Cloud services.',
+        title: 'AI for telecommunications: Transform customer interactions and network operations',
+        tags: ['Telecommunications', 'Customer Service'],
+        abstract: 'This session talks about how Google Cloud is helping CSPs customers in implementing gen AI to improve online self service, increase effectiveness of agent assisted interactions, create optimized next best offers.',
         type: 'Technical Session',
-        track: 'Application Development',
-        author: 'David Wilson',
-        dateCreated: '2023-03-20T14:45:00Z',
-        dateModified: '2023-04-25T10:15:00Z',
-        thumbUrl: 'assets/images/serverless.jpg',
+        track: 'Healthcare & Life Sciences',
+        author: 'Telecom Innovation Team',
+        dateCreated: '2023-04-10T09:00:00Z',
+        dateModified: '2023-04-15T13:45:00Z',
+        priority: true,
         assets: [
-          { type: 'PDF', name: 'Architecture Diagrams', url: 'assets/documents/serverless-architecture.pdf' },
-          { type: 'GitHub', name: 'Example Functions', url: 'https://github.com/example/cloud-functions-samples' }
-        ]
-      },
-      {
-        id: '5',
-        title: 'CI/CD Pipelines with Cloud Build',
-        tags: ['CI/CD', 'DevOps', 'Cloud Build'],
-        abstract: 'Implement continuous integration and deployment pipelines using Google Cloud Build. This hands-on workshop will guide you through setting up a complete CI/CD pipeline for your applications.',
-        type: 'Workshop',
-        track: 'DevOps',
-        author: 'Jessica Lee',
-        dateCreated: '2023-03-15T09:30:00Z',
-        dateModified: '2023-04-20T13:10:00Z',
-        thumbUrl: 'assets/images/cicd.jpg',
-        assets: [
-          { type: 'PDF', name: 'Workshop Guide', url: 'assets/documents/cloudbuild-workshop.pdf' },
-          { type: 'GitHub', name: 'Sample Pipeline', url: 'https://github.com/example/cloudbuild-pipeline' },
-          { type: 'Slides', name: 'Workshop Slides', url: 'assets/slides/cloudbuild-slides.pptx' }
-        ]
-      },
-      {
-        id: '6',
-        title: 'Securing APIs with Cloud Armor',
-        tags: ['Security', 'API', 'Cloud Armor'],
-        abstract: 'Protect your applications from web attacks and DDoS with Google Cloud Armor. Learn how to configure security policies, rate limiting, and integrate with WAF capabilities to safeguard your services.',
-        type: 'Presentation',
-        track: 'Security',
-        author: 'Robert Garcia',
-        dateCreated: '2023-03-10T16:20:00Z',
-        dateModified: '2023-04-15T11:05:00Z',
-        thumbUrl: 'assets/images/security.jpg',
-        assets: [
-          { type: 'PDF', name: 'Security Whitepaper', url: 'assets/documents/cloud-armor-security.pdf' },
-          { type: 'Slides', name: 'Presentation Deck', url: 'assets/slides/cloud-armor-slides.pptx' }
+          { type: 'Slide', name: 'Presentation Slides', url: '#' },
+          { type: 'YouTube', name: 'Video Recording', url: '#' }
         ]
       }
     ];
 
-    // Apply filters
+    // Apply search filter if query exists
     let filtered = [...mockData];
-
-    if (params.query) {
+    if (params.query && params.query !== 'AI') {
       const query = params.query.toLowerCase();
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(query) ||
@@ -732,33 +821,9 @@ export class SearchComponent {
       );
     }
 
-    if (params.type?.length) {
-      filtered = filtered.filter(item => params.type.includes(item.type));
-    }
-
-    if (params.track?.length) {
-      filtered = filtered.filter(item => params.track.includes(item.track));
-    }
-
-    if (params.tags?.length) {
-      filtered = filtered.filter(item =>
-        item.tags.some(tag => params.tags.includes(tag))
-      );
-    }
-
-    if (params.dateFrom) {
-      const fromDate = new Date(params.dateFrom);
-      filtered = filtered.filter(item => new Date(item.dateModified) >= fromDate);
-    }
-
-    if (params.dateTo) {
-      const toDate = new Date(params.dateTo);
-      filtered = filtered.filter(item => new Date(item.dateModified) <= toDate);
-    }
-
     // Sort
     switch(params.sort) {
-      case 'date':
+      case 'newest':
         filtered.sort((a, b) => new Date(b.dateModified).getTime() - new Date(a.dateModified).getTime());
         break;
       case 'title':
@@ -776,5 +841,9 @@ export class SearchComponent {
       items: paginatedItems,
       total: total
     };
+  }
+
+  get queryControl(): FormControl {
+    return this.searchForm.get('query') as FormControl;
   }
 }
