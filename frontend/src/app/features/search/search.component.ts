@@ -1,8 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { catchError, of } from 'rxjs';
+import { catchError, of, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { RouterModule, Router } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
@@ -67,6 +68,7 @@ import { ContentService } from '../../core/services/content.service';
               placeholder="AI"
               class="search-input"
               [formControl]="queryControl"
+              (keydown)="handleKeyDown($event)"
             >
             <button
               *ngIf="searchForm.get('query')?.value"
@@ -75,6 +77,13 @@ import { ContentService } from '../../core/services/content.service';
               (click)="clearSearch()"
             >
               <mat-icon>close</mat-icon>
+            </button>
+            <button
+              class="search-button"
+              type="button"
+              (click)="search()"
+            >
+              <mat-icon>search</mat-icon>
             </button>
           </div>
 
@@ -842,6 +851,23 @@ import { ContentService } from '../../core/services/content.service';
       z-index: 1000;
     }
 
+    .search-button {
+      background: none;
+      border: none;
+      color: #1a73e8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      width: 46px;
+      height: 46px;
+    }
+
+    .search-button:hover {
+      background-color: rgba(26, 115, 232, 0.04);
+    }
+
     @media (max-width: 768px) {
       .search-container {
         padding: 16px;
@@ -875,7 +901,7 @@ import { ContentService } from '../../core/services/content.service';
     }
   `]
 })
-export class SearchComponent {
+export class SearchComponent implements OnInit, OnDestroy {
   searchForm: FormGroup;
   sortField = 'newest';
   sortDropdownOpen = false;
@@ -886,6 +912,9 @@ export class SearchComponent {
   // For managing abstract expansions
   expandedAbstracts: { [key: number]: boolean } = {};
   abstractMaxLength = 150;
+
+  // For cleaning up subscriptions
+  private destroy$ = new Subject<void>();
 
   // Filter configurations
   filters: Filter[] = [
@@ -948,9 +977,15 @@ export class SearchComponent {
     this.searchForm = this.fb.group({
       query: ['AI']
     });
+    // Set up the FormControl reference
+    this.queryControl = this.searchForm.get('query') as FormControl;
+
     // Auto-search on component init
     this.search();
   }
+
+  // Define queryControl as a class property
+  queryControl: FormControl;
 
   toggleSortDropdown(): void {
     this.sortDropdownOpen = !this.sortDropdownOpen;
@@ -1001,24 +1036,30 @@ export class SearchComponent {
     this.expandedAbstracts = {}; // Reset expanded state when new search is performed
 
     // Build search params
+    const query = this.searchForm.get('query')?.value || '';
+
     const params = {
-      ...this.searchForm.value,
+      query,
       page: this.pageIndex,
       size: this.pageSize,
       sort: this.sortField,
       filters: this.getSelectedFilters()
     };
 
+    console.log('Searching with params:', params);
+
     // Use ContentService instead of direct HTTP request
     this.contentService.searchContent(params).subscribe({
       next: (data) => {
-        this.results.set(data.items);
-        this.resultsTotal.set(data.total);
+        console.log('Search results:', data);
+        this.results.set(data.items || []);
+        this.resultsTotal.set(data.total || 0);
         this.isLoading.set(false);
       },
       error: (err) => {
         console.error('Search error', err);
         this.isLoading.set(false);
+        this.results.set([]);
       }
     });
   }
@@ -1090,15 +1131,19 @@ export class SearchComponent {
 
   clearSearch(): void {
     this.searchForm.get('query')?.setValue('');
-    this.search();
+    // The valueChanges subscription will trigger the search
+  }
+
+  // Add a method to handle Enter key
+  handleKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.search();
+    }
   }
 
   navigateToContent(contentId: string): void {
     this.router.navigate(['/content', contentId]);
-  }
-
-  get queryControl(): FormControl {
-    return this.searchForm.get('query') as FormControl;
   }
 
   isNewContent(item: Content): boolean {
@@ -1109,5 +1154,26 @@ export class SearchComponent {
   hasAiSummary(item: Content): boolean {
     // Check if item has an AI summary or an AI tag
     return !!item.aiSummary || item.tags?.some(tag => tag.includes('AI'));
+  }
+
+  ngOnInit(): void {
+    // Set up debounced search
+    this.queryControl.valueChanges.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(300), // Wait 300ms after the user stops typing
+      distinctUntilChanged() // Only trigger if the value has changed
+    ).subscribe(value => {
+      if (value && value.length >= 2) {
+        // Only search if the query is at least 2 characters long
+        this.search();
+      } else if (value === '') {
+        this.search(); // Search with empty query to show all results
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
