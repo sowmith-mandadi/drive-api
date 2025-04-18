@@ -47,15 +47,28 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       <div class="content-main" *ngIf="!loading && !error && content">
         <div class="content-left">
           <div class="content-header">
-            <h1>{{ content.title }}</h1>
+            <div class="header-main">
+              <h1>{{ content.title }}</h1>
 
-            <div class="tags-container">
-              <div class="tag recommended" *ngIf="content.recommended">Recommended</div>
-              <div class="tag priority" *ngIf="content.priority">Priority</div>
-              <div class="tag new" *ngIf="isNewContent(content)">New</div>
-              <ng-container *ngFor="let tag of content.tags">
-                <div class="tag" [ngClass]="getTagClass(tag)">{{ tag }}</div>
-              </ng-container>
+              <div class="tags-container">
+                <div class="tag recommended" *ngIf="content.recommended">Recommended</div>
+                <div class="tag priority" *ngIf="content.priority">Priority</div>
+                <div class="tag new" *ngIf="isNewContent(content)">New</div>
+                <ng-container *ngFor="let tag of content.tags">
+                  <div class="tag" [ngClass]="getTagClass(tag)">{{ tag }}</div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-bar">
+            <div class="action-buttons">
+              <button mat-stroked-button class="action-button share-button">
+                <mat-icon>share</mat-icon> Share
+              </button>
+              <button mat-stroked-button class="action-button feedback-button">
+                <mat-icon>feedback</mat-icon> Provide Feedback
+              </button>
             </div>
           </div>
 
@@ -63,8 +76,43 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             <div class="section-content">
               <h2>Abstract</h2>
               <p class="abstract-text">
-                {{ content.abstract || content.description }}
+                {{ abstractExpanded ? (content.abstract || content.description) : ((content.abstract || content.description) | slice:0:300) }}
+                <span *ngIf="!abstractExpanded && (content.abstract || content.description).length > 300">...</span>
               </p>
+              <button
+                *ngIf="(content.abstract || content.description).length > 300"
+                class="show-more-btn"
+                (click)="abstractExpanded = !abstractExpanded">
+                {{ abstractExpanded ? 'Show less' : 'Show more' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="ai-summary-section" *ngIf="content.aiSummary">
+            <div class="section-content ai-gradient">
+              <div class="ai-header">
+                <h2>AI Summary</h2>
+                <div class="ai-controls">
+                  <div class="ai-icon">
+                    <mat-icon>smart_toy</mat-icon>
+                  </div>
+                  <button mat-icon-button class="collapse-button" (click)="toggleAiSummary()" *ngIf="showAiSummary">
+                    <mat-icon>expand_less</mat-icon>
+                  </button>
+                  <button mat-icon-button class="collapse-button" (click)="toggleAiSummary()" *ngIf="!showAiSummary">
+                    <mat-icon>expand_more</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <div *ngIf="showAiSummary">
+                <p class="ai-text">{{ content.aiSummary }}</p>
+              </div>
+              <button
+                *ngIf="!showAiSummary"
+                class="show-more-btn"
+                (click)="toggleAiSummary()">
+                Show AI Summary
+              </button>
             </div>
           </div>
 
@@ -99,15 +147,21 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             </div>
           </div>
 
-          <div class="ai-summary-section" *ngIf="content.aiSummary">
-            <div class="section-content ai-gradient">
-              <div class="ai-header">
-                <h2>AI Summary</h2>
-                <div class="ai-icon">
-                  <mat-icon>smart_toy</mat-icon>
+          <div class="notes-section">
+            <div class="section-content">
+              <h2>Notes/Comments</h2>
+              <p class="notes-text">
+                Any comments or notes put by the content creator that can help end users understand where the crucial points of the asset are, or any other piece of information that can be useful.
+              </p>
+              <div class="comments-container" *ngIf="content.comments && content.comments.length > 0">
+                <div class="comment" *ngFor="let comment of content.comments">
+                  <div class="comment-header">
+                    <span class="comment-author">{{ comment.userName }}</span>
+                    <span class="comment-date">{{ formatDate(comment.timestamp) }}</span>
+                  </div>
+                  <p class="comment-text">{{ comment.text }}</p>
                 </div>
               </div>
-              <p class="ai-text">{{ content.aiSummary }}</p>
             </div>
           </div>
         </div>
@@ -119,14 +173,22 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             </div>
             <div class="info-card-content">
               <div class="info-row">
-                <div class="info-label">ID</div>
+                <div class="info-label">Session ID</div>
                 <div class="info-value highlight-value">{{ content.id }}</div>
+              </div>
+              <div class="info-row" *ngIf="content.dateCreated">
+                <div class="info-label">Date of Creation</div>
+                <div class="info-value highlight-value">{{ formatDate(content.dateCreated) }}</div>
               </div>
               <div class="info-row">
                 <div class="info-label">Track</div>
                 <div class="info-value highlight-value">{{ content.track }}</div>
               </div>
-              <div class="info-row">
+              <div class="info-row" *ngIf="content.industry">
+                <div class="info-label">Industry</div>
+                <div class="info-value highlight-value">{{ content.industry }}</div>
+              </div>
+              <div class="info-row" *ngIf="content.sessionType">
                 <div class="info-label">Session Type</div>
                 <div class="info-value highlight-value">{{ content.sessionType }}</div>
               </div>
@@ -137,12 +199,6 @@ import { Content, Asset } from '../../../../shared/models/content.model';
               <div class="info-row" *ngIf="content.learningLevel">
                 <div class="info-label">Learning Level</div>
                 <div class="info-value highlight-value">{{ content.learningLevel }}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Status</div>
-                <div class="info-value status-value" [ngClass]="getStatusClass(content.status || '')">
-                  {{ content.status || 'Draft' }}
-                </div>
               </div>
             </div>
           </div>
@@ -159,45 +215,38 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             </div>
           </div>
 
-          <div class="info-card">
+          <div class="info-card" *ngIf="content.jobRole || content.areaOfInterest || content.topic">
             <div class="info-card-header">
-              <h3>Dates</h3>
+              <h3>Additional Information</h3>
             </div>
             <div class="info-card-content">
-              <div class="info-row">
-                <div class="info-label">Created</div>
-                <div class="info-value highlight-value">{{ formatDate(content.dateCreated || '') }}</div>
+              <div class="info-row" *ngIf="content.jobRole">
+                <div class="info-label">Job Role</div>
+                <div class="info-value highlight-value">{{ content.jobRole }}</div>
               </div>
-              <div class="info-row">
-                <div class="info-label">Last Modified</div>
-                <div class="info-value highlight-value">{{ formatDate(content.dateModified || '') }}</div>
+              <div class="info-row" *ngIf="content.areaOfInterest">
+                <div class="info-label">Area of Interest</div>
+                <div class="info-value highlight-value">{{ content.areaOfInterest }}</div>
+              </div>
+              <div class="info-row" *ngIf="content.topic">
+                <div class="info-label">Topic</div>
+                <div class="info-value highlight-value">{{ content.topic }}</div>
               </div>
             </div>
           </div>
 
-          <!-- Related Content Card -->
-          <div class="info-card" *ngIf="relatedContent && relatedContent.length > 0">
+          <div class="info-card" *ngIf="content.assets && content.assets.length > 0">
             <div class="info-card-header">
-              <h3>Related Content</h3>
+              <h3>Resources/Supplementals</h3>
             </div>
             <div class="info-card-content">
-              <div class="related-item" *ngFor="let item of relatedContent">
-                <a [routerLink]="['/content', item.id]" class="related-link">
-                  <div class="related-title">{{ item.title }}</div>
-                  <div class="related-meta">{{ item.sessionType }} | {{ formatDate(item.sessionDate || '') }}</div>
+              <div class="resource-link" *ngFor="let asset of content.assets">
+                <a [href]="asset.url" target="_blank" class="resource-item">
+                  <span class="resource-name">{{ asset.name }}</span>
+                  <mat-icon class="resource-icon">open_in_new</mat-icon>
                 </a>
               </div>
             </div>
-          </div>
-
-          <!-- Actions card -->
-          <div class="actions-card">
-            <button mat-raised-button color="primary" class="action-button">
-              <mat-icon>edit</mat-icon> Edit Content
-            </button>
-            <button mat-stroked-button class="action-button">
-              <mat-icon>published_with_changes</mat-icon> Submit for Review
-            </button>
           </div>
         </div>
       </div>
@@ -269,7 +318,17 @@ import { Content, Asset } from '../../../../shared/models/content.model';
     }
 
     .content-header {
+      margin-bottom: 16px;
+    }
+
+    .action-bar {
+      display: flex;
+      justify-content: flex-end;
       margin-bottom: 32px;
+    }
+
+    .header-main {
+      flex: 1;
     }
 
     h1 {
@@ -352,8 +411,97 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       color: #c5221f;
     }
 
-    .abstract-section, .assets-section, .ai-summary-section {
+    .abstract-section, .assets-section, .ai-summary-section, .notes-section {
       margin-bottom: 32px;
+    }
+
+    .ai-summary-container {
+      margin-bottom: 32px;
+    }
+
+    .ai-summary-toggle {
+      height: 44px;
+      padding: 0 24px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a73e8;
+      background-color: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 auto;
+      transition: background-color 0.2s;
+    }
+
+    .ai-summary-toggle:hover {
+      background-color: #f8f9fa;
+    }
+
+    .show-more-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a73e8;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .show-more-btn:hover {
+      text-decoration: underline;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .action-button {
+      height: 36px;
+      padding: 0 16px;
+      font-weight: 500;
+      font-size: 14px;
+      border-radius: 18px;
+      background-color: #fff;
+      color: #1a73e8;
+      border: 1px solid #dadce0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-button:hover {
+      background-color: #f8f9fa;
+    }
+
+    .action-button mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #1a73e8;
+    }
+
+    .share-button {
+      color: #34a853; /* Google green */
+      border-color: #34a853;
+    }
+
+    .share-button mat-icon {
+      color: #34a853; /* Google green */
+    }
+
+    .feedback-button {
+      color: #4285f4; /* Google blue */
+      border-color: #4285f4;
+    }
+
+    .feedback-button mat-icon {
+      color: #4285f4; /* Google blue */
     }
 
     .section-content {
@@ -385,15 +533,25 @@ import { Content, Asset } from '../../../../shared/models/content.model';
     .ai-header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       margin-bottom: 16px;
+    }
+
+    .ai-controls {
+      display: flex;
+      align-items: center;
     }
 
     .ai-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-left: 12px;
+      margin-right: 8px;
       color: #1a73e8;
+    }
+
+    .collapse-button {
+      color: #5f6368;
     }
 
     .ai-text {
@@ -461,33 +619,7 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       background-color: #f8f9fa;
       padding: 6px 12px;
       border-radius: 4px;
-      border-left: 3px solid #1a73e8;
-    }
-
-    .status-value {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #fff;
-      background-color: #9aa0a6;
-    }
-
-    .status-value.draft {
-      background-color: #9aa0a6;
-    }
-
-    .status-value.pending {
-      background-color: #f29900;
-    }
-
-    .status-value.approved {
-      background-color: #1e8e3e;
-    }
-
-    .status-value.published {
-      background-color: #1a73e8;
+      border-left: 3px solid #dadce0;
     }
 
     .presenter {
@@ -517,56 +649,80 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       color: #5f6368;
     }
 
-    .related-item {
-      margin-bottom: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      transition: background-color 0.2s;
-    }
-
-    .related-item:hover {
-      background-color: #f1f8ff;
-    }
-
-    .related-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .related-link {
-      text-decoration: none;
-      display: block;
-    }
-
-    .related-title {
+    .notes-text {
       font-size: 14px;
-      font-weight: 500;
-      color: #1a73e8;
-      margin-bottom: 4px;
+      line-height: 1.5;
+      color: #5f6368;
+      margin: 0 0 16px 0;
     }
 
-    .related-meta {
+    .comments-container {
+      margin-top: 16px;
+    }
+
+    .comment {
+      padding: 12px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .comment-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .comment-author {
+      font-weight: 500;
+      font-size: 14px;
+      color: #202124;
+    }
+
+    .comment-date {
       font-size: 12px;
       color: #5f6368;
     }
 
-    .actions-card {
+    .comment-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #3c4043;
+      margin: 0;
+    }
+
+    .resource-link {
+      margin-bottom: 12px;
+    }
+
+    .resource-link:last-child {
+      margin-bottom: 0;
+    }
+
+    .resource-item {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      color: #3c4043;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
     }
 
-    .action-button {
-      width: 100%;
-      height: 44px;
-      border-radius: 22px;
-      font-weight: 500;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
+    .resource-item:hover {
+      background-color: #f1f3f4;
     }
 
-    .action-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    .resource-name {
+      font-size: 14px;
+    }
+
+    .resource-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #5f6368;
     }
 
     .assets-table-wrapper {
@@ -649,16 +805,21 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       .section-content {
         padding: 20px;
       }
+
+      .action-bar {
+        margin-bottom: 24px;
+      }
     }
   `]
 })
 export class ContentViewComponent implements OnInit {
   contentId: string | null = null;
   content: Content | null = null;
-  relatedContent: Content[] = [];
   loading: boolean = true;
   error: string | null = null;
   referrer: string = 'search results';
+  abstractExpanded: boolean = false;
+  showAiSummary: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -702,9 +863,6 @@ export class ContentViewComponent implements OnInit {
         this.loading = false;
         if (!content) {
           this.error = `Content with ID ${id} not found`;
-        } else {
-          // Load related content
-          this.loadRelatedContent(content);
         }
       },
       error: (err) => {
@@ -713,37 +871,6 @@ export class ContentViewComponent implements OnInit {
         this.loading = false;
       }
     });
-  }
-
-  loadRelatedContent(content: Content): void {
-    // In a real app, this would be a service call with proper parameters
-    // For now, we'll simulate it with dummy data
-    // Implementation would use content.tags, content.track, etc. to find related items
-
-    // Sample related content - would come from a service in a real app
-    this.relatedContent = [
-      {
-        id: 'rel-1',
-        title: 'Advanced Machine Learning on Google Cloud',
-        sessionType: 'Workshop',
-        sessionDate: '2025-04-16',
-        tags: ['AI', 'Cloud']
-      },
-      {
-        id: 'rel-2',
-        title: 'Optimizing Cloud Applications for Scale',
-        sessionType: 'Session',
-        sessionDate: '2025-04-17',
-        tags: ['Performance', 'Cloud']
-      },
-      {
-        id: 'rel-3',
-        title: 'Security Best Practices for Cloud Applications',
-        sessionType: 'Breakout',
-        sessionDate: '2025-04-15',
-        tags: ['Security', 'Best Practices']
-      }
-    ] as any[];
   }
 
   goBack(): void {
@@ -781,20 +908,6 @@ export class ContentViewComponent implements OnInit {
     return '';
   }
 
-  getStatusClass(status: string): string {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('draft')) {
-      return 'draft';
-    } else if (statusLower.includes('pending') || statusLower.includes('review')) {
-      return 'pending';
-    } else if (statusLower.includes('approved')) {
-      return 'approved';
-    } else if (statusLower.includes('published')) {
-      return 'published';
-    }
-    return 'draft';
-  }
-
   isNewContent(content: Content): boolean {
     if (!content.dateCreated) return false;
 
@@ -803,5 +916,9 @@ export class ContentViewComponent implements OnInit {
     const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
 
     return daysDiff <= 7; // Consider content new if it's less than 7 days old
+  }
+
+  toggleAiSummary(): void {
+    this.showAiSummary = !this.showAiSummary;
   }
 }
