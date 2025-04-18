@@ -1,6 +1,88 @@
+@use '@angular/material' as mat;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* You can add global styles to this file, and also import other style files */
 
-@use '@angular/material' as mat;
+/* Base styles */
+@layer base {
+  html, body {
+    @apply h-full m-0 p-0 overflow-auto font-google-sans text-neutral-800 bg-neutral-50;
+  }
+
+  app-root {
+    @apply block h-full min-h-full;
+  }
+
+  router-outlet + * {
+    @apply block h-full min-h-full overflow-y-auto;
+  }
+
+  h1 {
+    @apply text-2xl font-medium text-neutral-800 mb-4;
+  }
+
+  h2 {
+    @apply text-xl font-medium text-neutral-800 mb-3;
+  }
+
+  h3 {
+    @apply text-lg font-medium text-neutral-800 mb-2;
+  }
+
+  p {
+    @apply mb-4 text-neutral-700;
+  }
+}
+
+/* Component styles */
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded font-medium;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-neutral-700 border border-neutral-300 px-4 py-2 rounded font-medium;
+  }
+
+  .card {
+    @apply bg-white rounded-card shadow-card p-6 transition-shadow hover:shadow-card-hover;
+  }
+
+  .tag {
+    @apply inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium;
+  }
+
+  .tag-primary {
+    @apply bg-primary-light text-primary;
+  }
+
+  .tag-neutral {
+    @apply bg-neutral-100 text-neutral-600;
+  }
+
+  /* Material Component Overrides */
+  .mat-mdc-card {
+    @apply rounded-card bg-white border-none shadow-card transition-all;
+  }
+
+  .mat-mdc-button,
+  .mat-mdc-raised-button,
+  .mat-mdc-outlined-button,
+  .mat-mdc-unelevated-button {
+    @apply font-medium tracking-wide rounded;
+  }
+
+  .mat-mdc-raised-button.mat-primary {
+    @apply bg-primary;
+  }
+
+  .mat-mdc-raised-button.mat-accent {
+    @apply bg-success;
+  }
+}
 
 // Define CSS Variables for theming
 :root {

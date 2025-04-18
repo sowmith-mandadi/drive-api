@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
     MatBadgeModule
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styles: ['']
 })
 export class AppComponent {
   title = 'Conference Content Management System';

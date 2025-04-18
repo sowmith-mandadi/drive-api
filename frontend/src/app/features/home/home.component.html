@@ -1,65 +1,122 @@
-<div class="home-container">
-  <div class="welcome-section">
-    <h2>Welcome back, John!</h2>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+  <div class="bg-white rounded-card shadow-card p-6 mb-8">
+    <h2 class="text-2xl font-medium text-neutral-800 mb-4">Welcome back, John!</h2>
 
-    <div class="search-container">
-      <div class="search-box">
-        <mat-icon>search</mat-icon>
-        <input
-          type="text"
-          placeholder="Search"
-          [(ngModel)]="searchQuery"
-          (keyup.enter)="applyFilters()">
-      </div>
-
-      <div class="sort-by" (click)="sortDropdownOpen = !sortDropdownOpen">
-        <span>Sort by</span>
-        <span class="sort-value">Newest</span>
-        <div class="sort-dropdown" *ngIf="sortDropdownOpen">
-          <div class="sort-option" (click)="sortBy('newest')">Newest</div>
-          <div class="sort-option" (click)="sortBy('relevance')">Relevance</div>
-          <div class="sort-option" (click)="sortBy('title')">Title</div>
+    <div class="flex flex-col sm:flex-row items-center gap-4">
+      <div class="relative flex-1 w-full">
+        <div class="flex items-center h-12 px-4 border border-neutral-300 rounded-search bg-white">
+          <mat-icon class="text-neutral-500 mr-2">search</mat-icon>
+          <input
+            type="text"
+            class="w-full h-full border-none outline-none text-neutral-800 bg-transparent"
+            placeholder="Search"
+            [formControl]="searchControl">
         </div>
       </div>
 
-      <button class="filters-button" (click)="toggleFilters()">
-        <mat-icon>tune</mat-icon>
+      <div class="relative">
+        <div class="flex items-center h-9 px-3 border border-neutral-300 rounded-full bg-white cursor-pointer" (click)="sortDropdownOpen = !sortDropdownOpen">
+          <span class="text-sm text-neutral-600 mr-2">Sort by</span>
+          <span class="text-sm font-medium text-neutral-800">Newest</span>
+        </div>
+        <div class="absolute top-full left-0 min-w-[180px] mt-1 bg-white rounded-lg shadow-lg z-10 overflow-hidden" *ngIf="sortDropdownOpen">
+          <div class="py-3 px-4 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer" (click)="sortBy('newest')">Newest</div>
+          <div class="py-3 px-4 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer" (click)="sortBy('relevance')">Relevance</div>
+          <div class="py-3 px-4 text-sm text-neutral-800 hover:bg-neutral-100 cursor-pointer" (click)="sortBy('title')">Title</div>
+        </div>
+      </div>
+
+      <button class="flex items-center gap-2 h-9 px-4 border border-neutral-300 rounded-full bg-white text-neutral-600 text-sm hover:bg-neutral-50" (click)="toggleFilters()">
+        <mat-icon class="text-lg">tune</mat-icon>
         <span>Filters</span>
       </button>
     </div>
   </div>
 
-  <div class="content-container" [class.with-filters]="showFilters">
-    <section class="content-section">
-      <h2>Latest Updates</h2>
+  <!-- Search Results Section -->
+  <div *ngIf="isSearching">
+    <div class="flex justify-center py-12" *ngIf="searchLoading">
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+    <div *ngIf="!searchLoading && searchResults.length === 0" class="text-center py-12 text-neutral-600">
+      <p>No results found</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="!searchLoading && searchResults.length > 0">
+      <div class="relative bg-white rounded-lg shadow hover:shadow-lg transition-shadow duration-200 p-6 cursor-pointer flex flex-col h-full" *ngFor="let item of searchResults; let i = index" (click)="navigateToContent(item.id)">
+        <button class="absolute top-4 right-4 bg-transparent border-none p-1 text-gray-400 hover:text-blue-600" [class.text-blue-600]="item.bookmarked" (click)="$event.stopPropagation(); item.bookmarked = !item.bookmarked">
+          <mat-icon>{{ item.bookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+        </button>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2 pr-10">{{ item.title }}</h3>
+        <div class="flex flex-wrap gap-2 mb-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" *ngIf="item.priority">Priority</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" *ngIf="item.recommended">Recommended</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" *ngIf="isNewContent(item)">New</span>
+        </div>
+        <div class="flex items-center gap-2 text-blue-700 text-sm mb-2" *ngIf="hasAiSummary(item)">
+          <mat-icon class="text-blue-600">smart_toy</mat-icon>
+          <span>AI Summary</span>
+        </div>
+        <div class="text-sm text-gray-700 mb-4 flex-1">
+          <p>{{ getAbstractToShow(item, i) }}</p>
+          <button *ngIf="shouldShowMoreButton(item, i)" type="button" class="text-blue-600 hover:underline text-xs font-medium mt-1" (click)="toggleShowMore($event, i)">
+            {{ expandedAbstracts[i] ? 'Show less' : 'Show more' }}
+          </button>
+        </div>
+        <div *ngIf="item.assets && item.assets.length > 0">
+          <div class="text-xs text-gray-500 mb-1">Assets</div>
+          <div class="flex flex-wrap gap-3">
+            <a *ngFor="let asset of item.assets" [href]="asset.url" target="_blank" class="flex items-center gap-1 text-blue-700 hover:underline text-xs font-medium" (click)="$event.stopPropagation()">
+              <div [ngClass]="{
+                'bg-yellow-400 text-white': asset.type.toLowerCase() === 'slide',
+                'bg-red-500 text-white': asset.type.toLowerCase() === 'pdf',
+                'bg-blue-600 text-white': asset.type.toLowerCase() === 'youtube',
+                'bg-gray-300 text-gray-700': asset.type.toLowerCase() !== 'slide' && asset.type.toLowerCase() !== 'pdf' && asset.type.toLowerCase() !== 'youtube'
+              }" class="w-5 h-5 flex items-center justify-center rounded">
+                <mat-icon class="text-xs">{{ getAssetIcon(asset.type) }}</mat-icon>
+              </div>
+              <span>{{ asset.type }}</span>
+              <mat-icon *ngIf="asset.type === 'Slide'" class="text-xs ml-1">open_in_new</mat-icon>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <div class="loading-spinner" *ngIf="loading.latest">
+  <!-- Default Sections: Latest & Recommended -->
+  <div class="transition-all duration-300" [ngClass]="{'pr-80': showFilters}" *ngIf="!isSearching">
+    <section class="mb-12">
+      <h2 class="text-xl font-medium text-neutral-800 mb-6">Latest Updates</h2>
+
+      <div class="flex justify-center py-12" *ngIf="loading.latest">
         <mat-spinner diameter="36"></mat-spinner>
       </div>
 
-      <div class="no-results" *ngIf="!loading.latest && visibleLatestUpdates.length === 0">
+      <div class="text-center py-12 text-neutral-600" *ngIf="!loading.latest && visibleLatestUpdates.length === 0">
         <p>No content available</p>
       </div>
 
-      <div class="card-grid" *ngIf="!loading.latest && visibleLatestUpdates.length > 0">
-        <div class="card" *ngFor="let item of visibleLatestUpdates" (click)="navigateToContent(item.id)">
-          <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
-          <h3 class="card-title">{{ item.title }}</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="!loading.latest && visibleLatestUpdates.length > 0">
+        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover transition-shadow duration-300 p-6 cursor-pointer"
+             *ngFor="let item of visibleLatestUpdates"
+             (click)="navigateToContent(item.id)">
+          <div class="text-sm text-neutral-500 mb-2">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
+          <h3 class="text-lg font-medium text-neutral-800 mb-3">{{ item.title }}</h3>
 
-          <div class="card-tags">
-            <div class="tag new" *ngIf="isNew(item)">New</div>
-            <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-primary-light text-primary" *ngIf="isNew(item)">New</div>
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
           </div>
 
-          <div class="card-description">{{ item.description }}</div>
+          <div class="text-sm text-neutral-600 mb-4 line-clamp-3">{{ item.description }}</div>
 
-          <div class="card-link">
-            <mat-icon>arrow_forward</mat-icon>
+          <div class="flex justify-end">
+            <mat-icon class="text-primary">arrow_forward</mat-icon>
           </div>
         </div>
       </div>
 
-      <div class="pagination-controls" *ngIf="!loading.latest && latestUpdates.length > itemsPerPage">
+      <div class="flex justify-center mt-6" *ngIf="!loading.latest && latestUpdates.length > itemsPerPage">
         <button mat-icon-button (click)="prevLatestSlide()" [disabled]="latestPage === 0">
           <mat-icon>chevron_left</mat-icon>
         </button>
@@ -69,36 +126,38 @@
       </div>
     </section>
 
-    <section class="content-section">
-      <h2>Recommended</h2>
+    <section class="mb-12">
+      <h2 class="text-xl font-medium text-neutral-800 mb-6">Recommended</h2>
 
-      <div class="loading-spinner" *ngIf="loading.recommended">
+      <div class="flex justify-center py-12" *ngIf="loading.recommended">
         <mat-spinner diameter="36"></mat-spinner>
       </div>
 
-      <div class="no-results" *ngIf="!loading.recommended && visibleRecommended.length === 0">
+      <div class="text-center py-12 text-neutral-600" *ngIf="!loading.recommended && visibleRecommended.length === 0">
         <p>No content available</p>
       </div>
 
-      <div class="card-grid" *ngIf="!loading.recommended && visibleRecommended.length > 0">
-        <div class="card" *ngFor="let item of visibleRecommended" (click)="navigateToContent(item.id)">
-          <div class="card-date">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
-          <h3 class="card-title">{{ item.title }}</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="!loading.recommended && visibleRecommended.length > 0">
+        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover transition-shadow duration-300 p-6 cursor-pointer"
+             *ngFor="let item of visibleRecommended"
+             (click)="navigateToContent(item.id)">
+          <div class="text-sm text-neutral-500 mb-2">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
+          <h3 class="text-lg font-medium text-neutral-800 mb-3">{{ item.title }}</h3>
 
-          <div class="card-tags">
-            <div class="tag recommended" *ngIf="isRecommended(item)">Recommended</div>
-            <div class="tag" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-primary-light text-primary" *ngIf="isRecommended(item)">Recommended</div>
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
           </div>
 
-          <div class="card-description">{{ item.description }}</div>
+          <div class="text-sm text-neutral-600 mb-4 line-clamp-3">{{ item.description }}</div>
 
-          <div class="card-link">
-            <mat-icon>arrow_forward</mat-icon>
+          <div class="flex justify-end">
+            <mat-icon class="text-primary">arrow_forward</mat-icon>
           </div>
         </div>
       </div>
 
-      <div class="pagination-controls" *ngIf="!loading.recommended && recommendedContent.length > itemsPerPage">
+      <div class="flex justify-center mt-6" *ngIf="!loading.recommended && recommendedContent.length > itemsPerPage">
         <button mat-icon-button (click)="prevRecommendedSlide()" [disabled]="recommendedPage === 0">
           <mat-icon>chevron_left</mat-icon>
         </button>
@@ -110,61 +169,46 @@
   </div>
 
   <!-- Filter sidebar -->
-  <div class="filter-sidebar" [class.open]="showFilters">
-    <div class="filter-header">
-      <h2>Filters</h2>
-      <button type="button" class="close-filters-button" (click)="toggleFilters()">
+  <div class="fixed top-0 right-0 bottom-0 w-80 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out"
+       [ngClass]="{'translate-x-0': showFilters, 'translate-x-full': !showFilters}">
+    <div class="flex justify-between items-center px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10">
+      <h2 class="text-lg font-medium text-neutral-800 m-0">Filters</h2>
+      <button type="button" class="flex items-center justify-center text-neutral-600 hover:text-neutral-800" (click)="toggleFilters()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
-    <div class="filter-body">
-      <div class="filter-section" *ngFor="let filter of filters">
-        <div
-          class="filter-section-header"
-          (click)="filter.expanded = !filter.expanded"
-        >
-          <h3>{{ filter.name }}</h3>
-          <mat-icon>{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+    <div class="p-6 overflow-y-auto flex-1" style="height: calc(100% - 130px);">
+      <div class="mb-6" *ngFor="let filter of filters">
+        <div class="flex justify-between items-center cursor-pointer mb-3"
+             (click)="filter.expanded = !filter.expanded">
+          <h3 class="text-base font-medium text-neutral-800 m-0">{{ filter.name }}</h3>
+          <mat-icon class="text-neutral-600">{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
         </div>
 
-        <div class="filter-options" *ngIf="filter.expanded">
-          <div class="filter-option" *ngFor="let option of filter.options">
+        <div class="ml-2" *ngIf="filter.expanded">
+          <div class="flex justify-between items-center py-2" *ngFor="let option of filter.options">
             <mat-checkbox
               [checked]="option.selected"
-              (change)="option.selected = !option.selected"
-              [ngStyle]="{'color': '#202124', 'font-weight': '400'}"
-            >
-              {{ option.label }}
+              (change)="option.selected = !option.selected">
+              <span class="text-neutral-800 font-normal">{{ option.label }}</span>
             </mat-checkbox>
-            <span class="option-count">{{ option.count }}</span>
+            <span class="text-xs text-neutral-500 ml-2">{{ option.count }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="filter-actions">
-      <button
-        type="button"
-        class="clear-filters-button"
-        (click)="clearAllFilters()"
-      >
+    <div class="flex justify-end gap-3 p-4 border-t border-neutral-200 sticky bottom-0 bg-white z-10">
+      <button type="button" class="px-4 py-2 text-sm font-medium text-neutral-600" (click)="clearAllFilters()">
         Clear all
       </button>
-      <button
-        type="button"
-        class="apply-filters-button"
-        (click)="applyFilters()"
-      >
+      <button type="button" class="px-4 py-2 text-sm font-medium bg-primary text-white rounded" (click)="applyFilters()">
         Apply
       </button>
     </div>
   </div>
 
   <!-- Overlay to close filters when clicking outside -->
-  <div
-    class="filters-overlay"
-    *ngIf="showFilters"
-    (click)="toggleFilters()"
-  ></div>
+  <div class="fixed inset-0 bg-neutral-900 bg-opacity-30 z-40" *ngIf="showFilters" (click)="toggleFilters()"></div>
 </div>

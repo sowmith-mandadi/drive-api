@@ -15,11 +15,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatListModule } from '@angular/material/list';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTabsModule } from '@angular/material/tabs';
+import { FormControl } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, switchMap, startWith, tap } from 'rxjs/operators';
 
 import { Content, Filter } from '../../shared/models/content.model';
 import { ContentService } from '../../core/services/content.service';
@@ -49,10 +51,11 @@ import { Subscription } from 'rxjs';
     MatListModule,
     MatTooltipModule,
     MatMenuModule,
-    MatTabsModule
+    MatTabsModule,
+    ReactiveFormsModule
   ],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.scss'
+  styles: ['']
 })
 export class HomeComponent implements OnInit, OnDestroy {
   // Make Math available to the template
@@ -131,14 +134,98 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   ];
 
+  // Live search
+  searchControl = new FormControl('');
+  searchResults: Content[] = [];
+  isSearching = false;
+  searchLoading = false;
+
+  // For managing abstract expansions in search results
+  expandedAbstracts: { [key: number]: boolean } = {};
+  abstractMaxLength = 150;
+
   constructor(
     private contentService: ContentService,
     private router: Router
   ) {}
 
+  isNewContent(item: Content): boolean {
+    // Check if the item has a 'New' tag
+    return item.tags?.some(tag => tag === 'New');
+  }
+
+  hasAiSummary(item: Content): boolean {
+    // Check if item has an AI summary or an AI tag
+    return !!item.aiSummary || item.tags?.some(tag => tag.includes('AI'));
+  }
+
+  getAbstractToShow(item: Content, index: number): string {
+    if (!item.abstract) return item.description;
+    if (this.expandedAbstracts[index] || item.abstract.length <= this.abstractMaxLength) {
+      return item.abstract;
+    }
+    return item.abstract.substring(0, this.abstractMaxLength) + '...';
+  }
+
+  shouldShowMoreButton(item: Content, index: number): boolean {
+    const text = item.abstract || item.description;
+    return !!(text && text.length > this.abstractMaxLength);
+  }
+
+  toggleShowMore(event: Event, index: number): void {
+    event.stopPropagation(); // Prevent navigation
+    this.expandedAbstracts[index] = !this.expandedAbstracts[index];
+  }
+
+  getAssetIcon(assetType: string): string {
+    switch(assetType.toLowerCase()) {
+      case 'pdf':
+        return 'picture_as_pdf';
+      case 'slide':
+        return 'slideshow';
+      case 'video':
+        return 'videocam';
+      case 'demo':
+        return 'code';
+      case 'github':
+        return 'code';
+      case 'youtube':
+        return 'smart_display';
+      case 'notebook':
+        return 'book';
+      default:
+        return 'insert_drive_file';
+    }
+  }
+
   ngOnInit(): void {
     this.loadContent();
     this.startLatestAutoplay();
+    // Live search subscription
+    const searchSub = this.searchControl.valueChanges.pipe(
+      startWith(''),
+      debounceTime(300),
+      distinctUntilChanged(),
+      tap(query => {
+        this.isSearching = !!query && query.trim().length > 0;
+        this.searchLoading = !!query && query.trim().length > 0;
+      }),
+      switchMap(query => {
+        if (!query || query.trim() === '') {
+          this.searchResults = [];
+          this.searchLoading = false;
+          return [];
+        }
+        // Placeholder: search all content (latest + recommended union, deduped by id)
+        const allContent = [...this.latestUpdates, ...this.recommendedContent].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        // Simulate async search (replace with API call later)
+        return this.contentService.searchContent({ query, page: 0, size: 12 }).pipe(
+          tap(() => this.searchLoading = false),
+          tap(result => this.searchResults = result.items)
+        );
+      })
+    ).subscribe();
+    this.subscriptions.push(searchSub);
   }
 
   ngOnDestroy(): void {
