@@ -65,17 +65,18 @@
         <div *ngIf="item.assets && item.assets.length > 0">
           <div class="text-xs text-gray-500 mb-1">Assets</div>
           <div class="flex flex-wrap gap-3">
-            <a *ngFor="let asset of item.assets" [href]="asset.url" target="_blank" class="flex items-center gap-1 text-blue-700 hover:underline text-xs font-medium" (click)="$event.stopPropagation()">
+            <a *ngFor="let asset of item.assets" [href]="asset.url" target="_blank" class="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-gray-100 text-xs font-medium" (click)="$event.stopPropagation()">
               <div [ngClass]="{
-                'bg-yellow-400 text-white': asset.type.toLowerCase() === 'slide',
-                'bg-red-500 text-white': asset.type.toLowerCase() === 'pdf',
-                'bg-blue-600 text-white': asset.type.toLowerCase() === 'youtube',
-                'bg-gray-300 text-gray-700': asset.type.toLowerCase() !== 'slide' && asset.type.toLowerCase() !== 'pdf' && asset.type.toLowerCase() !== 'youtube'
-              }" class="w-5 h-5 flex items-center justify-center rounded">
+                'bg-yellow-400': asset.type.toLowerCase() === 'slide',
+                'bg-red-500': asset.type.toLowerCase() === 'pdf',
+                'bg-blue-600': asset.type.toLowerCase() === 'youtube',
+                'bg-gray-700': asset.type.toLowerCase() === 'github',
+                'bg-purple-600': asset.type.toLowerCase() === 'demo',
+                'bg-gray-500': ['slide', 'pdf', 'youtube', 'github', 'demo'].indexOf(asset.type.toLowerCase()) === -1
+              }" class="w-5 h-5 flex items-center justify-center rounded text-white">
                 <mat-icon class="text-xs">{{ getAssetIcon(asset.type) }}</mat-icon>
               </div>
-              <span>{{ asset.type }}</span>
-              <mat-icon *ngIf="asset.type === 'Slide'" class="text-xs ml-1">open_in_new</mat-icon>
+              <span class="text-gray-700">{{ asset.type }}</span>
             </a>
           </div>
         </div>
