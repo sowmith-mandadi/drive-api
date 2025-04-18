@@ -62,3 +62,47 @@ The UI is themed after Google Cloud Next '25 event, using:
 - RxJS
 - SCSS with custom theming
 - Google Cloud integration
+
+## Cloud Shell Deployment
+
+To deploy this Angular application in a cloud shell environment:
+
+1. Create a deployment zip file:
+   ```bash
+   chmod +x create-deploy-zip.sh
+   ./create-deploy-zip.sh
+   ```
+
+2. Upload the generated `frontend-deploy.zip` to your cloud shell.
+
+3. In cloud shell, unzip the file:
+   ```bash
+   unzip frontend-deploy.zip
+   cd temp_deploy
+   ```
+
+4. Run the setup script:
+   ```bash
+   ./cloud-shell-setup.sh
+   ```
+
+5. Start the application:
+   ```bash
+   npm start
+   ```
+
+If you need to connect to a backend API, edit the `cloud-shell-setup.sh` script to uncomment and modify the line that updates the backend API URL in `proxy.conf.json`.
+
+### Node.js Version
+
+This project uses Angular 19, which requires Node.js 20.x or higher. If you encounter Node.js version issues in cloud shell:
+
+```bash
+# Install nvm (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.nvm/nvm.sh
+
+# Install and use Node.js 20
+nvm install 20
+nvm use 20
+```
