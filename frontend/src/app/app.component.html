@@ -18,68 +18,84 @@
     </div>
   </mat-toolbar>
 
-  <mat-menu #notificationsMenu="matMenu" class="min-w-[350px] max-w-[350px] rounded-lg overflow-hidden">
-    <div class="py-3 px-4">
-      <h3 class="m-0 text-base font-medium text-neutral-800">Notifications</h3>
+  <mat-menu #notificationsMenu="matMenu" class="notifications-menu">
+    <div class="bg-blue-50 py-3 px-4 border-b border-neutral-100">
+      <h3 class="m-0 text-base font-medium text-blue-500">Notifications</h3>
     </div>
-    <mat-divider></mat-divider>
-    <div class="max-h-[300px] overflow-y-auto">
-      <button mat-menu-item class="h-auto py-3 px-4 hover:bg-neutral-100 relative before:content-[''] before:absolute before:left-1.5 before:top-1/2 before:-translate-y-1/2 before:h-2 before:w-2 before:rounded-full before:bg-primary">
-        <mat-icon color="primary">description</mat-icon>
-        <span class="flex flex-col ml-4">
-          <span class="font-medium text-sm text-neutral-800">New Content Added</span>
-          <span class="text-sm text-neutral-600 mt-1">A new presentation was added to the conference</span>
-          <span class="text-xs text-neutral-500 mt-1">5 minutes ago</span>
-        </span>
+    <div class="max-h-[350px] overflow-y-auto bg-white">
+      <button mat-menu-item class="notification-item notification-unread">
+        <div class="flex items-start p-3 hover:bg-blue-50/50 border-l-4 border-blue-500 rounded-r transition-colors">
+          <div class="flex-shrink-0 p-2 rounded-full bg-blue-100 mr-3">
+            <mat-icon class="text-blue-500">description</mat-icon>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-medium text-sm text-neutral-900">New Content Added</span>
+            <span class="text-sm text-neutral-700 mt-1">A new presentation was added to the conference</span>
+            <span class="text-xs text-neutral-500 mt-2">5 minutes ago</span>
+          </div>
+        </div>
       </button>
-      <button mat-menu-item class="h-auto py-3 px-4 hover:bg-neutral-100 relative before:content-[''] before:absolute before:left-1.5 before:top-1/2 before:-translate-y-1/2 before:h-2 before:w-2 before:rounded-full before:bg-primary">
-        <mat-icon color="accent">rate_review</mat-icon>
-        <span class="flex flex-col ml-4">
-          <span class="font-medium text-sm text-neutral-800">Content Review Required</span>
-          <span class="text-sm text-neutral-600 mt-1">3 items need your review</span>
-          <span class="text-xs text-neutral-500 mt-1">2 hours ago</span>
-        </span>
+      <button mat-menu-item class="notification-item notification-unread">
+        <div class="flex items-start p-3 hover:bg-blue-50/50 border-l-4 border-green-500 rounded-r transition-colors">
+          <div class="flex-shrink-0 p-2 rounded-full bg-green-100 mr-3">
+            <mat-icon class="text-green-500">rate_review</mat-icon>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-medium text-sm text-neutral-900">Content Review Required</span>
+            <span class="text-sm text-neutral-700 mt-1">3 items need your review</span>
+            <span class="text-xs text-neutral-500 mt-2">2 hours ago</span>
+          </div>
+        </div>
       </button>
-      <button mat-menu-item class="h-auto py-3 px-4 hover:bg-neutral-100">
-        <mat-icon color="warn">warning</mat-icon>
-        <span class="flex flex-col ml-4">
-          <span class="font-medium text-sm text-neutral-800">Upload Failed</span>
-          <span class="text-sm text-neutral-600 mt-1">There was an issue with your recent upload</span>
-          <span class="text-xs text-neutral-500 mt-1">Yesterday</span>
-        </span>
+      <button mat-menu-item class="notification-item">
+        <div class="flex items-start p-3 hover:bg-blue-50/50 border-l-4 border-transparent rounded-r transition-colors">
+          <div class="flex-shrink-0 p-2 rounded-full bg-red-100 mr-3">
+            <mat-icon class="text-red-500">warning</mat-icon>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-medium text-sm text-neutral-900">Upload Failed</span>
+            <span class="text-sm text-neutral-700 mt-1">There was an issue with your recent upload</span>
+            <span class="text-xs text-neutral-500 mt-2">Yesterday</span>
+          </div>
+        </div>
       </button>
     </div>
-    <mat-divider></mat-divider>
-    <button mat-menu-item>
-      <mat-icon>settings</mat-icon>
-      <span>Notification Settings</span>
-    </button>
+    <div class="bg-white border-t border-neutral-100 py-2">
+      <button mat-menu-item class="flex items-center justify-center text-blue-500">
+        <mat-icon class="text-blue-500 mr-2">settings</mat-icon>
+        <span class="text-blue-500 font-medium">Notification Settings</span>
+      </button>
+    </div>
   </mat-menu>
 
-  <mat-menu #userMenu="matMenu">
-    <div class="flex p-4 items-center">
-      <div class="bg-primary-light rounded-full h-10 w-10 flex items-center justify-center mr-3">
-        <mat-icon class="text-primary">account_circle</mat-icon>
-      </div>
-      <div class="flex flex-col">
-        <div class="font-medium text-sm text-neutral-800">Admin User</div>
-        <div class="text-sm text-neutral-600">admin&#64;example.com</div>
+  <mat-menu #userMenu="matMenu" class="user-menu">
+    <div class="bg-blue-50 p-4">
+      <div class="flex items-center">
+        <div class="bg-blue-500 rounded-full h-10 w-10 flex items-center justify-center mr-3 shadow-sm">
+          <mat-icon class="text-white">account_circle</mat-icon>
+        </div>
+        <div class="flex flex-col">
+          <div class="font-medium text-neutral-900">Admin User</div>
+          <div class="text-sm text-neutral-700">admin&#64;example.com</div>
+        </div>
       </div>
     </div>
-    <mat-divider></mat-divider>
-    <button mat-menu-item>
-      <mat-icon>person</mat-icon>
-      <span>My Profile</span>
-    </button>
-    <button mat-menu-item>
-      <mat-icon>settings</mat-icon>
-      <span>Settings</span>
-    </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item>
-      <mat-icon>exit_to_app</mat-icon>
-      <span>Logout</span>
-    </button>
+    <div class="py-2 bg-white">
+      <button mat-menu-item class="hover:bg-blue-50/50">
+        <mat-icon class="text-blue-500">person</mat-icon>
+        <span class="text-neutral-800">My Profile</span>
+      </button>
+      <button mat-menu-item class="hover:bg-blue-50/50">
+        <mat-icon class="text-blue-500">settings</mat-icon>
+        <span class="text-neutral-800">Settings</span>
+      </button>
+    </div>
+    <div class="border-t border-neutral-100 py-2 bg-white">
+      <button mat-menu-item class="hover:bg-blue-50/50">
+        <mat-icon class="text-red-500">exit_to_app</mat-icon>
+        <span class="text-red-500">Logout</span>
+      </button>
+    </div>
   </mat-menu>
 
   <div class="flex-1 w-full min-h-[calc(100vh-112px)] overflow-y-auto overflow-x-hidden bg-neutral-50">
