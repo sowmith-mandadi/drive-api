@@ -476,6 +476,7 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       display: flex;
       align-items: center;
       gap: 8px;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
     }
 
     .action-button:hover {
@@ -486,25 +487,45 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #1a73e8;
+      transition: color 0.2s;
     }
 
     .share-button {
-      color: #34a853; /* Google green */
-      border-color: #34a853;
+      color: #188038; /* Deeper Google green */
+      border-color: #188038;
     }
 
     .share-button mat-icon {
-      color: #34a853; /* Google green */
+      color: #188038; /* Deeper Google green */
+    }
+
+    .share-button:hover {
+      background-color: #e6f4ea; /* Light green background on hover */
+      color: #0d652d; /* Darker green on hover */
+      border-color: #0d652d;
+    }
+
+    .share-button:hover mat-icon {
+      color: #0d652d;
     }
 
     .feedback-button {
-      color: #4285f4; /* Google blue */
-      border-color: #4285f4;
+      color: #1a73e8; /* Google primary blue */
+      border-color: #1a73e8;
     }
 
     .feedback-button mat-icon {
-      color: #4285f4; /* Google blue */
+      color: #1a73e8; /* Google primary blue */
+    }
+
+    .feedback-button:hover {
+      background-color: #e8f0fe; /* Light blue background on hover */
+      color: #174ea6; /* Darker blue on hover */
+      border-color: #174ea6;
+    }
+
+    .feedback-button:hover mat-icon {
+      color: #174ea6;
     }
 
     .section-content {
