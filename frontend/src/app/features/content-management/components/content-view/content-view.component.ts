@@ -27,11 +27,9 @@ import { Content, Asset } from '../../../../shared/models/content.model';
   ],
   template: `
     <div class="content-view-container">
-      <div class="back-link">
-        <button mat-icon-button (click)="goBack()">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <span>Back to {{ referrer || 'previous page' }}</span>
+      <div class="back-link" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back to {{ getContextualBackLabel() }}</span>
       </div>
 
       <div class="loading-spinner" *ngIf="loading">
@@ -174,31 +172,31 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             <div class="info-card-content">
               <div class="info-row">
                 <div class="info-label">Session ID</div>
-                <div class="info-value highlight-value">{{ content.id }}</div>
+                <div class="info-value">{{ content.id }}</div>
               </div>
               <div class="info-row" *ngIf="content.dateCreated">
                 <div class="info-label">Date of Creation</div>
-                <div class="info-value highlight-value">{{ formatDate(content.dateCreated) }}</div>
+                <div class="info-value">{{ formatDate(content.dateCreated) }}</div>
               </div>
               <div class="info-row">
                 <div class="info-label">Track</div>
-                <div class="info-value highlight-value">{{ content.track }}</div>
+                <div class="info-value">{{ content.track }}</div>
               </div>
               <div class="info-row" *ngIf="content.industry">
                 <div class="info-label">Industry</div>
-                <div class="info-value highlight-value">{{ content.industry }}</div>
+                <div class="info-value">{{ content.industry }}</div>
               </div>
               <div class="info-row" *ngIf="content.sessionType">
                 <div class="info-label">Session Type</div>
-                <div class="info-value highlight-value">{{ content.sessionType }}</div>
+                <div class="info-value">{{ content.sessionType }}</div>
               </div>
               <div class="info-row" *ngIf="content.sessionDate">
                 <div class="info-label">Session Date</div>
-                <div class="info-value highlight-value">{{ formatDate(content.sessionDate) }}</div>
+                <div class="info-value">{{ formatDate(content.sessionDate) }}</div>
               </div>
               <div class="info-row" *ngIf="content.learningLevel">
                 <div class="info-label">Learning Level</div>
-                <div class="info-value highlight-value">{{ content.learningLevel }}</div>
+                <div class="info-value">{{ content.learningLevel }}</div>
               </div>
             </div>
           </div>
@@ -222,15 +220,15 @@ import { Content, Asset } from '../../../../shared/models/content.model';
             <div class="info-card-content">
               <div class="info-row" *ngIf="content.jobRole">
                 <div class="info-label">Job Role</div>
-                <div class="info-value highlight-value">{{ content.jobRole }}</div>
+                <div class="info-value">{{ content.jobRole }}</div>
               </div>
               <div class="info-row" *ngIf="content.areaOfInterest">
                 <div class="info-label">Area of Interest</div>
-                <div class="info-value highlight-value">{{ content.areaOfInterest }}</div>
+                <div class="info-value">{{ content.areaOfInterest }}</div>
               </div>
               <div class="info-row" *ngIf="content.topic">
                 <div class="info-label">Topic</div>
-                <div class="info-value highlight-value">{{ content.topic }}</div>
+                <div class="info-value">{{ content.topic }}</div>
               </div>
             </div>
           </div>
@@ -275,9 +273,14 @@ import { Content, Asset } from '../../../../shared/models/content.model';
       color: #5f6368;
       font-size: 14px;
       cursor: pointer;
+      transition: color 0.2s;
     }
 
-    .back-link button {
+    .back-link:hover {
+      color: #1a73e8;
+    }
+
+    .back-link mat-icon {
       margin-right: 8px;
     }
 
@@ -616,10 +619,6 @@ import { Content, Asset } from '../../../../shared/models/content.model';
 
     .highlight-value {
       color: #3c4043;
-      background-color: #f8f9fa;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border-left: 3px solid #dadce0;
     }
 
     .presenter {
@@ -820,6 +819,7 @@ export class ContentViewComponent implements OnInit {
   referrer: string = 'search results';
   abstractExpanded: boolean = false;
   showAiSummary: boolean = false;
+  searchTerm: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -839,12 +839,17 @@ export class ContentViewComponent implements OnInit {
       }
     });
 
-    // Try to determine where the user came from
+    // Try to determine where the user came from and get search term if applicable
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.previousNavigation) {
       const previousUrl = navigation.previousNavigation.finalUrl?.toString() || '';
       if (previousUrl.includes('search')) {
         this.referrer = 'search results';
+        // Try to extract search term from previous navigation state
+        const state = navigation.extras?.state;
+        if (state && state['searchTerm']) {
+          this.searchTerm = state['searchTerm'];
+        }
       } else if (previousUrl.includes('home')) {
         this.referrer = 'home';
       } else if (previousUrl.includes('content-management')) {
@@ -920,5 +925,9 @@ export class ContentViewComponent implements OnInit {
 
   toggleAiSummary(): void {
     this.showAiSummary = !this.showAiSummary;
+  }
+
+  getContextualBackLabel(): string {
+    return "Home page";
   }
 }
