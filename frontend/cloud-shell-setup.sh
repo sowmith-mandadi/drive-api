@@ -22,4 +22,4 @@ echo "Building the application..."
 npm run build
 
 echo "Setup complete! Run 'npm start' to start the development server."
-echo "For production, the build output is in the 'dist' directory." 
+echo "For production, the build output is in the 'dist' directory."

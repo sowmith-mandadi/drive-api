@@ -22,4 +22,4 @@ rm -rf temp_deploy
 echo "Created frontend-deploy.zip - ready for cloud shell deployment"
 echo "After unzipping in cloud shell, run:"
 echo "  cd temp_deploy"
-echo "  ./cloud-shell-setup.sh" 
+echo "  ./cloud-shell-setup.sh"
