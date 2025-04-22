@@ -111,7 +111,7 @@ export interface FilterOption {
   value: string;
   label: string;
   selected: boolean;
-  count: number;
+  count?: number;
 }
 
 /**

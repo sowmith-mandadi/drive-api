@@ -173,28 +173,35 @@
   <div class="fixed top-0 right-0 bottom-0 w-80 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out"
        [ngClass]="{'translate-x-0': showFilters, 'translate-x-full': !showFilters}">
     <div class="flex justify-between items-center px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white z-10">
-      <h2 class="text-lg font-medium text-neutral-800 m-0">Filters</h2>
+      <div class="flex items-center">
+        <button type="button" class="mr-3 text-neutral-600" (click)="toggleFilters()">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <h2 class="text-xl font-medium text-neutral-800 m-0">Filters</h2>
+      </div>
       <button type="button" class="flex items-center justify-center text-neutral-600 hover:text-neutral-800" (click)="toggleFilters()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto flex-1" style="height: calc(100% - 130px);">
-      <div class="mb-6" *ngFor="let filter of filters">
-        <div class="flex justify-between items-center cursor-pointer mb-3"
+    <div class="overflow-y-auto flex-1" style="height: calc(100% - 130px);">
+      <div *ngFor="let filter of filters">
+        <div class="flex justify-between items-center cursor-pointer py-4 px-6 border-b border-neutral-100"
              (click)="filter.expanded = !filter.expanded">
-          <h3 class="text-base font-medium text-neutral-800 m-0">{{ filter.name }}</h3>
-          <mat-icon class="text-neutral-600">{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <h3 class="text-base text-neutral-800 m-0">{{ filter.name }}</h3>
+          <mat-icon class="text-blue-600">{{ filter.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
         </div>
 
-        <div class="ml-2" *ngIf="filter.expanded">
-          <div class="flex justify-between items-center py-2" *ngFor="let option of filter.options">
-            <mat-checkbox
-              [checked]="option.selected"
-              (change)="option.selected = !option.selected">
-              <span class="text-neutral-800 font-normal">{{ option.label }}</span>
-            </mat-checkbox>
-            <span class="text-xs text-neutral-500 ml-2">{{ option.count }}</span>
+        <div class="py-3 px-6 border-b border-neutral-100" *ngIf="filter.expanded">
+          <div class="flex flex-wrap gap-3">
+            <div
+              *ngFor="let option of filter.options"
+              [class.selected-chip]="option.selected"
+              (click)="option.selected = !option.selected"
+              class="cursor-pointer h-9 px-4 flex items-center rounded-full border border-neutral-200 bg-white text-neutral-700 text-sm">
+              <mat-icon *ngIf="option.selected" class="text-primary text-sm mr-1">check</mat-icon>
+              <span>{{ option.label }}</span>
+            </div>
           </div>
         </div>
       </div>

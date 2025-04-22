@@ -55,7 +55,85 @@ import { Subscription } from 'rxjs';
     ReactiveFormsModule
   ],
   templateUrl: './home.component.html',
-  styles: ['']
+  styles: [`
+    ::ng-deep .mat-mdc-chip-option {
+      --mdc-chip-elevated-container-color: transparent !important;
+      --mdc-chip-elevated-selected-container-color: transparent !important;
+      --mdc-chip-elevated-selected-label-text-color: inherit !important;
+      --mdc-chip-with-trailing-icon-trailing-icon-color: inherit !important;
+      --mdc-chip-with-trailing-icon-selected-trailing-icon-color: inherit !important;
+      --mdc-chip-elevated-selected-label-text-color: inherit !important;
+      --mdc-chip-elevated-selected-state-layer-color: transparent !important;
+      box-shadow: none !important;
+      padding: 0 16px !important;
+      height: 40px !important;
+      border-radius: 20px !important;
+    }
+
+    ::ng-deep .mat-mdc-chip-option .mdc-evolution-chip__checkmark {
+      display: none !important;
+    }
+
+    ::ng-deep .mat-mdc-standard-chip {
+      background-color: transparent !important;
+    }
+
+    ::ng-deep .mat-mdc-chip-option-selected {
+      background-color: #EBF5FF !important;
+      color: #0057D2 !important;
+      border-color: #0057D2 !important;
+    }
+
+    ::ng-deep .mat-mdc-chip-listbox {
+      gap: 8px !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+    }
+
+    ::ng-deep .mdc-evolution-chip__action--primary {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+    }
+
+    ::ng-deep .mdc-evolution-chip__graphic {
+      display: none !important;
+    }
+
+    ::ng-deep .mdc-evolution-chip__text-label {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      font-size: 14px !important;
+    }
+
+    ::ng-deep .mat-icon {
+      font-size: 20px !important;
+      height: 20px !important;
+      width: 20px !important;
+      line-height: 20px !important;
+    }
+
+    .cursor-pointer:hover {
+      background-color: #F5F7FA;
+    }
+
+    .border-primary {
+      border-color: #D2E3FC !important;
+    }
+
+    .bg-primary-light {
+      background-color: #D2E3FC !important;
+    }
+
+    .text-primary {
+      color: #1967D2 !important;
+    }
+
+    .selected-chip {
+      background-color: #D2E3FC !important;
+      color: #1967D2 !important;
+      border-color: #D2E3FC !important;
+    }
+  `]
 })
 export class HomeComponent implements OnInit, OnDestroy {
   // Make Math available to the template
@@ -92,45 +170,91 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Filter configurations
   filters: Filter[] = [
     {
-      name: 'Track',
+      name: 'Event',
       options: [
-        { value: 'ai-ml', label: 'AI & Machine Learning', selected: false, count: 28 },
-        { value: 'cloud-infrastructure', label: 'Cloud Infrastructure', selected: false, count: 35 },
-        { value: 'data-analytics', label: 'Data & Analytics', selected: false, count: 22 },
-        { value: 'application-modernization', label: 'App Modernization', selected: false, count: 19 },
-        { value: 'security', label: 'Security', selected: false, count: 16 }
+        { value: 'conferences', label: 'Conferences', selected: false, count: 0 },
+        { value: 'webinars', label: 'Webinars', selected: false, count: 0 },
+        { value: 'workshops', label: 'Workshops', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Topic',
+      options: [
+        { value: 'ai-ml', label: 'AI & Machine Learning', selected: false, count: 0 },
+        { value: 'cloud-infrastructure', label: 'Cloud Infrastructure', selected: false, count: 0 },
+        { value: 'data-analytics', label: 'Data & Analytics', selected: false, count: 0 },
+        { value: 'app-modernization', label: 'App Modernization', selected: false, count: 0 },
+        { value: 'security', label: 'Security', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Industry',
+      options: [
+        { value: 'financial-services', label: 'Financial Services', selected: false, count: 0 },
+        { value: 'healthcare', label: 'Healthcare', selected: false, count: 0 },
+        { value: 'retail', label: 'Retail', selected: false, count: 0 },
+        { value: 'manufacturing', label: 'Manufacturing', selected: false, count: 0 },
+        { value: 'government', label: 'Government', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Content Type',
+      options: [
+        { value: 'article', label: 'Article', selected: false, count: 0 },
+        { value: 'video', label: 'Video', selected: false, count: 0 },
+        { value: 'whitepaper', label: 'Whitepaper', selected: false, count: 0 },
+        { value: 'demo', label: 'Demo', selected: false, count: 0 },
+        { value: 'code-sample', label: 'Code Sample', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Account Type',
+      options: [
+        { value: 'personal', label: 'Personal', selected: false, count: 0 },
+        { value: 'business', label: 'Business', selected: false, count: 0 },
+        { value: 'enterprise', label: 'Enterprise', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Products',
+      options: [
+        { value: 'compute-engine', label: 'Compute Engine', selected: false, count: 0 },
+        { value: 'cloud-storage', label: 'Cloud Storage', selected: false, count: 0 },
+        { value: 'bigquery', label: 'BigQuery', selected: false, count: 0 },
+        { value: 'kubernetes', label: 'Kubernetes', selected: false, count: 0 },
+        { value: 'vertex-ai', label: 'Vertex AI', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Region',
+      options: [
+        { value: 'north-america', label: 'North America', selected: false, count: 0 },
+        { value: 'europe', label: 'Europe', selected: false, count: 0 },
+        { value: 'asia-pacific', label: 'Asia Pacific', selected: false, count: 0 },
+        { value: 'latin-america', label: 'Latin America', selected: false, count: 0 }
+      ],
+      expanded: false
+    },
+    {
+      name: 'Tags',
+      options: [
+        { value: 'ai', label: 'AI', selected: false, count: 0 },
+        { value: 'apis', label: 'APIs', selected: false, count: 0 },
+        { value: 'app-dev', label: 'App Dev', selected: false, count: 0 },
+        { value: 'applied-ai', label: 'Applied AI', selected: false, count: 0 },
+        { value: 'architecture', label: 'Architecture', selected: false, count: 0 },
+        { value: 'business-intelligence', label: 'Business Intelligence', selected: false, count: 0 },
+        { value: 'chrome', label: 'Chrome', selected: false, count: 0 },
+        { value: 'compute', label: 'Compute', selected: false, count: 0 },
+        { value: 'cost-optimization', label: 'Cost Optimization', selected: false, count: 0 }
       ],
       expanded: true
-    },
-    {
-      name: 'Session Type',
-      options: [
-        { value: 'keynote', label: 'Keynote', selected: false, count: 5 },
-        { value: 'workshop', label: 'Workshop', selected: false, count: 32 },
-        { value: 'breakout', label: 'Breakout Session', selected: false, count: 48 },
-        { value: 'panel', label: 'Panel Discussion', selected: false, count: 12 },
-        { value: 'demo', label: 'Demo', selected: false, count: 28 }
-      ],
-      expanded: false
-    },
-    {
-      name: 'Learning Level',
-      options: [
-        { value: 'beginner', label: 'Beginner', selected: false, count: 35 },
-        { value: 'intermediate', label: 'Intermediate', selected: false, count: 54 },
-        { value: 'advanced', label: 'Advanced', selected: false, count: 36 }
-      ],
-      expanded: false
-    },
-    {
-      name: 'Status',
-      options: [
-        { value: 'draft', label: 'Draft', selected: false, count: 12 },
-        { value: 'review', label: 'In Review', selected: false, count: 24 },
-        { value: 'approved', label: 'Approved', selected: false, count: 45 },
-        { value: 'published', label: 'Published', selected: false, count: 44 }
-      ],
-      expanded: false
     }
   ];
 
