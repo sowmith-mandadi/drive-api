@@ -59,8 +59,8 @@ module.exports = {
         }
       },
       boxShadow: {
-        'card': '0 1px 3px rgba(0,0,0,0.05)',
-        'card-hover': '0 4px 12px rgba(0,0,0,0.08)',
+        'card': '0 3px 6px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+        'card-hover': '0 8px 16px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.05)',
         'button': '0 2px 4px rgba(0,0,0,0.1)',
         'button-hover': '0 4px 8px rgba(0,0,0,0.15)',
       },
@@ -68,7 +68,7 @@ module.exports = {
         'google-sans': ['"Google Sans"', 'Roboto', 'sans-serif'],
       },
       borderRadius: {
-        'card': '12px',
+        'card': '18px',
         'button': '22px',
         'tag': '14px',
         'search': '24px',

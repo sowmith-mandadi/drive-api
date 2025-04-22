@@ -98,15 +98,14 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="!loading.latest && visibleLatestUpdates.length > 0">
-        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover transition-shadow duration-300 p-6 cursor-pointer"
+        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 p-6 cursor-pointer"
              *ngFor="let item of visibleLatestUpdates"
              (click)="navigateToContent(item.id)">
           <div class="text-sm text-neutral-500 mb-2">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
           <h3 class="text-lg font-medium text-neutral-800 mb-3">{{ item.title }}</h3>
 
           <div class="flex flex-wrap gap-2 mb-4">
-            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-primary-light text-primary" *ngIf="isNew(item)">New</div>
-            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of getFilteredTags(item).slice(0, 3)">{{ tag }}</div>
           </div>
 
           <div class="text-sm text-neutral-600 mb-4 line-clamp-3">{{ item.description }}</div>
@@ -139,15 +138,15 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="!loading.recommended && visibleRecommended.length > 0">
-        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover transition-shadow duration-300 p-6 cursor-pointer"
+        <div class="bg-white rounded-card shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 p-6 cursor-pointer"
              *ngFor="let item of visibleRecommended"
              (click)="navigateToContent(item.id)">
           <div class="text-sm text-neutral-500 mb-2">{{ item.dateCreated | date: 'MMM dd, yyyy' }}</div>
           <h3 class="text-lg font-medium text-neutral-800 mb-3">{{ item.title }}</h3>
 
           <div class="flex flex-wrap gap-2 mb-4">
-            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-primary-light text-primary" *ngIf="isRecommended(item)">Recommended</div>
-            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of item.tags.slice(0, 3)">{{ tag }}</div>
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-primary-light text-primary" *ngIf="isNew(item)">New</div>
+            <div class="inline-flex items-center h-7 px-3 rounded-tag text-xs font-medium bg-neutral-100 text-neutral-600" *ngFor="let tag of getFilteredTags(item).slice(0, 3)">{{ tag }}</div>
           </div>
 
           <div class="text-sm text-neutral-600 mb-4 line-clamp-3">{{ item.description }}</div>

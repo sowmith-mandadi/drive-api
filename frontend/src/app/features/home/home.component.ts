@@ -274,8 +274,15 @@ export class HomeComponent implements OnInit, OnDestroy {
   ) {}
 
   isNewContent(item: Content): boolean {
-    // Check if the item has a 'New' tag
-    return item.tags?.some(tag => tag === 'New');
+    // First check if the item has isNew flag set
+    if (item.isNew) return true;
+
+    // Otherwise, consider an item "new" if it's less than 7 days old
+    const now = new Date();
+    const itemDate = new Date(item.dateCreated);
+    const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
   }
 
   hasAiSummary(item: Content): boolean {
@@ -574,7 +581,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   isNew(item: Content): boolean {
-    // Consider an item "new" if it's less than 7 days old
+    // First check if the item has isNew flag set
+    if (item.isNew) return true;
+
+    // Otherwise, consider an item "new" if it's less than 7 days old
     const now = new Date();
     const itemDate = new Date(item.dateCreated);
     const diffTime = Math.abs(now.getTime() - itemDate.getTime());
@@ -589,6 +599,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       tag.toLowerCase() === 'recommended' ||
       tag.toLowerCase() === 'featured' ||
       tag.toLowerCase() === 'popular'
+    );
+  }
+
+  getFilteredTags(item: Content): string[] {
+    // Filter out any recommended-related tags for the recommended section
+    return item.tags.filter(tag =>
+      tag.toLowerCase() !== 'recommended' &&
+      tag.toLowerCase() !== 'featured' &&
+      tag.toLowerCase() !== 'popular' &&
+      tag.toLowerCase() !== 'new'
     );
   }
 

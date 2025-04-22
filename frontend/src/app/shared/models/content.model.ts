@@ -69,6 +69,7 @@ export interface Content {
   priority?: boolean;    // High priority content
   recommended?: boolean; // Recommended to users
   bookmarked?: boolean;  // User has bookmarked (client-side only)
+  isNew?: boolean;       // New content flag
 
   // Related content
   presenters: Presenter[];
