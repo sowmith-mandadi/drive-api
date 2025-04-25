@@ -2,12 +2,19 @@
 Configuration settings for the FastAPI application.
 """
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel, validator
+
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 
-class Settings(BaseSettings):
+class Settings(BaseModel):
     """Base settings for the application."""
 
     # API Settings
@@ -39,7 +46,7 @@ class Settings(BaseSettings):
     ]
 
     # Upload Settings
-    MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", 100))
+    MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "100"))
 
     # RAG Settings
     VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")
@@ -63,11 +70,14 @@ class Settings(BaseSettings):
     # Flask Settings (for compatibility)
     FLASK_ENV: Optional[str] = os.getenv("FLASK_ENV")
 
-    class Config:
-        """Configuration for BaseSettings."""
-
-        env_file = ".env"
-        case_sensitive = True
+    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """Parse CORS origins from string or list."""
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
 
 
 # Create settings instance
