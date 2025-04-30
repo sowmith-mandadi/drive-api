@@ -3,19 +3,24 @@ entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
 
 build_env_variables:
   GOOGLE_RUNTIME_VERSION: "3.9"
-  PIP_REQUIREMENTS_FILE: "requirements-deploy.txt"
+  PIP_REQUIREMENTS_FILE: "requirements.txt"
 
 env_variables:
-  GOOGLE_CLIENT_ID: "YOUR_ACTUAL_OAUTH_CLIENT_ID"
-  GOOGLE_CLIENT_SECRET: "YOUR_ACTUAL_OAUTH_CLIENT_SECRET"
-  GOOGLE_REDIRECT_URI: "https://YOUR_PROJECT_ID.uc.r.appspot.com/api/auth/callback"
-  FIRESTORE_PROJECT_ID: "YOUR_PROJECT_ID"
-  SESSION_SECRET_KEY: "GENERATE_A_STRONG_RANDOM_SECRET"
-  GOOGLE_CLOUD_PROJECT: "YOUR_PROJECT_ID"
+  # Replace these values with your actual project details
+  GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+  GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+  GOOGLE_REDIRECT_URI: "https://${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com/api/auth/callback"
+  FIRESTORE_PROJECT_ID: "${GOOGLE_CLOUD_PROJECT}"
+  SESSION_SECRET_KEY: "${SESSION_SECRET_KEY}"
+  GOOGLE_CLOUD_PROJECT: "${GOOGLE_CLOUD_PROJECT}"
+  
+  # AI/ML Settings
   VERTEX_RAG_MODEL: "gemini-1.0-pro"
   TEXT_EMBEDDING_MODEL: "textembedding-gecko@latest"
-  GCS_BUCKET_NAME: "drive-api-uploads"
-  FRONTEND_URL: "https://frontend-dot-YOUR_PROJECT_ID.uc.r.appspot.com"
+  
+  # Storage settings
+  GCS_BUCKET_NAME: "${GOOGLE_CLOUD_PROJECT}-uploads"
+  FRONTEND_URL: "https://frontend-dot-${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com"
 
   # Google Cloud Storage settings
   USE_GCS: "true"
@@ -25,10 +30,10 @@ env_variables:
 
   # Cloud Tasks settings for vector processing backend
   USE_CLOUD_TASKS: "true"
-  GCP_PROJECT_ID: "YOUR_PROJECT_ID"
+  GCP_PROJECT_ID: "${GOOGLE_CLOUD_PROJECT}"
   GCP_LOCATION: "us-central1"
   VECTOR_PROCESSING_QUEUE: "vector-processing"
-  VECTOR_PROCESSING_ENDPOINT: "https://vector-processor-dot-YOUR_PROJECT_ID.uc.r.appspot.com/api/process"
+  VECTOR_PROCESSING_ENDPOINT: "https://vector-processor-dot-${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com/api/process"
   TASK_DISPATCH_DEADLINE: "600"
   TASK_SCHEDULE_DELAY: "0"
 
@@ -46,3 +51,6 @@ skip_files:
 - ^test_reports/$
 - ^coverage_reports/$
 - ^tests/$
+- ^uploads/$
+- ^backend-deploy\.zip$
+- ^temp_deploy/$
