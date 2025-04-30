@@ -1,0 +1,36 @@
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_reports/
+coverage_reports/
+tests/
+
+# Dev/Editors
+.git/
+.github/
+.vscode/
+.idea/
+.mypy_cache/
+*.swp
+*.swo
+.DS_Store
+
+# Project specific
+tempvenv/
+dev_data/
+scratch/
+*.log

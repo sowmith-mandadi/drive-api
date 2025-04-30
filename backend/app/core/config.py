@@ -9,6 +9,7 @@ from pydantic import BaseModel, validator
 # Load .env file if it exists
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -59,6 +60,21 @@ class Settings(BaseModel):
     GOOGLE_CLOUD_PROJECT: Optional[str] = os.getenv("GOOGLE_CLOUD_PROJECT")
     GCS_BUCKET_NAME: Optional[str] = os.getenv("GCS_BUCKET_NAME")
 
+    # Google Cloud Storage Settings
+    USE_GCS: bool = os.getenv("USE_GCS", "false").lower() == "true"
+    GCS_FOLDER_PREFIX: str = os.getenv("GCS_FOLDER_PREFIX", "uploads")
+    GCS_MAKE_PUBLIC: bool = os.getenv("GCS_MAKE_PUBLIC", "false").lower() == "true"
+    GCS_URL_EXPIRATION: int = int(os.getenv("GCS_URL_EXPIRATION", "3600"))  # 1 hour in seconds
+
+    # Cloud Tasks Settings
+    USE_CLOUD_TASKS: bool = os.getenv("USE_CLOUD_TASKS", "false").lower() == "true"
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
+    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+    VECTOR_PROCESSING_QUEUE: str = os.getenv("VECTOR_PROCESSING_QUEUE", "vector-processing")
+    VECTOR_PROCESSING_ENDPOINT: str = os.getenv("VECTOR_PROCESSING_ENDPOINT", "")
+    TASK_DISPATCH_DEADLINE: int = int(os.getenv("TASK_DISPATCH_DEADLINE", "600"))  # 10 minutes
+    TASK_SCHEDULE_DELAY: int = int(os.getenv("TASK_SCHEDULE_DELAY", "0"))  # 0 = immediate execution
+
     # Firestore Settings
     FIRESTORE_PROJECT_ID: str = os.getenv("FIRESTORE_PROJECT_ID", "conference-cms")
     FIRESTORE_COLLECTION_CONTENT: str = os.getenv("FIRESTORE_COLLECTION_CONTENT", "content")
@@ -75,8 +91,10 @@ class Settings(BaseModel):
         """Parse CORS origins from string or list."""
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        elif isinstance(v, list):
             return v
+        elif isinstance(v, str):
+            return [v]
         raise ValueError(v)
 
 

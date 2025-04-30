@@ -16,6 +16,8 @@ google-api-python-client>=2.95.0,<3.0.0
 google-auth>=2.20.0,<3.0.0
 google-auth-httplib2>=0.1.0,<0.2.0
 google-auth-oauthlib>=1.0.0,<2.0.0
+google-cloud-storage>=2.10.0,<3.0.0  # For Google Cloud Storage
+google-cloud-tasks>=2.13.0,<3.0.0    # For Cloud Tasks
 
 # PDF and document handling
 pypdf2>=3.0.0,<4.0.0
@@ -47,6 +49,7 @@ mypy>=1.0.0,<2.0.0
 pytest-asyncio>=0.20.0,<0.22.0
 pytest-xdist>=3.0.0,<4.0.0
 coverage>=7.0.0,<8.0.0
+types-protobuf>=5.29.1,<6.0.0  # Type stubs for protobuf
 
 # Web Server
 gunicorn>=21.0.0,<22.0.0

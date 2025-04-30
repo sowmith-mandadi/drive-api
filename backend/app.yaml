@@ -17,6 +17,21 @@ env_variables:
   GCS_BUCKET_NAME: "drive-api-uploads"
   FRONTEND_URL: "https://frontend-dot-YOUR_PROJECT_ID.uc.r.appspot.com"
 
+  # Google Cloud Storage settings
+  USE_GCS: "true"
+  GCS_FOLDER_PREFIX: "uploads"
+  GCS_MAKE_PUBLIC: "false"
+  GCS_URL_EXPIRATION: "3600"
+
+  # Cloud Tasks settings for vector processing backend
+  USE_CLOUD_TASKS: "true"
+  GCP_PROJECT_ID: "YOUR_PROJECT_ID"
+  GCP_LOCATION: "us-central1"
+  VECTOR_PROCESSING_QUEUE: "vector-processing"
+  VECTOR_PROCESSING_ENDPOINT: "https://vector-processor-dot-YOUR_PROJECT_ID.uc.r.appspot.com/api/process"
+  TASK_DISPATCH_DEADLINE: "600"
+  TASK_SCHEDULE_DELAY: "0"
+
 skip_files:
 - ^venv$
 - ^\.git$
