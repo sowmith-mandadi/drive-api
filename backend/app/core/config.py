@@ -4,7 +4,8 @@ Configuration settings for the FastAPI application.
 import os
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
+from pydantic_settings import BaseSettings
 
 # Load .env file if it exists
 try:
@@ -15,7 +16,7 @@ except ImportError:
     pass
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Base settings for the application."""
 
     # API Settings
@@ -86,7 +87,8 @@ class Settings(BaseModel):
     # Flask Settings (for compatibility)
     FLASK_ENV: Optional[str] = os.getenv("FLASK_ENV")
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         """Parse CORS origins from string or list."""
         if isinstance(v, str) and not v.startswith("["):
