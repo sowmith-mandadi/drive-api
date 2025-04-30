@@ -118,6 +118,14 @@ echo -e "${BLUE}Installing data processing and ML packages...${NC}"
 install_with_verify "numpy>=1.20.0,<2.0.0"
 install_with_verify "scikit-learn>=1.0.0,<2.0.0"
 install_with_verify "pandas>=1.5.0,<3.0.0"
+install_with_verify "openpyxl>=3.1.0,<4.0.0"
+install_with_verify "xlrd>=2.0.0,<3.0.0"
+
+# Install document processing packages
+echo -e "${BLUE}Installing document processing packages...${NC}"
+install_with_verify "pypdf2>=3.0.0,<4.0.0"
+echo -e "${YELLOW}Installing python-pptx (required for PowerPoint processing)...${NC}"
+install_with_verify "python-pptx>=0.6.21"
 
 # Install utility packages
 echo -e "${BLUE}Installing utility packages...${NC}"
@@ -126,9 +134,59 @@ install_with_verify "structlog>=23.0.0,<24.0.0"
 install_with_verify "httpx>=0.20.0,<1.0.0"
 install_with_verify "tenacity>=8.0.0,<9.0.0"
 
-# Document processing packages
-echo -e "${BLUE}Installing document processing packages...${NC}"
-install_with_verify "pypdf2>=3.0.0,<4.0.0"
+# Install AI/LLM packages if used in the application
+echo -e "${BLUE}Installing AI/LLM packages...${NC}"
+install_with_verify "openai>=0.27.0,<1.0.0"
+install_with_verify "tiktoken>=0.4.0,<1.0.0"
+
+# Create stub implementation for pptx if installation failed
+if ! pip show python-pptx > /dev/null 2>&1; then
+    echo -e "${YELLOW}Creating stub implementation for python-pptx...${NC}"
+    
+    # Create directory if it doesn't exist
+    mkdir -p app/services/stubs
+    
+    # Create the stub file
+    cat > app/services/stubs/pptx_stub.py << 'EOF'
+"""
+Stub implementation for python-pptx for environments where it cannot be installed.
+This provides just enough functionality to prevent import errors.
+"""
+import logging
+
+logger = logging.getLogger(__name__)
+
+class Presentation:
+    """Stub Presentation class that logs instead of processing PowerPoint files."""
+    
+    def __init__(self, pptx_path=None):
+        self.pptx_path = pptx_path
+        self.slides = []
+        logger.warning(f"STUB: Created fake Presentation for {pptx_path}")
+    
+    def save(self, path):
+        logger.warning(f"STUB: Pretending to save presentation to {path}")
+        return True
+
+# Create the stub for the extraction service
+class PPTXExtractor:
+    """Stub extractor that returns placeholder text instead of real content."""
+    
+    def extract_text(self, file_path):
+        logger.warning(f"STUB: Cannot extract text from PowerPoint {file_path} - python-pptx not available")
+        return "STUB CONTENT: PowerPoint processing not available in this environment."
+EOF
+
+    # Patch extraction_service.py to use the stub
+    if [ -f "app/services/extraction_service.py" ]; then
+        echo -e "${YELLOW}Patching extraction_service.py to use stub implementation...${NC}"
+        cp app/services/extraction_service.py app/services/extraction_service.py.bak
+        
+        # Modify the import
+        sed -i.bak 's/from pptx import Presentation/# Using stub implementation\ntry:\n    from pptx import Presentation\nexcept ImportError:\n    from app.services.stubs.pptx_stub import Presentation/g' app/services/extraction_service.py
+        echo -e "${GREEN}Patched extraction_service.py${NC}"
+    fi
+fi
 
 # Create upload directories if they don't exist
 echo -e "${BLUE}Creating upload directories...${NC}"
