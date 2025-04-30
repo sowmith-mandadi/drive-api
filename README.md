@@ -272,6 +272,41 @@ The application can run in development mode without a complete GCP setup. In thi
      --region us-central1 \
      --allow-unauthenticated
    ```
+graph TD
+    A[Client] -->|Upload CSV/Excel| B[Bulk Upload Endpoint]
+    B -->|Create| C[Batch Job]
+    C -->|Process in Background| D[Process Batch Upload]
+    D -->|For Each Row| E[Content Processing]
+    
+    E -->|Create| F[Content Metadata]
+    F -->|Store| G[Firestore]
+    
+    E -->|If File Present| H[File Processing]
+    H -->|Upload| I{Storage Type}
+    I -->|GCS| J[Google Cloud Storage]
+    I -->|Local| K[Local Storage]
+    
+    J -->|Create Task| L[Cloud Tasks]
+    K -->|Create Task| L
+    
+    L -->|Process| M[Vector Processing Backend]
+    M -->|Update| G
+    
+    subgraph "Background Processing"
+        D
+        E
+        F
+        H
+        I
+        J
+        K
+    end
+    
+    subgraph "Cloud Infrastructure"
+        G
+        L
+        M
+    end
 
 ## License
 
