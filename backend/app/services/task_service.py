@@ -22,9 +22,17 @@ class TaskService:
     def __init__(self) -> None:
         """Initialize the task service."""
         self.firestore = FirestoreClient()
-        self.upload_dir = os.path.join(os.getcwd(), "uploads")
-        self.bucket_dir = os.path.join(self.upload_dir, "bucket")
+
+        # Use environment variables if set, otherwise use defaults
+        base_upload_dir = os.environ.get("TEMP_UPLOAD_DIR", os.path.join(os.getcwd(), "uploads"))
+        self.bucket_dir = os.environ.get(
+            "UPLOAD_BUCKET_DIR", os.path.join(base_upload_dir, "bucket")
+        )
+
+        # Create directories
         os.makedirs(self.bucket_dir, exist_ok=True)
+
+        logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
 
         # Initialize GCS client if configured
         self.storage_client = None
