@@ -92,8 +92,8 @@ async def upload_content(
         # Generate a new ID
         content_id = firestore.generate_id()
 
-        # Create temp directory for file if it doesn't exist
-        temp_dir = os.path.join(os.getcwd(), "uploads", "temp")
+        # Use the temp directory from environment variable or default to /tmp which is writable in App Engine
+        temp_dir = os.environ.get("TEMP_UPLOAD_DIR", "/tmp/uploads")
         os.makedirs(temp_dir, exist_ok=True)
 
         # Save file temporarily if provided

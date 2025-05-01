@@ -23,11 +23,9 @@ class TaskService:
         """Initialize the task service."""
         self.firestore = FirestoreClient()
 
-        # Use environment variables if set, otherwise use defaults
-        base_upload_dir = os.environ.get("TEMP_UPLOAD_DIR", os.path.join(os.getcwd(), "uploads"))
-        self.bucket_dir = os.environ.get(
-            "UPLOAD_BUCKET_DIR", os.path.join(base_upload_dir, "bucket")
-        )
+        # Use environment variables with proper defaults for App Engine
+        # Default to /tmp paths which are writable in App Engine
+        self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
 
         # Create directories
         os.makedirs(self.bucket_dir, exist_ok=True)
