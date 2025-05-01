@@ -22,11 +22,20 @@ class ContentProcessor:
     def __init__(self) -> None:
         """Initialize the content processor."""
         self.firestore = FirestoreClient()
-        self.upload_dir = os.path.join(os.getcwd(), "uploads")
-        self.temp_dir = os.path.join(self.upload_dir, "temp")
-        self.bucket_dir = os.path.join(self.upload_dir, "bucket")
+
+        # Use environment variables if set, otherwise use defaults
+        base_upload_dir = os.environ.get("TEMP_UPLOAD_DIR", os.path.join(os.getcwd(), "uploads"))
+        self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", os.path.join(base_upload_dir, "temp"))
+        self.bucket_dir = os.environ.get(
+            "UPLOAD_BUCKET_DIR", os.path.join(base_upload_dir, "bucket")
+        )
+
+        # Create directories
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.bucket_dir, exist_ok=True)
+
+        logger.info(f"Using temp directory: {self.temp_dir}")
+        logger.info(f"Using bucket directory: {self.bucket_dir}")
 
     async def process_content_item(
         self, content_data: Dict[str, Any], file_url: Optional[str] = None

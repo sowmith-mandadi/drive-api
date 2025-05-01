@@ -1,62 +1,32 @@
 runtime: python39
 entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
 
-build_env_variables:
-  GOOGLE_RUNTIME_VERSION: "3.9"
-  PIP_REQUIREMENTS_FILE: "requirements.txt"
-
 # Add explicit scaling configuration
 automatic_scaling:
-  max_instances: 20
+  max_instances: 10
   min_instances: 1
   target_cpu_utilization: 0.65
-  max_concurrent_requests: 50
 
 env_variables:
-  GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
-  GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
-  GOOGLE_REDIRECT_URI: "https://${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com/api/auth/callback"
-  FIRESTORE_PROJECT_ID: "${GOOGLE_CLOUD_PROJECT}"
-  SESSION_SECRET_KEY: "${SESSION_SECRET_KEY}"
-  GOOGLE_CLOUD_PROJECT: "${GOOGLE_CLOUD_PROJECT}"
-  
+  # Basic settings - hardcoded for initial deployment
+  SESSION_SECRET_KEY: "dev-secret-replace-in-production"
+  GOOGLE_CLOUD_PROJECT: "conference-cms-project"
+  GOOGLE_CLIENT_ID: "your-client-id-here.apps.googleusercontent.com"
+
+  # Feature flags - turn off advanced features for initial deployment
+  USE_GCS: "false"
+  USE_CLOUD_TASKS: "false"
+
   # AI/ML Settings
-  VERTEX_RAG_MODEL: "gemini-1.0-pro"
-  TEXT_EMBEDDING_MODEL: "textembedding-gecko@latest"
-  
+  VERTEX_RAG_MODEL: "text-bison"
+
   # Storage settings
-  GCS_BUCKET_NAME: "${GOOGLE_CLOUD_PROJECT}-uploads"
-  FRONTEND_URL: "https://frontend-dot-${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com"
-
-  # Google Cloud Storage settings
-  USE_GCS: "true"
   GCS_FOLDER_PREFIX: "uploads"
-  GCS_MAKE_PUBLIC: "false"
-  GCS_URL_EXPIRATION: "3600"
 
-  # Cloud Tasks settings for vector processing backend
-  USE_CLOUD_TASKS: "true"
-  GCP_PROJECT_ID: "${GOOGLE_CLOUD_PROJECT}"
+  # Cloud Tasks settings
   GCP_LOCATION: "us-central1"
-  VECTOR_PROCESSING_QUEUE: "vector-processing"
-  VECTOR_PROCESSING_ENDPOINT: "https://vector-processor-dot-${GOOGLE_CLOUD_PROJECT}.uc.r.appspot.com/api/process"
-  TASK_DISPATCH_DEADLINE: "600"
-  TASK_SCHEDULE_DELAY: "0"
 
-skip_files:
-- ^venv$
-- ^\.git$
-- ^\.github$
-- ^\.vscode$
-- ^\.pytest_cache$
-- ^\.mypy_cache$
-- ^__pycache__$
-- ^.*\.pyc$
-- ^.*\.md$
-- ^.*\.log$
-- ^test_reports/$
-- ^coverage_reports/$
-- ^tests/$
-- ^uploads/$
-- ^backend-deploy\.zip$
-- ^temp_deploy/$
+  # Temp directory settings for App Engine (writable paths)
+  TEMP_UPLOAD_DIR: "/tmp/uploads"
+  TEMP_PROCESSING_DIR: "/tmp/processing"
+  UPLOAD_BUCKET_DIR: "/tmp/bucket"
