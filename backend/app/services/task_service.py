@@ -46,12 +46,14 @@ class TaskService:
             self.storage_client = None
             self.bucket = None
             self.use_gcs = settings.USE_GCS
-            
+
             if self.use_gcs:
                 try:
                     self.storage_client = storage.Client()
                     self.bucket = self.storage_client.bucket(settings.GCS_BUCKET_NAME)
-                    logger.info(f"TaskService: GCS client initialized with bucket {settings.GCS_BUCKET_NAME}")
+                    logger.info(
+                        f"TaskService: GCS client initialized with bucket {settings.GCS_BUCKET_NAME}"
+                    )
                 except Exception as gcs_error:
                     logger.error(
                         f"TaskService: Failed to initialize GCS client: {str(gcs_error)}",
@@ -59,7 +61,7 @@ class TaskService:
                     )
                     # Don't re-raise - we can continue without GCS
                     self.use_gcs = False
-            
+
             # Fall back to local storage if GCS is not available
             if not self.use_gcs:
                 self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
@@ -78,7 +80,9 @@ class TaskService:
                         exc_info=True,
                     )
                     # Don't re-raise - we can continue without Cloud Tasks
-                    logger.warning("Using TaskService stub implementation - Cloud Tasks not available")
+                    logger.warning(
+                        "Using TaskService stub implementation - Cloud Tasks not available"
+                    )
 
             logger.info("TaskService initialization completed successfully")
 
@@ -156,11 +160,11 @@ class TaskService:
             file_urls = content.get("fileUrls", [])
             file_urls.append(
                 {
-                    "url": public_url, 
-                    "name": file_name, 
-                    "type": content_type, 
+                    "url": public_url,
+                    "name": file_name,
+                    "type": content_type,
                     "gcs_path": gcs_path,
-                    "source": "upload"
+                    "source": "upload",
                 }
             )
 

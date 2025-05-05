@@ -7,7 +7,6 @@ import traceback
 from typing import Any, Dict, List, Optional
 
 from google.cloud import firestore
-from google.auth.exceptions import DefaultCredentialsError
 
 from app.core.config import settings
 
@@ -22,35 +21,45 @@ class FirestoreClient:
         """Initialize the Firestore client."""
         try:
             # Check if we should use App Engine credentials
-            use_app_engine_creds = os.environ.get("USE_APP_ENGINE_CREDENTIALS", "").lower() == "true"
+            use_app_engine_creds = (
+                os.environ.get("USE_APP_ENGINE_CREDENTIALS", "").lower() == "true"
+            )
 
             logger.info(
                 f"Initializing Firestore client - use_app_engine_creds: {use_app_engine_creds}"
             )
 
             # Detect App Engine environment
-            is_app_engine = os.environ.get("GAE_ENV") == "standard" or os.environ.get("GAE_APPLICATION") is not None
-            
+            is_app_engine = (
+                os.environ.get("GAE_ENV") == "standard"
+                or os.environ.get("GAE_APPLICATION") is not None
+            )
+
             if is_app_engine:
                 logger.info("Detected App Engine environment")
-            
+
             # Get project ID from environment variables
             project_id = settings.FIRESTORE_PROJECT_ID
             if not project_id:
                 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
                 logger.info(f"Using GOOGLE_CLOUD_PROJECT: {project_id}")
-            
+
             # Clear any empty GOOGLE_APPLICATION_CREDENTIALS environment variable
             # This forces the client to use the App Engine default credentials
-            if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ and not os.environ["GOOGLE_APPLICATION_CREDENTIALS"]:
-                logger.info("Removing empty GOOGLE_APPLICATION_CREDENTIALS to force default credentials")
+            if (
+                "GOOGLE_APPLICATION_CREDENTIALS" in os.environ
+                and not os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+            ):
+                logger.info(
+                    "Removing empty GOOGLE_APPLICATION_CREDENTIALS to force default credentials"
+                )
                 del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-            
+
             # Initialize Firestore client with project ID only
             logger.info(f"Initializing Firestore with project ID: {project_id}")
             self.db = firestore.Client(project=project_id)
             logger.info("Successfully connected to Firestore with default credentials")
-            
+
             # Verify connection with a simple query
             try:
                 # Try to access a collection to verify connection
@@ -243,35 +252,35 @@ class FirestoreClient:
             # This is a very basic implementation that does client-side filtering
             # Not recommended for large collections
             results = []
-            
+
             # Get all documents (up to a reasonable limit)
             max_docs = 1000  # Set a reasonable upper bound
             query = self.db.collection(collection).limit(max_docs)
-            
+
             # Apply filters if provided
             if filters:
                 for field, op, value in filters:
                     query = query.where(field, op, value)
-            
+
             docs = query.stream()
-            
+
             # Client-side text search
             query_text = query_text.lower()
             for doc in docs:
                 doc_data = doc.to_dict()
                 doc_data["id"] = doc.id
-                
+
                 # Check if query text exists in any of the specified fields
                 for field in fields:
                     if field in doc_data and isinstance(doc_data[field], str):
                         if query_text in doc_data[field].lower():
                             results.append(doc_data)
                             break
-                
+
                 # Stop once we have enough results
                 if len(results) >= limit:
                     break
-            
+
             return results
         except Exception as e:
             logger.error(f"Error searching documents in {collection}: {str(e)}")

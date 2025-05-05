@@ -27,7 +27,7 @@ env_variables:
   # Auth settings - App Engine will use the default service account
   GOOGLE_APPLICATION_CREDENTIALS: ""  # Keep empty to use default credentials
   USE_APP_ENGINE_CREDENTIALS: "true"
-  
+
   # OAuth configuration - Set to true when OAuth is needed
   GOOGLE_CLIENT_ID: ""
   GOOGLE_CLIENT_SECRET: ""
@@ -51,19 +51,19 @@ env_variables:
   GCS_FOLDER_PREFIX: "uploads"
   GCS_MAKE_PUBLIC: "false"
   GCS_URL_EXPIRATION: "86400"  # 24 hours in seconds
-  
+
   # Temporary processing directories
   TEMP_PROCESSING_DIR: "/tmp/processing"
   TEMP_UPLOAD_DIR: "/tmp/uploads"
   UPLOAD_DIR: "/tmp/uploads"
-  
+
   # Cloud Tasks settings
   GCP_LOCATION: "us-central1"
   VECTOR_PROCESSING_QUEUE: "vector-processing"
 
   # Firestore settings
   FIRESTORE_PROJECT_ID: "conference-cms-project"
-  
+
   # OpenAPI Schema Generation
   OPENAPI_SIMPLE_MODE: "true"
   DISABLE_OPENAPI_VALIDATION: "true"
