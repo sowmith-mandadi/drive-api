@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 
-from app.models.content import Content, ContentCreate, ContentUpdate, Session
+from app.models.content import Content, ContentCreate, ContentUpdate
 from app.services.content_service import ContentService
 from app.services.extraction_service import ExtractionService
 
@@ -49,7 +49,6 @@ async def create_content(
     session_id: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
     demo_type: Optional[str] = Form(None),
-    
     # Categorization
     tags: str = Form("[]"),  # JSON string of tags
     track: Optional[str] = Form(None),
@@ -57,17 +56,13 @@ async def create_content(
     topics: Optional[str] = Form("[]"),  # JSON string
     target_job_roles: Optional[str] = Form("[]"),  # JSON string
     area_of_interest: Optional[str] = Form("[]"),  # JSON string
-    
     # Metadata
     metadata: str = Form("{}"),  # JSON string of metadata
     duration_minutes: Optional[str] = Form(None),
-    
     # Speakers
     speakers: Optional[str] = Form("[]"),  # JSON string of speakers
-    
     # Files
     file: Optional[UploadFile] = File(None),
-    
     # Assets
     presentation_slides_url: Optional[str] = Form(None),
     recap_slides_url: Optional[str] = Form(None),
@@ -95,7 +90,7 @@ async def create_content(
 
         # Create content in database
         content = content_service.create_content(content_data)
-        
+
         # Update with additional fields that are not part of ContentCreate
         additional_data = {
             "abstract": abstract,
@@ -113,10 +108,10 @@ async def create_content(
             "recap_slides_url": recap_slides_url,
             "video_recording_status": video_recording_status,
         }
-        
+
         # Remove None values
         additional_data = {k: v for k, v in additional_data.items() if v is not None}
-        
+
         # Update content with additional fields
         if additional_data:
             content_service.update_content_fields(content.id, additional_data)

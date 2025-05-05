@@ -22,6 +22,7 @@ google-cloud-tasks>=2.13.0,<3.0.0    # For Cloud Tasks
 # PDF and document handling
 pypdf2>=3.0.0,<4.0.0
 python-pptx>=0.6.21,<0.7.0
+regex>=2022.10.0  # For advanced pattern matching
 
 # Machine Learning & RAG
 openai>=0.27.0,<1.0.0

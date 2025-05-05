@@ -23,13 +23,16 @@ class TaskService:
         """Initialize the task service."""
         try:
             logger.info("Initializing TaskService")
-            
+
             # Initialize Firestore client
             try:
                 self.firestore = FirestoreClient()
                 logger.info("TaskService: Firestore client initialized successfully")
             except Exception as db_error:
-                logger.error(f"TaskService: Failed to initialize Firestore client: {str(db_error)}", exc_info=True)
+                logger.error(
+                    f"TaskService: Failed to initialize Firestore client: {str(db_error)}",
+                    exc_info=True,
+                )
                 # Re-raise to fail initialization
                 raise
 
@@ -46,7 +49,10 @@ class TaskService:
                     raise Exception(f"Directory {self.bucket_dir} is not writable")
                 logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
             except Exception as dir_error:
-                logger.error(f"TaskService: Failed to set up bucket directory: {str(dir_error)}", exc_info=True)
+                logger.error(
+                    f"TaskService: Failed to set up bucket directory: {str(dir_error)}",
+                    exc_info=True,
+                )
                 # Re-raise to fail initialization
                 raise
 
@@ -57,7 +63,10 @@ class TaskService:
                     self.storage_client = storage.Client()
                     logger.info("TaskService: GCS client initialized")
                 except Exception as gcs_error:
-                    logger.error(f"TaskService: Failed to initialize GCS client: {str(gcs_error)}", exc_info=True)
+                    logger.error(
+                        f"TaskService: Failed to initialize GCS client: {str(gcs_error)}",
+                        exc_info=True,
+                    )
                     # Don't re-raise - we can continue without GCS
 
             # Initialize Cloud Tasks client if configured
@@ -67,11 +76,14 @@ class TaskService:
                     self.tasks_client = tasks_v2.CloudTasksClient()
                     logger.info("TaskService: Cloud Tasks client initialized")
                 except Exception as tasks_error:
-                    logger.error(f"TaskService: Failed to initialize Cloud Tasks client: {str(tasks_error)}", exc_info=True)
+                    logger.error(
+                        f"TaskService: Failed to initialize Cloud Tasks client: {str(tasks_error)}",
+                        exc_info=True,
+                    )
                     # Don't re-raise - we can continue without Cloud Tasks
-            
+
             logger.info("TaskService initialization completed successfully")
-            
+
         except Exception as e:
             logger.error(f"Critical error initializing TaskService: {str(e)}", exc_info=True)
             # Re-raise to fail initialization

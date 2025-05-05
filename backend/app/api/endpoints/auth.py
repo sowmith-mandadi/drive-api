@@ -3,12 +3,12 @@ API endpoints for authentication.
 """
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from app.core.auth import google_oauth, GOOGLE_AUTH_DISABLED
+from app.core.auth import GOOGLE_AUTH_DISABLED, google_oauth
 from app.core.config import settings
 
 # Setup logging
@@ -26,12 +26,9 @@ async def login(request: Request):
             logger.warning("Login attempted while OAuth is disabled")
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "message": "OAuth authentication is disabled",
-                    "oauth_disabled": True
-                }
+                content={"message": "OAuth authentication is disabled", "oauth_disabled": True},
             )
-            
+
         # Generate authorization URL
         authorization_url = google_oauth.get_authorization_url()
 
@@ -57,7 +54,7 @@ async def callback(request: Request, code: str, state: Optional[str] = None):
             logger.warning("OAuth callback received while OAuth is disabled")
             frontend_url = settings.FRONTEND_URL or "/"
             return RedirectResponse(f"{frontend_url}?oauth_disabled=true")
-            
+
         # Exchange code for credentials
         credentials = google_oauth.exchange_code(code)
 
@@ -88,14 +85,14 @@ async def auth_status(request: Request) -> Dict[str, Any]:
         return {
             "authenticated": False,
             "oauth_disabled": True,
-            "message": "OAuth authentication is disabled for this deployment"
+            "message": "OAuth authentication is disabled for this deployment",
         }
-    
+
     # Check for credentials in session
     credentials_str = request.session.get("credentials")
     if not credentials_str:
         return {"authenticated": False}
-    
+
     return {"authenticated": True}
 
 
@@ -104,5 +101,5 @@ async def logout(request: Request):
     """Log out the current user by clearing the session."""
     # Clear session
     request.session.clear()
-    
+
     return {"success": True, "message": "Logged out successfully"}

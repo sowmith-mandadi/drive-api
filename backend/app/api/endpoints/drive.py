@@ -2,15 +2,13 @@
 API endpoints for Google Drive integration.
 """
 import logging
-import os
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from app.core.auth import get_current_user_credentials, GOOGLE_AUTH_DISABLED
-from app.core.logging import configure_logging
+from app.core.auth import GOOGLE_AUTH_DISABLED, get_current_user_credentials
 from app.models.content import DriveFile, DriveImportRequest
 from app.schemas.drive import DriveFolder
 from app.services.drive_service import DriveService
@@ -19,18 +17,6 @@ from app.services.drive_service import DriveService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/drive", tags=["Drive"])
-
-
-class DriveFile(BaseModel):
-    """Model for a Google Drive file."""
-
-    id: str
-    name: str
-    mime_type: str
-    web_view_link: Optional[str] = None
-    thumbnail_link: Optional[str] = None
-    modified_time: Optional[str] = None
-    size: Optional[int] = None
 
 
 class DriveFileList(BaseModel):
@@ -107,7 +93,7 @@ async def list_drive_files(
                 ],
                 "next_page_token": None,
             }
-            
+
         # Check if using mock credentials (OAuth not fully configured)
         if credentials.get("mock"):
             logger.info("Using mock credentials, returning sample data")
@@ -125,10 +111,10 @@ async def list_drive_files(
                 ],
                 "next_page_token": None,
             }
-            
+
         # Import Google API client
-        from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
 
         # Build credential object
         creds = Credentials(
@@ -177,7 +163,7 @@ async def list_drive_files(
 
         return {"files": file_list, "next_page_token": next_page_token}
     except Exception as e:
-        logger.error("Failed to list Drive files", error=str(e))
+        logger.error(f"Failed to list Drive files: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list Drive files: {str(e)}",
@@ -244,18 +230,15 @@ async def get_auth_url() -> Dict[str, str]:
     """
     try:
         logger.info("Generating Google Drive auth URL")
-        
+
         # Check if OAuth is disabled
         if GOOGLE_AUTH_DISABLED:
             logger.warning("Drive auth is disabled, returning mock URL")
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "auth_url": "https://example.com/oauth-disabled", 
-                    "oauth_disabled": True
-                }
+                content={"auth_url": "https://example.com/oauth-disabled", "oauth_disabled": True},
             )
-        
+
         # Use OAuth utilities directly since we don't have credentials yet
         from app.core.auth import google_oauth
 
@@ -266,7 +249,7 @@ async def get_auth_url() -> Dict[str, str]:
         # Pass through specific HTTP exceptions
         raise
     except Exception as e:
-        logger.error("Failed to generate auth URL", error=str(e))
+        logger.error(f"Failed to generate auth URL: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate auth URL: {str(e)}",
@@ -296,16 +279,16 @@ async def auth_callback(
     """
     try:
         logger.info("Processing OAuth callback")
-        
+
         # Check if OAuth is disabled
         if GOOGLE_AUTH_DISABLED:
             logger.warning("OAuth callback received while OAuth is disabled")
             return {
                 "success": True,
                 "message": "OAuth is disabled, but the callback was received",
-                "oauth_disabled": True
+                "oauth_disabled": True,
             }
-            
+
         # Use OAuth utilities directly
         from app.core.auth import google_oauth
 
@@ -323,7 +306,7 @@ async def auth_callback(
         # Pass through specific HTTP exceptions
         raise
     except Exception as e:
-        logger.error("OAuth callback processing failed", error=str(e))
+        logger.error(f"OAuth callback processing failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Authentication failed: {str(e)}",
@@ -361,7 +344,7 @@ async def list_folders(
         ]
         return folders
     except Exception as e:
-        logger.error("Failed to list folders", error=str(e))
+        logger.error(f"Failed to list folders: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list folders: {str(e)}",
@@ -391,7 +374,7 @@ async def list_files_in_folder(
                       or if not authenticated
     """
     try:
-        logger.info("Listing files in folder", folder_id=folder_id)
+        logger.info(f"Listing files in folder {folder_id}")
         drive_service = DriveService(credentials)
 
         # In a real implementation, we would use a proper folder query
@@ -400,7 +383,7 @@ async def list_files_in_folder(
         folder_files = [file for file in all_files if folder_id in file.get("parents", [])]
         return folder_files
     except Exception as e:
-        logger.error("Failed to list files in folder", folder_id=folder_id, error=str(e))
+        logger.error(f"Failed to list files in folder {folder_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list files in folder: {str(e)}",

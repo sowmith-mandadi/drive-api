@@ -7,9 +7,9 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
 from app.models.content import ContentCreate, ContentInDB, ContentUpdate
 from app.repositories.content_repository import ContentRepository
-from app.core.config import settings
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -21,18 +21,18 @@ class ContentService:
     def __init__(self) -> None:
         """Initialize the content service."""
         self.repository = ContentRepository()
-        
+
         # Use environment variable for upload directory with fallback to /tmp path
         # This ensures App Engine compatibility
         self.upload_dir = settings.UPLOAD_DIR
-        
+
         # Log the upload directory being used
         logger.info(f"ContentService using upload directory: {self.upload_dir}")
-        
+
         # Create directory if it doesn't exist
         try:
             os.makedirs(self.upload_dir, exist_ok=True)
-            
+
             # Verify the directory exists and is writable
             if not os.path.exists(self.upload_dir):
                 logger.error(f"Failed to create upload directory: {self.upload_dir}")
@@ -40,7 +40,7 @@ class ContentService:
                 logger.error(f"Upload directory is not writable: {self.upload_dir}")
             else:
                 logger.info(f"Successfully initialized upload directory: {self.upload_dir}")
-                
+
         except Exception as e:
             logger.error(f"Error setting up upload directory: {str(e)}", exc_info=True)
             # Don't re-raise, as we can try to continue even if this fails
@@ -117,16 +117,18 @@ class ContentService:
 
         return updated_content
 
-    def update_content_fields(self, content_id: str, fields: Dict[str, Any]) -> Optional[ContentInDB]:
+    def update_content_fields(
+        self, content_id: str, fields: Dict[str, Any]
+    ) -> Optional[ContentInDB]:
         """Update specific fields of existing content.
-        
+
         This method is more flexible than update_content as it can update any field,
         not just those defined in ContentUpdate.
-        
+
         Args:
             content_id: ID of the content to update.
             fields: Dictionary of fields to update.
-            
+
         Returns:
             Updated content item or None if not found.
         """
@@ -135,18 +137,18 @@ class ContentService:
             content = self.repository.get_by_id(content_id)
             if not content:
                 return None
-                
+
             # Add updated timestamp
             fields["updated_at"] = None  # Will be handled by the repository
-            
+
             # Update in repository
             success = self.repository.firestore.update_document(
                 self.repository.collection, content_id, fields
             )
-            
+
             if not success:
                 return None
-                
+
             # Get updated content
             return self.repository.get_by_id(content_id)
         except Exception as e:
@@ -274,10 +276,8 @@ class ContentService:
         offset = (page - 1) * page_size
 
         # Get content with pagination
-        content_items = self.repository.get_all(
-            limit=page_size, offset=offset
-        )
-        
+        content_items = self.repository.get_all(limit=page_size, offset=offset)
+
         # Sort by created_at (most recent first)
         content_items.sort(key=lambda x: x.created_at, reverse=True)
 

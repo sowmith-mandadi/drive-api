@@ -117,4 +117,4 @@ https://PROJECT-ID.uc.r.appspot.com
 To view logs:
 ```bash
 gcloud app logs tail -s default
-``` 
+```

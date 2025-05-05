@@ -107,4 +107,4 @@ https://YOUR-PROJECT-ID.uc.r.appspot.com
 - If you encounter package compatibility issues, check the script outputs and error messages
 - For Python 3.12+, the script will automatically patch `config.py` for compatibility
 - If deployment fails, check the logs using `gcloud app logs tail`
-- If you didn't set OAuth credentials, the app will use stub implementations for some features 
+- If you didn't set OAuth credentials, the app will use stub implementations for some features

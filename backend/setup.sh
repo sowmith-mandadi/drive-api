@@ -41,7 +41,7 @@ echo -e "${BLUE}Detected Python version: ${PYTHON_VERSION}${NC}"
 if [[ "$PYTHON_VERSION" == "3.12" ]]; then
     echo -e "${YELLOW}Python 3.12 detected. Some packages may have compatibility issues.${NC}"
     echo -e "${YELLOW}Checking for Python 3.9 or 3.10...${NC}"
-    
+
     if command -v python3.9 &> /dev/null; then
         echo -e "${GREEN}Python 3.9 found. Using Python 3.9 for compatibility.${NC}"
         PYTHON_CMD="python3.9"
@@ -91,7 +91,7 @@ if [ -d "/google/devshell" ] || [ -n "$CLOUD_SHELL" ]; then
     # Install compatible versions of libraries for Cloud Shell
     echo -e "${BLUE}Installing compatible packages for Cloud Shell...${NC}"
     pip install "fastapi<0.100.0" "pydantic<2.0.0" "uvicorn>=0.20.0,<0.30.0" "gunicorn>=21.0.0,<22.0.0"
-    
+
     # Install the rest of requirements but skip pydantic which we already installed
     echo -e "${BLUE}Installing remaining dependencies...${NC}"
     grep -v "pydantic" requirements.txt | grep -v "fastapi" | grep -v "uvicorn" | grep -v "gunicorn" > temp_requirements.txt
@@ -101,7 +101,7 @@ else
     # Install dependencies normally
     echo -e "${BLUE}Installing dependencies...${NC}"
     pip install -r requirements.txt
-    
+
     # Handle potential pydantic issues
     if pip list | grep -q "pydantic" && ! python -c "import pydantic_core" &> /dev/null; then
         echo -e "${YELLOW}pydantic_core issue detected. Fixing...${NC}"

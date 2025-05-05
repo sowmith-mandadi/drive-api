@@ -13,8 +13,7 @@ from app.core.logging import configure_logging
 from app.models.batch import BatchJob, BatchJobCreate, BatchJobError, BatchJobStatus, BatchJobUpdate
 from app.services.batch_service import BatchService
 from app.services.content_processor import ContentProcessor
-# Using stub implementation
-from app.services.task_service_stub import TaskService
+from app.services.task_service import TaskService
 
 # Setup logging
 logger = configure_logging()

@@ -22,8 +22,10 @@ class FirestoreClient:
         try:
             # Check if credentials file path is provided
             credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-            
-            logger.info(f"Initializing Firestore client - credentials path: {credentials_path or 'not set'}")
+
+            logger.info(
+                f"Initializing Firestore client - credentials path: {credentials_path or 'not set'}"
+            )
 
             if credentials_path and os.path.exists(credentials_path):
                 # Use service account credentials file
@@ -33,7 +35,7 @@ class FirestoreClient:
                 except Exception as cred_error:
                     logger.error(
                         f"Failed to initialize Firestore with credentials file: {str(cred_error)}",
-                        exc_info=True
+                        exc_info=True,
                     )
                     # Try fallback
                     logger.info("Attempting to fall back to application default credentials")
@@ -51,7 +53,7 @@ class FirestoreClient:
                     except Exception as emu_error:
                         logger.error(
                             f"Failed to initialize Firestore with emulator: {str(emu_error)}",
-                            exc_info=True
+                            exc_info=True,
                         )
                         raise
                 else:
@@ -60,23 +62,25 @@ class FirestoreClient:
                         # Log environment details that might affect authentication
                         gcp_project = settings.FIRESTORE_PROJECT_ID
                         logger.info(f"Initializing Firestore with project ID: {gcp_project}")
-                        
+
                         # Log authentication-related environment variables (without sensitive values)
                         auth_vars = [
                             "GOOGLE_APPLICATION_CREDENTIALS",
                             "GOOGLE_CLOUD_PROJECT",
                             "GCLOUD_PROJECT",
-                            "GCP_PROJECT"
+                            "GCP_PROJECT",
                         ]
                         for var in auth_vars:
                             if os.environ.get(var):
                                 logger.info(f"Environment variable {var} is set")
                             else:
                                 logger.info(f"Environment variable {var} is NOT set")
-                        
+
                         self.db = firestore.Client(project=gcp_project)
-                        logger.info("Initialized Firestore client with application default credentials")
-                        
+                        logger.info(
+                            "Initialized Firestore client with application default credentials"
+                        )
+
                         # Verify connection with a simple query
                         try:
                             # Try to access a collection to verify connection
@@ -85,14 +89,14 @@ class FirestoreClient:
                         except Exception as verify_error:
                             logger.warning(
                                 f"Firestore client initialized but connection verification failed: {str(verify_error)}",
-                                exc_info=True
+                                exc_info=True,
                             )
                             # Continue anyway, this is just a verification
-                            
+
                     except Exception as adc_error:
                         logger.error(
                             f"Failed to initialize Firestore with application default credentials: {str(adc_error)}",
-                            exc_info=True
+                            exc_info=True,
                         )
                         raise
         except Exception as e:
@@ -296,7 +300,7 @@ class FirestoreClient:
 
     def generate_id(self) -> str:
         """Generate a unique document ID.
-        
+
         Returns:
             A unique document ID string.
         """
@@ -308,4 +312,5 @@ class FirestoreClient:
             logger.error(f"Error generating document ID: {str(e)}")
             # Fallback to a timestamp-based ID if Firestore generation fails
             import uuid
+
             return str(uuid.uuid4())

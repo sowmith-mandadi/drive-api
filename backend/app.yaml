@@ -14,18 +14,18 @@ health_check:
   timeout_sec: 10
   unhealthy_threshold: 3
   healthy_threshold: 2
-    
+
 # Environment variables
 env_variables:
   # Basic settings
   SESSION_SECRET_KEY: "dev-secret-replace-in-production"
   GOOGLE_CLOUD_PROJECT: "conference-cms-project"
-  
+
   # Completely disable OAuth for initial deployment
   GOOGLE_CLIENT_ID: ""
   GOOGLE_CLIENT_SECRET: ""
   GOOGLE_AUTH_DISABLED: "true"
-  
+
   # Frontend URL for redirects
   FRONTEND_URL: "https://conference-cms-project.uw.r.appspot.com"
 
@@ -48,6 +48,6 @@ env_variables:
 
   # Cloud Tasks settings
   GCP_LOCATION: "us-central1"
-  
+
   # Firestore settings
   FIRESTORE_PROJECT_ID: "conference-cms-project"

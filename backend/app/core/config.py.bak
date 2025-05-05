@@ -5,12 +5,7 @@ import os
 from typing import List, Optional, Union
 
 from pydantic import field_validator
-# Using direct pydantic for Python 3.12 compatibility
-from pydantic import BaseModel
-
-# Create a BaseSettings replacement
-class BaseSettings(BaseModel):
-    model_config = {"extra": "ignore"}
+from pydantic_settings import BaseSettings
 
 # Load .env file if it exists
 try:

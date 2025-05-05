@@ -23,7 +23,7 @@ handle_error() {
 install_with_verify() {
     package_spec=$1
     package_name=$(echo $1 | cut -d'>' -f1 | cut -d'<' -f1 | cut -d'=' -f1)
-    
+
     echo -e "${BLUE}Installing $package_name...${NC}"
     pip install $package_spec
 
@@ -31,13 +31,13 @@ install_with_verify() {
     if ! pip show $package_name > /dev/null 2>&1; then
         echo -e "${RED}Failed to install $package_name. Trying again with no version constraint...${NC}"
         pip install $package_name
-        
+
         if ! pip show $package_name > /dev/null 2>&1; then
             echo -e "${RED}Installation of $package_name still failed. This may cause issues.${NC}"
             return 1
         fi
     fi
-    
+
     echo -e "${GREEN}Successfully installed $package_name${NC}"
     return 0
 }
@@ -61,10 +61,10 @@ pip install --upgrade pip setuptools wheel || handle_error "Failed to upgrade pi
 if [[ "${PYTHON_VERSION}" == 3.12* ]] || [[ "${PYTHON_VERSION}" > 3.12 ]]; then
     echo -e "${YELLOW}Python 3.12+ detected. Installing compatible packages...${NC}"
     # Install compatible packages for Python 3.12+
-    install_with_verify "fastapi>=0.100.0,<0.116.0" 
+    install_with_verify "fastapi>=0.100.0,<0.116.0"
     install_with_verify "pydantic>=2.0.0,<3.0.0"
     install_with_verify "uvicorn>=0.20.0,<0.30.0"
-    
+
     # Create/patch config.py workaround for pydantic-settings issues
     if grep -q "pydantic_settings" app/core/config.py; then
         echo -e "${YELLOW}Patching config.py to use pydantic instead of pydantic-settings...${NC}"
@@ -96,7 +96,7 @@ pip uninstall -y itsdangerous
 install_with_verify "itsdangerous>=2.0.0" || {
     echo -e "${RED}First attempt to install itsdangerous failed. Trying alternative installation...${NC}"
     pip install itsdangerous --no-cache-dir
-    
+
     if ! pip show itsdangerous > /dev/null 2>&1; then
         echo -e "${RED}Installation of itsdangerous still failed. Installing specific version...${NC}"
         pip install itsdangerous==2.1.2
@@ -142,10 +142,10 @@ install_with_verify "tiktoken>=0.4.0,<1.0.0"
 # Create stub implementation for pptx if installation failed
 if ! pip show python-pptx > /dev/null 2>&1; then
     echo -e "${YELLOW}Creating stub implementation for python-pptx...${NC}"
-    
+
     # Create directory if it doesn't exist
     mkdir -p app/services/stubs
-    
+
     # Create the stub file
     cat > app/services/stubs/pptx_stub.py << 'EOF'
 """
@@ -158,12 +158,12 @@ logger = logging.getLogger(__name__)
 
 class Presentation:
     """Stub Presentation class that logs instead of processing PowerPoint files."""
-    
+
     def __init__(self, pptx_path=None):
         self.pptx_path = pptx_path
         self.slides = []
         logger.warning(f"STUB: Created fake Presentation for {pptx_path}")
-    
+
     def save(self, path):
         logger.warning(f"STUB: Pretending to save presentation to {path}")
         return True
@@ -171,7 +171,7 @@ class Presentation:
 # Create the stub for the extraction service
 class PPTXExtractor:
     """Stub extractor that returns placeholder text instead of real content."""
-    
+
     def extract_text(self, file_path):
         logger.warning(f"STUB: Cannot extract text from PowerPoint {file_path} - python-pptx not available")
         return "STUB CONTENT: PowerPoint processing not available in this environment."
@@ -181,7 +181,7 @@ EOF
     if [ -f "app/services/extraction_service.py" ]; then
         echo -e "${YELLOW}Patching extraction_service.py to use stub implementation...${NC}"
         cp app/services/extraction_service.py app/services/extraction_service.py.bak
-        
+
         # Modify the import
         sed -i.bak 's/from pptx import Presentation/# Using stub implementation\ntry:\n    from pptx import Presentation\nexcept ImportError:\n    from app.services.stubs.pptx_stub import Presentation/g' app/services/extraction_service.py
         echo -e "${GREEN}Patched extraction_service.py${NC}"
@@ -196,7 +196,7 @@ mkdir -p uploads/temp uploads/bucket || handle_error "Failed to create upload di
 echo -e "${BLUE}Checking for OAuth credentials...${NC}"
 if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
     echo -e "${YELLOW}Google OAuth credentials not found. Creating stub implementation...${NC}"
-    
+
     # Create a task_service_stub.py file to bypass Google Cloud Tasks import error
     cat > app/services/task_service_stub.py << 'EOF'
 """
@@ -209,16 +209,16 @@ logger = logging.getLogger(__name__)
 
 class TaskService:
     """Stub implementation of TaskService that logs instead of creating real tasks."""
-    
+
     def __init__(self):
         logger.warning("Using TaskService stub implementation - Cloud Tasks not available")
         self.tasks = []
-    
+
     def create_task(self, queue_name, endpoint, payload, delay_seconds=0):
         """Log the task instead of creating it in Cloud Tasks."""
         scheduled_time = datetime.now() + timedelta(seconds=delay_seconds)
         task_id = f"stub-task-{len(self.tasks)+1}"
-        
+
         logger.info(
             f"STUB TASK CREATED - ID: {task_id}, "
             f"Queue: {queue_name}, "
@@ -226,7 +226,7 @@ class TaskService:
             f"Scheduled: {scheduled_time}, "
             f"Payload size: {len(str(payload))} bytes"
         )
-        
+
         self.tasks.append({
             "id": task_id,
             "queue": queue_name,
@@ -234,7 +234,7 @@ class TaskService:
             "scheduled_time": scheduled_time,
             "payload": payload,
         })
-        
+
         return task_id
 EOF
 
@@ -242,12 +242,12 @@ EOF
     if [ -f "app/api/endpoints/batch.py" ]; then
         echo -e "${YELLOW}Patching batch.py to use stub implementation...${NC}"
         cp app/api/endpoints/batch.py app/api/endpoints/batch.py.bak
-        
+
         # Use sed to replace the import
         sed -i.bak "s/from app.services.task_service import TaskService/# Using stub implementation\nfrom app.services.task_service_stub import TaskService/g" app/api/endpoints/batch.py
         echo -e "${GREEN}Patched batch.py${NC}"
     fi
-    
+
     echo -e "${YELLOW}Created stub implementation for Cloud Tasks. The app will log tasks instead of creating them.${NC}"
     echo -e "${YELLOW}For actual functionality, set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.${NC}"
 fi
@@ -265,7 +265,7 @@ done
 if [ ${#missing_packages[@]} -ne 0 ]; then
     echo -e "${RED}Critical packages still missing: ${missing_packages[*]}${NC}"
     echo -e "${YELLOW}Attempting emergency installation of missing packages...${NC}"
-    
+
     for pkg in "${missing_packages[@]}"; do
         echo -e "${BLUE}Emergency installation of $pkg...${NC}"
         pip install $pkg --no-cache-dir
