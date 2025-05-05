@@ -290,10 +290,24 @@ class ContentProcessor:
         temp_file_path = None
 
         try:
-            # Build the Drive service using App Engine default credentials
+            # Build the Drive service using App Engine default credentials or service account
             try:
-                drive_service = build("drive", "v3", cache_discovery=False)
-                logger.info("Successfully created Drive service with default credentials")
+                # Check if a service account file path is specified
+                service_account_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_PATH")
+                
+                if service_account_path and os.path.exists(service_account_path):
+                    # Use the service account file if provided
+                    from google.oauth2 import service_account
+                    credentials = service_account.Credentials.from_service_account_file(
+                        service_account_path,
+                        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+                    )
+                    drive_service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+                    logger.info("Successfully created Drive service with service account credentials")
+                else:
+                    # Fall back to default credentials
+                    drive_service = build("drive", "v3", cache_discovery=False)
+                    logger.info("Successfully created Drive service with default credentials")
             except Exception as auth_error:
                 logger.error(f"Failed to authenticate with Google Drive: {str(auth_error)}")
                 return False, f"Drive authentication failed: {str(auth_error)}", None
@@ -305,6 +319,7 @@ class ContentProcessor:
                     .get(
                         fileId=file_id,
                         fields="id,name,mimeType,size,webViewLink,thumbnailLink,iconLink",
+                        supportsAllDrives=True,
                     )
                     .execute()
                 )
@@ -322,6 +337,8 @@ class ContentProcessor:
                             q=f"'{file_id}' in parents",
                             fields="files(id,name,mimeType,size,webViewLink,thumbnailLink,iconLink)",
                             pageSize=1,  # Just get the first file
+                            supportsAllDrives=True,
+                            includeItemsFromAllDrives=True,
                         )
                         .execute()
                     )
@@ -338,6 +355,7 @@ class ContentProcessor:
                         .get(
                             fileId=file_id,
                             fields="id,name,mimeType,size,webViewLink,thumbnailLink,iconLink",
+                            supportsAllDrives=True,
                         )
                         .execute()
                     )
@@ -380,7 +398,7 @@ class ContentProcessor:
                     if "document" in mime_type:
                         # Export as PDF
                         request = drive_service.files().export_media(
-                            fileId=file_id, mimeType="application/pdf"
+                            fileId=file_id, mimeType="application/pdf", supportsAllDrives=True
                         )
                         file_extension = ".pdf"
                         export_mime_type = "application/pdf"
@@ -389,6 +407,7 @@ class ContentProcessor:
                         request = drive_service.files().export_media(
                             fileId=file_id,
                             mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            supportsAllDrives=True
                         )
                         file_extension = ".xlsx"
                         export_mime_type = (
@@ -399,13 +418,14 @@ class ContentProcessor:
                         request = drive_service.files().export_media(
                             fileId=file_id,
                             mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            supportsAllDrives=True
                         )
                         file_extension = ".pptx"
                         export_mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                     else:
                         # Default to PDF for other Google formats
                         request = drive_service.files().export_media(
-                            fileId=file_id, mimeType="application/pdf"
+                            fileId=file_id, mimeType="application/pdf", supportsAllDrives=True
                         )
                         file_extension = ".pdf"
                         export_mime_type = "application/pdf"
@@ -429,7 +449,7 @@ class ContentProcessor:
             else:
                 # Regular file
                 try:
-                    request = drive_service.files().get_media(fileId=file_id)
+                    request = drive_service.files().get_media(fileId=file_id, supportsAllDrives=True)
                 except Exception as get_error:
                     logger.error(f"Failed to get Drive file: {str(get_error)}")
                     return False, f"Failed to access Drive file: {str(get_error)}", None

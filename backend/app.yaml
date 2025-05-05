@@ -24,10 +24,21 @@ env_variables:
   SESSION_SECRET_KEY: "dev-secret-replace-in-production"
   GOOGLE_CLOUD_PROJECT: "conference-cms-project"
 
-  # Auth settings - App Engine will use the default service account
+  # Auth settings - Service account configuration for shared drives
+  # To use a service account with shared drives:
+  # 1. Create a service account in Google Cloud Console
+  # 2. Download the JSON key file and store it securely
+  # 3. Add the service account to your shared drive with appropriate permissions
+  # 4. Set GOOGLE_SERVICE_ACCOUNT_PATH to the path of the key file (relative to app directory)
+  # 5. Make sure service account has domain-wide delegation if needed
+  GOOGLE_SERVICE_ACCOUNT_PATH: ""  # Set to path of service account key file
   GOOGLE_APPLICATION_CREDENTIALS: ""  # Keep empty to use default credentials
   USE_APP_ENGINE_CREDENTIALS: "true"
 
+  # Shared Drive Configuration
+  # Set to true to support access to shared drives
+  SUPPORT_SHARED_DRIVES: "true"
+  
   # OAuth configuration - Set to true when OAuth is needed
   GOOGLE_CLIENT_ID: ""
   GOOGLE_CLIENT_SECRET: ""
