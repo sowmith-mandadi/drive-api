@@ -2,13 +2,17 @@
 API endpoints for authentication.
 """
 import json
-from typing import Optional
+import logging
+from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
-from app.core.auth import google_oauth
+from app.core.auth import google_oauth, GOOGLE_AUTH_DISABLED
 from app.core.config import settings
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -17,12 +21,27 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 async def login(request: Request):
     """Initiate Google OAuth login flow."""
     try:
+        # Check if OAuth is disabled
+        if GOOGLE_AUTH_DISABLED:
+            logger.warning("Login attempted while OAuth is disabled")
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": "OAuth authentication is disabled",
+                    "oauth_disabled": True
+                }
+            )
+            
         # Generate authorization URL
         authorization_url = google_oauth.get_authorization_url()
 
         # Redirect to Google's authorization page
         return RedirectResponse(authorization_url)
+    except HTTPException:
+        # Pass through HTTP exceptions
+        raise
     except Exception as e:
+        logger.error(f"Failed to initiate login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to initiate login: {str(e)}",
@@ -33,6 +52,12 @@ async def login(request: Request):
 async def callback(request: Request, code: str, state: Optional[str] = None):
     """Handle callback from Google OAuth."""
     try:
+        # Check if OAuth is disabled
+        if GOOGLE_AUTH_DISABLED:
+            logger.warning("OAuth callback received while OAuth is disabled")
+            frontend_url = settings.FRONTEND_URL or "/"
+            return RedirectResponse(f"{frontend_url}?oauth_disabled=true")
+            
         # Exchange code for credentials
         credentials = google_oauth.exchange_code(code)
 
@@ -44,31 +69,40 @@ async def callback(request: Request, code: str, state: Optional[str] = None):
         # Redirect to frontend application
         frontend_url = settings.FRONTEND_URL or "/"
         return RedirectResponse(frontend_url)
+    except HTTPException:
+        # Pass through HTTP exceptions
+        raise
     except Exception as e:
+        logger.error(f"Failed to complete authentication: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to complete authentication: {str(e)}",
         )
 
 
+@router.get("/status")
+async def auth_status(request: Request) -> Dict[str, Any]:
+    """Get current authentication status."""
+    # Check if OAuth is disabled
+    if GOOGLE_AUTH_DISABLED:
+        return {
+            "authenticated": False,
+            "oauth_disabled": True,
+            "message": "OAuth authentication is disabled for this deployment"
+        }
+    
+    # Check for credentials in session
+    credentials_str = request.session.get("credentials")
+    if not credentials_str:
+        return {"authenticated": False}
+    
+    return {"authenticated": True}
+
+
 @router.get("/logout")
-async def logout(request: Request, response: Response):
-    """Log out the current user."""
+async def logout(request: Request):
+    """Log out the current user by clearing the session."""
     # Clear session
     request.session.clear()
-
-    # Clear cookies
-    response.delete_cookie("session")
-
-    return {"message": "Logged out successfully"}
-
-
-@router.get("/status")
-async def auth_status(request: Request):
-    """Check authentication status."""
-    credentials_str = request.session.get("credentials")
-    if credentials_str:
-        # Return authenticated status (don't return the actual credentials)
-        return {"authenticated": True}
-    else:
-        return {"authenticated": False}
+    
+    return {"success": True, "message": "Logged out successfully"}

@@ -21,26 +21,61 @@ class TaskService:
 
     def __init__(self) -> None:
         """Initialize the task service."""
-        self.firestore = FirestoreClient()
+        try:
+            logger.info("Initializing TaskService")
+            
+            # Initialize Firestore client
+            try:
+                self.firestore = FirestoreClient()
+                logger.info("TaskService: Firestore client initialized successfully")
+            except Exception as db_error:
+                logger.error(f"TaskService: Failed to initialize Firestore client: {str(db_error)}", exc_info=True)
+                # Re-raise to fail initialization
+                raise
 
-        # Use environment variables with proper defaults for App Engine
-        # Default to /tmp paths which are writable in App Engine
-        self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
+            # Use environment variables with proper defaults for App Engine
+            # Default to /tmp paths which are writable in App Engine
+            self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
 
-        # Create directories
-        os.makedirs(self.bucket_dir, exist_ok=True)
+            # Check and create directories
+            try:
+                os.makedirs(self.bucket_dir, exist_ok=True)
+                if not os.path.exists(self.bucket_dir):
+                    raise Exception(f"Directory {self.bucket_dir} could not be created")
+                if not os.access(self.bucket_dir, os.W_OK):
+                    raise Exception(f"Directory {self.bucket_dir} is not writable")
+                logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
+            except Exception as dir_error:
+                logger.error(f"TaskService: Failed to set up bucket directory: {str(dir_error)}", exc_info=True)
+                # Re-raise to fail initialization
+                raise
 
-        logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
+            # Initialize GCS client if configured
+            self.storage_client = None
+            if settings.USE_GCS:
+                try:
+                    self.storage_client = storage.Client()
+                    logger.info("TaskService: GCS client initialized")
+                except Exception as gcs_error:
+                    logger.error(f"TaskService: Failed to initialize GCS client: {str(gcs_error)}", exc_info=True)
+                    # Don't re-raise - we can continue without GCS
 
-        # Initialize GCS client if configured
-        self.storage_client = None
-        if settings.USE_GCS:
-            self.storage_client = storage.Client()
-
-        # Initialize Cloud Tasks client if configured
-        self.tasks_client = None
-        if settings.USE_CLOUD_TASKS:
-            self.tasks_client = tasks_v2.CloudTasksClient()
+            # Initialize Cloud Tasks client if configured
+            self.tasks_client = None
+            if settings.USE_CLOUD_TASKS:
+                try:
+                    self.tasks_client = tasks_v2.CloudTasksClient()
+                    logger.info("TaskService: Cloud Tasks client initialized")
+                except Exception as tasks_error:
+                    logger.error(f"TaskService: Failed to initialize Cloud Tasks client: {str(tasks_error)}", exc_info=True)
+                    # Don't re-raise - we can continue without Cloud Tasks
+            
+            logger.info("TaskService initialization completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Critical error initializing TaskService: {str(e)}", exc_info=True)
+            # Re-raise to fail initialization
+            raise
 
     async def process_file(self, task_data: Dict[str, Any]) -> bool:
         """

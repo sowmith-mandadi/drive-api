@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 
-from app.models.content import Content, ContentCreate, ContentUpdate
+from app.models.content import Content, ContentCreate, ContentUpdate, Session
 from app.services.content_service import ContentService
 from app.services.extraction_service import ExtractionService
 
@@ -40,19 +40,48 @@ async def get_content(content_id: str) -> Content:
 
 @router.post("/", response_model=Content)
 async def create_content(
+    # Basic content info
     title: str = Form(...),
     description: Optional[str] = Form(None),
     content_type: str = Form(...),
     source: str = Form("upload"),
+    abstract: Optional[str] = Form(None),
+    session_id: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    demo_type: Optional[str] = Form(None),
+    
+    # Categorization
     tags: str = Form("[]"),  # JSON string of tags
+    track: Optional[str] = Form(None),
+    learning_level: Optional[str] = Form(None),
+    topics: Optional[str] = Form("[]"),  # JSON string
+    target_job_roles: Optional[str] = Form("[]"),  # JSON string
+    area_of_interest: Optional[str] = Form("[]"),  # JSON string
+    
+    # Metadata
     metadata: str = Form("{}"),  # JSON string of metadata
+    duration_minutes: Optional[str] = Form(None),
+    
+    # Speakers
+    speakers: Optional[str] = Form("[]"),  # JSON string of speakers
+    
+    # Files
     file: Optional[UploadFile] = File(None),
+    
+    # Assets
+    presentation_slides_url: Optional[str] = Form(None),
+    recap_slides_url: Optional[str] = Form(None),
+    video_recording_status: Optional[str] = Form(None),
 ) -> Content:
     """Create new content with optional file upload."""
     try:
         # Parse JSON strings
         tags_list = json.loads(tags)
         metadata_dict = json.loads(metadata)
+        speakers_list = json.loads(speakers) if speakers else []
+        topics_list = json.loads(topics) if topics else []
+        target_job_roles_list = json.loads(target_job_roles) if target_job_roles else []
+        area_of_interest_list = json.loads(area_of_interest) if area_of_interest else []
 
         # Create content data
         content_data = ContentCreate(
@@ -66,6 +95,33 @@ async def create_content(
 
         # Create content in database
         content = content_service.create_content(content_data)
+        
+        # Update with additional fields that are not part of ContentCreate
+        additional_data = {
+            "abstract": abstract,
+            "session_id": session_id,
+            "status": status,
+            "demo_type": demo_type,
+            "track": track,
+            "learning_level": learning_level,
+            "topics": topics_list,
+            "target_job_roles": target_job_roles_list,
+            "area_of_interest": area_of_interest_list,
+            "speakers": speakers_list,
+            "duration_minutes": duration_minutes,
+            "presentation_slides_url": presentation_slides_url,
+            "recap_slides_url": recap_slides_url,
+            "video_recording_status": video_recording_status,
+        }
+        
+        # Remove None values
+        additional_data = {k: v for k, v in additional_data.items() if v is not None}
+        
+        # Update content with additional fields
+        if additional_data:
+            content_service.update_content_fields(content.id, additional_data)
+            # Refresh content with updated fields
+            content = content_service.get_content_by_id(content.id)
 
         # Handle file upload if provided
         if file and source == "upload":
@@ -110,6 +166,18 @@ async def create_content(
 async def update_content(content_id: str, update_data: ContentUpdate) -> Content:
     """Update existing content."""
     updated_content = content_service.update_content(content_id, update_data)
+    if not updated_content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Content with ID {content_id} not found"
+        )
+    # Convert ContentInDB to Content
+    return Content.model_validate(updated_content.model_dump())
+
+
+@router.put("/{content_id}/fields", response_model=Content)
+async def update_content_fields(content_id: str, fields: Dict[str, Any] = Body(...)) -> Content:
+    """Update specific fields of existing content."""
+    updated_content = content_service.update_content_fields(content_id, fields)
     if not updated_content:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Content with ID {content_id} not found"

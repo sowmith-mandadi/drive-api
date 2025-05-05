@@ -37,8 +37,9 @@ async def get_file(file_name: str):
             detail="Invalid file name",
         )
 
-    # Construct the file path
-    bucket_dir = os.path.join(os.getcwd(), "uploads", "bucket")
+    # Construct the file path using environment variable instead of hardcoded path
+    # Default to /tmp/bucket for App Engine compatibility
+    bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
     file_path = os.path.join(bucket_dir, file_name)
 
     # Check if file exists

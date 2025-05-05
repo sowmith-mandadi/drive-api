@@ -1,32 +1,53 @@
 runtime: python39
-entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
+entrypoint: bash -c "python diagnose.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app"
 
 # Add explicit scaling configuration
-automatic_scaling:
-  max_instances: 10
-  min_instances: 1
-  target_cpu_utilization: 0.65
+# automatic_scaling:
+#   max_instances: 10
+#   min_instances: 1
+#   target_cpu_utilization: 0.65
 
+# Health check configuration
+health_check:
+  enable_health_check: true
+  check_interval_sec: 30
+  timeout_sec: 10
+  unhealthy_threshold: 3
+  healthy_threshold: 2
+    
+# Environment variables
 env_variables:
-  # Basic settings - hardcoded for initial deployment
+  # Basic settings
   SESSION_SECRET_KEY: "dev-secret-replace-in-production"
   GOOGLE_CLOUD_PROJECT: "conference-cms-project"
-  GOOGLE_CLIENT_ID: "your-client-id-here.apps.googleusercontent.com"
+  
+  # Completely disable OAuth for initial deployment
+  GOOGLE_CLIENT_ID: ""
+  GOOGLE_CLIENT_SECRET: ""
+  GOOGLE_AUTH_DISABLED: "true"
+  
+  # Frontend URL for redirects
+  FRONTEND_URL: "https://conference-cms-project.uw.r.appspot.com"
 
-  # Feature flags - turn off advanced features for initial deployment
+  # Debug flag
+  DEBUG: "true"
+
+  # Feature flags - disable advanced features for initial deployment
   USE_GCS: "false"
   USE_CLOUD_TASKS: "false"
 
   # AI/ML Settings
   VERTEX_RAG_MODEL: "text-bison"
 
-  # Storage settings
+  # Storage settings - all using /tmp for App Engine compatibility
   GCS_FOLDER_PREFIX: "uploads"
-
-  # Cloud Tasks settings
-  GCP_LOCATION: "us-central1"
-
-  # Temp directory settings for App Engine (writable paths)
+  UPLOAD_DIR: "/tmp/uploads"
   TEMP_UPLOAD_DIR: "/tmp/uploads"
   TEMP_PROCESSING_DIR: "/tmp/processing"
   UPLOAD_BUCKET_DIR: "/tmp/bucket"
+
+  # Cloud Tasks settings
+  GCP_LOCATION: "us-central1"
+  
+  # Firestore settings
+  FIRESTORE_PROJECT_ID: "conference-cms-project"

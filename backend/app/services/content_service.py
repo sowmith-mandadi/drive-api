@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from app.models.content import ContentCreate, ContentInDB, ContentUpdate
 from app.repositories.content_repository import ContentRepository
+from app.core.config import settings
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -20,8 +21,29 @@ class ContentService:
     def __init__(self) -> None:
         """Initialize the content service."""
         self.repository = ContentRepository()
-        self.upload_dir = os.path.join(os.getcwd(), "uploads")
-        os.makedirs(self.upload_dir, exist_ok=True)
+        
+        # Use environment variable for upload directory with fallback to /tmp path
+        # This ensures App Engine compatibility
+        self.upload_dir = settings.UPLOAD_DIR
+        
+        # Log the upload directory being used
+        logger.info(f"ContentService using upload directory: {self.upload_dir}")
+        
+        # Create directory if it doesn't exist
+        try:
+            os.makedirs(self.upload_dir, exist_ok=True)
+            
+            # Verify the directory exists and is writable
+            if not os.path.exists(self.upload_dir):
+                logger.error(f"Failed to create upload directory: {self.upload_dir}")
+            elif not os.access(self.upload_dir, os.W_OK):
+                logger.error(f"Upload directory is not writable: {self.upload_dir}")
+            else:
+                logger.info(f"Successfully initialized upload directory: {self.upload_dir}")
+                
+        except Exception as e:
+            logger.error(f"Error setting up upload directory: {str(e)}", exc_info=True)
+            # Don't re-raise, as we can try to continue even if this fails
 
     def get_all_content(self, limit: int = 100, offset: int = 0) -> List[ContentInDB]:
         """Get all content items with pagination.
@@ -94,6 +116,42 @@ class ContentService:
             logger.info(f"Updated content item with ID {content_id}")
 
         return updated_content
+
+    def update_content_fields(self, content_id: str, fields: Dict[str, Any]) -> Optional[ContentInDB]:
+        """Update specific fields of existing content.
+        
+        This method is more flexible than update_content as it can update any field,
+        not just those defined in ContentUpdate.
+        
+        Args:
+            content_id: ID of the content to update.
+            fields: Dictionary of fields to update.
+            
+        Returns:
+            Updated content item or None if not found.
+        """
+        try:
+            # Check if content exists
+            content = self.repository.get_by_id(content_id)
+            if not content:
+                return None
+                
+            # Add updated timestamp
+            fields["updated_at"] = None  # Will be handled by the repository
+            
+            # Update in repository
+            success = self.repository.firestore.update_document(
+                self.repository.collection, content_id, fields
+            )
+            
+            if not success:
+                return None
+                
+            # Get updated content
+            return self.repository.get_by_id(content_id)
+        except Exception as e:
+            logger.error(f"Error updating content fields: {str(e)}")
+            return None
 
     def delete_content(self, content_id: str) -> bool:
         """Delete a content item.

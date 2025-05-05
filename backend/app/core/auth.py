@@ -16,6 +16,9 @@ from app.core.config import settings
 # Setup logging
 logger = logging.getLogger(__name__)
 
+# Check if Google Auth is disabled
+GOOGLE_AUTH_DISABLED = os.environ.get("GOOGLE_AUTH_DISABLED", "false").lower() == "true"
+
 # OAuth2 scheme for authorization
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl=f"https://accounts.google.com/o/oauth2/auth",
@@ -35,9 +38,12 @@ class GoogleOAuth:
         self.client_secret = settings.GOOGLE_CLIENT_SECRET
         self.redirect_uri = settings.GOOGLE_REDIRECT_URI
         self.scopes = settings.GOOGLE_DRIVE_SCOPES
+        self.auth_disabled = GOOGLE_AUTH_DISABLED
         
         # Check if credentials are available
-        if not self.client_id or not self.client_secret:
+        if self.auth_disabled:
+            logger.warning("Google OAuth is disabled by configuration")
+        elif not self.client_id or not self.client_secret:
             logger.warning("Google OAuth credentials not configured")
     
     def get_authorization_url(self) -> str:
@@ -45,8 +51,25 @@ class GoogleOAuth:
         
         Returns:
             Authorization URL.
+        
+        Raises:
+            HTTPException: If OAuth is disabled or credentials are not configured.
         """
         try:
+            if self.auth_disabled:
+                logger.warning("Attempted to get auth URL while OAuth is disabled")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth authentication is disabled"
+                )
+                
+            if not self.client_id or not self.client_secret:
+                logger.error("Cannot generate auth URL: OAuth credentials not configured")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth credentials are not configured"
+                )
+                
             # Create flow instance
             flow = Flow.from_client_config(
                 {
@@ -72,9 +95,14 @@ class GoogleOAuth:
             )
             
             return authorization_url
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to generate authorization URL: {str(e)}")
-            raise
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate authorization URL: {str(e)}"
+            )
     
     def exchange_code(self, code: str) -> Dict[str, Any]:
         """Exchange authorization code for credentials.
@@ -84,8 +112,25 @@ class GoogleOAuth:
             
         Returns:
             Credentials dictionary.
+            
+        Raises:
+            HTTPException: If OAuth is disabled or credentials are not configured.
         """
         try:
+            if self.auth_disabled:
+                logger.warning("Attempted to exchange code while OAuth is disabled")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth authentication is disabled"
+                )
+                
+            if not self.client_id or not self.client_secret:
+                logger.error("Cannot exchange code: OAuth credentials not configured")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth credentials are not configured"
+                )
+                
             # Create flow instance
             flow = Flow.from_client_config(
                 {
@@ -118,9 +163,14 @@ class GoogleOAuth:
                 "client_secret": credentials.client_secret,
                 "scopes": credentials.scopes
             }
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to exchange code for credentials: {str(e)}")
-            raise
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to exchange code for credentials: {str(e)}"
+            )
     
     def refresh_credentials(self, credentials_dict: Dict[str, Any]) -> Dict[str, Any]:
         """Refresh credentials if expired.
@@ -130,8 +180,25 @@ class GoogleOAuth:
             
         Returns:
             Refreshed credentials dictionary.
+            
+        Raises:
+            HTTPException: If OAuth is disabled or credentials are not configured.
         """
         try:
+            if self.auth_disabled:
+                logger.warning("Attempted to refresh credentials while OAuth is disabled")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth authentication is disabled"
+                )
+                
+            if not self.client_id or not self.client_secret:
+                logger.error("Cannot refresh credentials: OAuth credentials not configured")
+                raise HTTPException(
+                    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                    detail="Google OAuth credentials are not configured"
+                )
+                
             # Create credentials object
             credentials = Credentials(
                 token=credentials_dict.get("token"),
@@ -150,9 +217,14 @@ class GoogleOAuth:
                 credentials_dict["token"] = credentials.token
             
             return credentials_dict
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to refresh credentials: {str(e)}")
-            raise
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to refresh credentials: {str(e)}"
+            )
 
 # OAuth helper instance
 google_oauth = GoogleOAuth()
@@ -174,8 +246,20 @@ async def get_current_user_credentials(request: Request) -> Dict[str, Any]:
         HTTPException: If user is not authenticated.
     """
     try:
-        # For development, use mock credentials
-        # In production, this would validate an access token and retrieve real credentials
+        # If auth is disabled, return mock credentials
+        if GOOGLE_AUTH_DISABLED:
+            logger.info("OAuth is disabled, using mock credentials")
+            return {
+                "token": "mock_token",
+                "refresh_token": "mock_refresh_token",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "client_id": "mock_client_id",
+                "client_secret": "mock_client_secret",
+                "scopes": settings.GOOGLE_DRIVE_SCOPES,
+                "mock": True
+            }
+        
+        # For development, use mock credentials if no real credentials are configured
         if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
             logger.warning("Using mock credentials for development")
             return {
@@ -184,7 +268,8 @@ async def get_current_user_credentials(request: Request) -> Dict[str, Any]:
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "client_id": "mock_client_id",
                 "client_secret": "mock_client_secret",
-                "scopes": settings.GOOGLE_DRIVE_SCOPES
+                "scopes": settings.GOOGLE_DRIVE_SCOPES,
+                "mock": True
             }
         
         # Get credentials from session

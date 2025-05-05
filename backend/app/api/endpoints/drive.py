@@ -1,44 +1,183 @@
 """
 API endpoints for Google Drive integration.
 """
-from typing import Any, Dict, List
+import logging
+import os
+from typing import Dict, List, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from app.core.auth import get_current_user_credentials
+from app.core.auth import get_current_user_credentials, GOOGLE_AUTH_DISABLED
 from app.core.logging import configure_logging
 from app.models.content import DriveFile, DriveImportRequest
 from app.schemas.drive import DriveFolder
 from app.services.drive_service import DriveService
 
-# Set up logger
-logger = configure_logging()
+# Setup logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/drive", tags=["Drive"])
 
 
+class DriveFile(BaseModel):
+    """Model for a Google Drive file."""
+
+    id: str
+    name: str
+    mime_type: str
+    web_view_link: Optional[str] = None
+    thumbnail_link: Optional[str] = None
+    modified_time: Optional[str] = None
+    size: Optional[int] = None
+
+
+class DriveFileList(BaseModel):
+    """Model for a list of Google Drive files."""
+
+    files: List[DriveFile]
+    next_page_token: Optional[str] = None
+
+
 class GoogleAuthResponse(BaseModel):
-    """Response model for Google authentication."""
+    """Model for Google auth response."""
 
     auth_url: str
 
 
 class GoogleCallbackResponse(BaseModel):
-    """Response model for Google authentication callback."""
+    """Model for Google callback response."""
 
     success: bool
     message: str
 
 
-@router.get("/files", response_model=List[DriveFile])
-async def list_drive_files(credentials: Dict[str, Any] = Depends(get_current_user_credentials)):
-    """List files from Google Drive."""
+@router.get(
+    "/drive/files",
+    response_model=DriveFileList,
+    summary="List Google Drive files",
+    description="Returns a list of files from Google Drive",
+)
+async def list_drive_files(
+    request: Request,
+    page_size: int = Query(10, gt=0, le=100, description="Number of files to return"),
+    page_token: Optional[str] = Query(None, description="Token for pagination"),
+    credentials: Dict[str, Any] = Depends(get_current_user_credentials),
+) -> Dict[str, Any]:
+    """
+    List files from Google Drive.
+
+    Args:
+        request (Request): FastAPI request object
+        page_size (int): Number of files to return
+        page_token (Optional[str]): Token for pagination
+        credentials (Dict[str, Any]): User's Google credentials
+
+    Returns:
+        Dict[str, Any]: List of files from Google Drive
+
+    Raises:
+        HTTPException: If there is an error listing files
+    """
     try:
-        drive_service = DriveService(credentials)
-        files = drive_service.list_files()
-        return files
+        # Check if OAuth is disabled
+        if GOOGLE_AUTH_DISABLED:
+            logger.info("Drive API is disabled, returning mock data")
+            return {
+                "files": [
+                    {
+                        "id": "mock_file_1",
+                        "name": "Sample Document.docx",
+                        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "web_view_link": "https://example.com/sample",
+                        "thumbnail_link": None,
+                        "modified_time": "2025-05-01T10:00:00Z",
+                        "size": 12345,
+                    },
+                    {
+                        "id": "mock_file_2",
+                        "name": "Example Presentation.pptx",
+                        "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "web_view_link": "https://example.com/example",
+                        "thumbnail_link": None,
+                        "modified_time": "2025-05-01T11:00:00Z",
+                        "size": 54321,
+                    },
+                ],
+                "next_page_token": None,
+            }
+            
+        # Check if using mock credentials (OAuth not fully configured)
+        if credentials.get("mock"):
+            logger.info("Using mock credentials, returning sample data")
+            return {
+                "files": [
+                    {
+                        "id": "sample_file_1",
+                        "name": "Example Document.docx",
+                        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "web_view_link": "https://example.com/doc",
+                        "thumbnail_link": None,
+                        "modified_time": "2025-05-01T09:00:00Z",
+                        "size": 23456,
+                    }
+                ],
+                "next_page_token": None,
+            }
+            
+        # Import Google API client
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+
+        # Build credential object
+        creds = Credentials(
+            token=credentials.get("token"),
+            refresh_token=credentials.get("refresh_token"),
+            token_uri=credentials.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=credentials.get("client_id"),
+            client_secret=credentials.get("client_secret"),
+            scopes=credentials.get("scopes"),
+        )
+
+        # Build Google Drive service
+        service = build("drive", "v3", credentials=creds)
+
+        # List files
+        fields = "files(id,name,mimeType,webViewLink,thumbnailLink,modifiedTime,size),nextPageToken"
+        results = (
+            service.files()
+            .list(
+                pageSize=page_size,
+                pageToken=page_token,
+                fields=fields,
+                orderBy="modifiedTime desc",
+            )
+            .execute()
+        )
+
+        # Process results
+        files = results.get("files", [])
+        next_page_token = results.get("nextPageToken")
+
+        # Convert to API response format
+        file_list = []
+        for file in files:
+            file_list.append(
+                {
+                    "id": file.get("id", ""),
+                    "name": file.get("name", ""),
+                    "mime_type": file.get("mimeType", ""),
+                    "web_view_link": file.get("webViewLink"),
+                    "thumbnail_link": file.get("thumbnailLink"),
+                    "modified_time": file.get("modifiedTime"),
+                    "size": file.get("size"),
+                }
+            )
+
+        return {"files": file_list, "next_page_token": next_page_token}
     except Exception as e:
+        logger.error("Failed to list Drive files", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list Drive files: {str(e)}",
@@ -105,11 +244,27 @@ async def get_auth_url() -> Dict[str, str]:
     """
     try:
         logger.info("Generating Google Drive auth URL")
+        
+        # Check if OAuth is disabled
+        if GOOGLE_AUTH_DISABLED:
+            logger.warning("Drive auth is disabled, returning mock URL")
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "auth_url": "https://example.com/oauth-disabled", 
+                    "oauth_disabled": True
+                }
+            )
+        
         # Use OAuth utilities directly since we don't have credentials yet
         from app.core.auth import google_oauth
 
+        # This will throw an appropriate HTTP exception if OAuth is misconfigured
         auth_url = google_oauth.get_authorization_url()
         return {"auth_url": auth_url}
+    except HTTPException:
+        # Pass through specific HTTP exceptions
+        raise
     except Exception as e:
         logger.error("Failed to generate auth URL", error=str(e))
         raise HTTPException(
@@ -141,9 +296,20 @@ async def auth_callback(
     """
     try:
         logger.info("Processing OAuth callback")
+        
+        # Check if OAuth is disabled
+        if GOOGLE_AUTH_DISABLED:
+            logger.warning("OAuth callback received while OAuth is disabled")
+            return {
+                "success": True,
+                "message": "OAuth is disabled, but the callback was received",
+                "oauth_disabled": True
+            }
+            
         # Use OAuth utilities directly
         from app.core.auth import google_oauth
 
+        # This will throw an appropriate HTTP exception if OAuth is misconfigured
         credentials = google_oauth.exchange_code(code)
 
         # Store credentials in session
@@ -153,6 +319,9 @@ async def auth_callback(
             "success": True,
             "message": "Authentication successful",
         }
+    except HTTPException:
+        # Pass through specific HTTP exceptions
+        raise
     except Exception as e:
         logger.error("OAuth callback processing failed", error=str(e))
         raise HTTPException(

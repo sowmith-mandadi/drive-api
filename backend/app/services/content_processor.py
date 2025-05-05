@@ -21,19 +21,51 @@ class ContentProcessor:
 
     def __init__(self) -> None:
         """Initialize the content processor."""
-        self.firestore = FirestoreClient()
+        try:
+            logger.info("Initializing ContentProcessor")
+            
+            # Initialize Firestore client
+            try:
+                self.firestore = FirestoreClient()
+                logger.info("ContentProcessor: Firestore client initialized successfully")
+            except Exception as db_error:
+                logger.error(f"ContentProcessor: Failed to initialize Firestore client: {str(db_error)}", exc_info=True)
+                # Re-raise to fail initialization
+                raise
 
-        # Use environment variables with proper defaults for App Engine
-        # Default to /tmp paths which are writable in App Engine
-        self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
-        self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
+            # Use environment variables with proper defaults for App Engine
+            # Default to /tmp paths which are writable in App Engine
+            self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
+            self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
 
-        # Create directories
-        os.makedirs(self.temp_dir, exist_ok=True)
-        os.makedirs(self.bucket_dir, exist_ok=True)
-
-        logger.info(f"Using temp directory: {self.temp_dir}")
-        logger.info(f"Using bucket directory: {self.bucket_dir}")
+            # Check and create directories
+            try:
+                # Create processing directory
+                os.makedirs(self.temp_dir, exist_ok=True)
+                if not os.path.exists(self.temp_dir):
+                    raise Exception(f"Directory {self.temp_dir} could not be created")
+                if not os.access(self.temp_dir, os.W_OK):
+                    raise Exception(f"Directory {self.temp_dir} is not writable")
+                logger.info(f"Using temp directory: {self.temp_dir}")
+                
+                # Create bucket directory
+                os.makedirs(self.bucket_dir, exist_ok=True)
+                if not os.path.exists(self.bucket_dir):
+                    raise Exception(f"Directory {self.bucket_dir} could not be created")
+                if not os.access(self.bucket_dir, os.W_OK):
+                    raise Exception(f"Directory {self.bucket_dir} is not writable")
+                logger.info(f"Using bucket directory: {self.bucket_dir}")
+            except Exception as dir_error:
+                logger.error(f"ContentProcessor: Failed to set up directories: {str(dir_error)}", exc_info=True)
+                # Re-raise to fail initialization
+                raise
+                
+            logger.info("ContentProcessor initialization completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Critical error initializing ContentProcessor: {str(e)}", exc_info=True)
+            # Re-raise to fail initialization
+            raise
 
     async def process_content_item(
         self, content_data: Dict[str, Any], file_url: Optional[str] = None

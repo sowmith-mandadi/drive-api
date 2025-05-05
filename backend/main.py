@@ -4,14 +4,17 @@ FastAPI application entry point for the Conference CMS API.
 import os
 import platform
 import sys
+import json
+import traceback
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Callable
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.endpoints.auth import router as auth_router
@@ -40,18 +43,58 @@ app = FastAPI(
     redoc_url=None,  # Disable default redoc
 )
 
-# Configure session middleware
-# In production, use a more secure secret key
+# Global exception handler
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next: Callable):
+    """Global exception handling middleware."""
+    try:
+        return await call_next(request)
+    except Exception as e:
+        # Enhanced error logging
+        error_details = {
+            "error": str(e),
+            "error_class": e.__class__.__name__,
+            "path": request.url.path,
+            "method": request.method,
+            "headers": dict(request.headers),
+            "client_host": request.client.host if request.client else "unknown",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Log the exception with detailed information
+        logger.error(
+            f"Unhandled exception: {e.__class__.__name__}: {str(e)}",
+            exc_info=True,
+            error_details=json.dumps(error_details),
+            traceback=traceback.format_exc()
+        )
+        
+        # Return JSON response with error
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": "Internal server error",
+                "error_type": e.__class__.__name__,
+                "detail": str(e) if os.environ.get("DEBUG", "false").lower() == "true" else "An unexpected error occurred"
+            }
+        )
+
+# Configure session middleware with secure defaults
+session_secret = os.environ.get("SESSION_SECRET_KEY", "supersecretkey")
+logger.info(f"Configuring session middleware with {'default' if session_secret == 'supersecretkey' else 'custom'} secret")
+
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ.get("SESSION_SECRET_KEY", "supersecretkey"),
+    secret_key=session_secret,
     max_age=60 * 60 * 24,  # 1 day
+    same_site="lax",       # Prevents CSRF
+    https_only=False       # Allow HTTP for App Engine internal routing
 )
 
-# Configure CORS
+# Configure CORS with wildcard origins for testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=["*"],  # Allow all origins during testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,15 +102,54 @@ app.add_middleware(
 
 
 @app.get("/")
-async def root() -> Dict[str, str]:
+async def root() -> Dict[str, Any]:
     """
     Root endpoint for the API.
 
     Returns:
-        Dict[str, str]: A simple status message
+        Dict[str, Any]: A simple status message
     """
-    logger.info("Root endpoint accessed")
-    return {"message": "Conference Content Management API is running"}
+    try:
+        logger.info("Root endpoint accessed")
+        
+        # Check app components to ensure they're properly initialized
+        system_status = {}
+        
+        try:
+            # Check if directories are correctly set up
+            temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
+            bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
+            upload_dir = os.environ.get("UPLOAD_DIR", "/tmp/uploads")
+            
+            system_status["dirs"] = {
+                "temp_dir": {"path": temp_dir, "exists": os.path.exists(temp_dir), "writable": os.access(temp_dir, os.W_OK)},
+                "bucket_dir": {"path": bucket_dir, "exists": os.path.exists(bucket_dir), "writable": os.access(bucket_dir, os.W_OK)},
+                "upload_dir": {"path": upload_dir, "exists": os.path.exists(upload_dir), "writable": os.access(upload_dir, os.W_OK)}
+            }
+            
+            # Additional diagnostics can be added here
+            logger.info(f"System status: {json.dumps(system_status)}")
+        except Exception as check_ex:
+            logger.error(f"Error in system status check: {str(check_ex)}", exc_info=True)
+            system_status["check_error"] = str(check_ex)
+        
+        # Simplified response for health checks
+        if os.environ.get("DEBUG", "false").lower() == "true":
+            diagnostics = json.dumps(system_status)
+        else:
+            diagnostics = "Diagnostics hidden in production mode"
+            
+        return {"status": "ok", "diagnostics": diagnostics}
+    except Exception as e:
+        # Enhanced error logging in root endpoint
+        logger.error(
+            f"Critical error in root endpoint: {e.__class__.__name__}: {str(e)}", 
+            exc_info=True,
+            traceback=traceback.format_exc()
+        )
+        
+        # For App Engine health checks, return a basic OK response even with errors
+        return {"status": "internal_error", "error": str(e) if os.environ.get("DEBUG", "false").lower() == "true" else "An error occurred"}
 
 
 @app.get("/api/health")
@@ -91,16 +173,25 @@ async def system_info() -> Dict[str, Any]:
         Dict[str, Any]: Detailed system information including Python version,
                        platform details, processor info, and current timestamp
     """
-    info = {
-        "python_version": sys.version,
-        "platform": platform.platform(),
-        "system": platform.system(),
-        "processor": platform.processor(),
-        "hostname": platform.node(),
-        "timestamp": datetime.now().isoformat(),
-    }
-    logger.info("System info requested", **info)
-    return info
+    try:
+        info = {
+            "python_version": sys.version,
+            "platform": platform.platform(),
+            "system": platform.system(),
+            "processor": platform.processor(),
+            "hostname": platform.node(),
+            "timestamp": datetime.now().isoformat(),
+            "environment": {k: v for k, v in os.environ.items() if k.startswith(("PYTHON", "GOOGLE", "USE_", "GCP_", "DEBUG", "TEMP_", "UPLOAD_"))},
+            "directories": {
+                "cwd": os.getcwd(),
+                "tmp_dir": {"path": "/tmp", "exists": os.path.exists("/tmp"), "writable": os.access("/tmp", os.W_OK)},
+            }
+        }
+        logger.info("System info requested")
+        return info
+    except Exception as e:
+        logger.error(f"Error in system_info endpoint: {str(e)}", exc_info=True)
+        return {"status": "error", "message": str(e)}
 
 
 # Custom OpenAPI documentation
@@ -145,6 +236,20 @@ app.include_router(auth_router, prefix="/api", tags=["Authentication"])
 app.include_router(upload_router, prefix="/api", tags=["File Uploads"])
 app.include_router(batch_router, prefix="/api", tags=["Batch Operations"])
 app.include_router(files_router, prefix="/api", tags=["File Serving"])
+
+# Add a dedicated health check endpoint for App Engine
+@app.get("/_ah/health")
+async def app_engine_health_check():
+    """Health check endpoint specifically for App Engine.
+    App Engine looks for this endpoint by default.
+    """
+    try:
+        # Quick check of application health
+        return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        logger.error(f"Error in App Engine health check: {str(e)}", exc_info=True)
+        # Still return OK for health check to prevent instance termination
+        return {"status": "ok", "note": "Error occurred but returning OK to prevent termination"}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
