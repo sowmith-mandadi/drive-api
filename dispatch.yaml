@@ -5,4 +5,4 @@ dispatch:
 
   # Send all other traffic to the frontend service
   - url: "*/*"
-    service: frontend 
+    service: frontend

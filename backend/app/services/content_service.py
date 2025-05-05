@@ -29,6 +29,15 @@ class ContentService:
         # Log the upload directory being used
         logger.info(f"ContentService using upload directory: {self.upload_dir}")
 
+        # In App Engine, force to use /tmp directory if the original path is not writable
+        if not os.path.exists(self.upload_dir) or not os.access(self.upload_dir, os.W_OK):
+            app_engine_tmp = "/tmp/uploads"
+            logger.warning(
+                f"Upload directory {self.upload_dir} not writable or doesn't exist. "
+                f"Falling back to App Engine safe path: {app_engine_tmp}"
+            )
+            self.upload_dir = app_engine_tmp
+
         # Create directory if it doesn't exist
         try:
             os.makedirs(self.upload_dir, exist_ok=True)
@@ -43,7 +52,8 @@ class ContentService:
 
         except Exception as e:
             logger.error(f"Error setting up upload directory: {str(e)}", exc_info=True)
-            # Don't re-raise, as we can try to continue even if this fails
+            # Fall back to using memory for uploads if we can't use the filesystem
+            logger.warning("Using in-memory processing due to filesystem issues")
 
     def get_all_content(self, limit: int = 100, offset: int = 0) -> List[ContentInDB]:
         """Get all content items with pagination.

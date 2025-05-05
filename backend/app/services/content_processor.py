@@ -11,9 +11,10 @@ from typing import Any, Dict, Optional, Tuple
 import requests
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-from google.oauth2 import service_account
+from google.cloud import storage
 
 from app.core.logging import configure_logging
+from app.core.config import settings
 from app.db.firestore_client import FirestoreClient
 
 # Setup logging
@@ -41,17 +42,33 @@ class ContentProcessor:
                 raise
 
             # Use environment variables with proper defaults for App Engine
-            # Default to /tmp paths which are writable in App Engine
+            # Temporary dir for file processing
             self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
-            self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
             
-            # Google Drive service account path
-            self.service_account_path = os.environ.get(
-                "GOOGLE_SERVICE_ACCOUNT_PATH", 
-                "/tmp/service-account-key.json"
-            )
+            # Initialize Google Cloud Storage
+            try:
+                self.storage_client = storage.Client()
+                bucket_name = os.environ.get("GCS_BUCKET_NAME")
+                if not bucket_name:
+                    raise ValueError("GCS_BUCKET_NAME environment variable is not set")
+                
+                self.bucket = self.storage_client.bucket(bucket_name)
+                logger.info(f"ContentProcessor: GCS client initialized with bucket {bucket_name}")
+                
+                # Ensure the bucket exists
+                if not self.bucket.exists():
+                    logger.info(f"Creating Cloud Storage bucket: {bucket_name}")
+                    self.storage_client.create_bucket(bucket_name)
+                    
+            except Exception as gcs_error:
+                logger.error(
+                    f"ContentProcessor: Failed to initialize GCS client: {str(gcs_error)}",
+                    exc_info=True,
+                )
+                # This is critical - we need storage to function
+                raise
 
-            # Check and create directories
+            # Check and create temp directory for processing
             try:
                 # Create processing directory
                 os.makedirs(self.temp_dir, exist_ok=True)
@@ -60,17 +77,9 @@ class ContentProcessor:
                 if not os.access(self.temp_dir, os.W_OK):
                     raise Exception(f"Directory {self.temp_dir} is not writable")
                 logger.info(f"Using temp directory: {self.temp_dir}")
-
-                # Create bucket directory
-                os.makedirs(self.bucket_dir, exist_ok=True)
-                if not os.path.exists(self.bucket_dir):
-                    raise Exception(f"Directory {self.bucket_dir} could not be created")
-                if not os.access(self.bucket_dir, os.W_OK):
-                    raise Exception(f"Directory {self.bucket_dir} is not writable")
-                logger.info(f"Using bucket directory: {self.bucket_dir}")
             except Exception as dir_error:
                 logger.error(
-                    f"ContentProcessor: Failed to set up directories: {str(dir_error)}",
+                    f"ContentProcessor: Failed to set up temp directory: {str(dir_error)}",
                     exc_info=True,
                 )
                 # Re-raise to fail initialization
@@ -262,32 +271,22 @@ class ContentProcessor:
         self, content_id: str, file_id: str
     ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        Process a file from Google Drive using the Drive API.
-        
+        Download and process a file from Google Drive.
+
         Args:
             content_id: ID of the content.
             file_id: Google Drive file ID.
-            
+
         Returns:
             Tuple of (success, message, file_info).
         """
         temp_file_path = None
         
         try:
-            # Check if service account file exists
-            if not os.path.exists(self.service_account_path):
-                logger.error(f"Service account file not found at {self.service_account_path}")
-                return False, "Service account file not found", None
-                
-            # Get service account credentials
+            # Build the Drive service using App Engine default credentials
             try:
-                credentials = service_account.Credentials.from_service_account_file(
-                    self.service_account_path,
-                    scopes=['https://www.googleapis.com/auth/drive.readonly']
-                )
-                
-                # Build Drive service
-                drive_service = build('drive', 'v3', credentials=credentials)
+                drive_service = build('drive', 'v3', cache_discovery=False)
+                logger.info("Successfully created Drive service with default credentials")
             except Exception as auth_error:
                 logger.error(f"Failed to authenticate with Google Drive: {str(auth_error)}")
                 return False, f"Drive authentication failed: {str(auth_error)}", None
@@ -457,38 +456,58 @@ class ContentProcessor:
                     
             storage_filename = f"{uuid.uuid4()}{file_extension}"
             
-            # Destination in the bucket
-            destination_path = os.path.join(self.bucket_dir, storage_filename)
-            
-            # Move file to bucket
+            # Upload to Google Cloud Storage
             try:
-                shutil.copy2(temp_file_path, destination_path)
-                os.remove(temp_file_path)
-                temp_file_path = None
-            except Exception as move_error:
-                logger.error(f"Failed to move file to bucket: {str(move_error)}")
-                if temp_file_path and os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                return False, f"Failed to store file: {str(move_error)}", None
+                # Create blob path with folder prefix
+                folder_prefix = os.environ.get("GCS_FOLDER_PREFIX", "uploads")
+                blob_path = f"{folder_prefix}/{storage_filename}"
+                blob = self.bucket.blob(blob_path)
                 
-            # Generate public URL
-            public_url = f"/api/files/{storage_filename}"
-            
-            # Return file info with Drive metadata
-            file_info = {
-                "url": public_url,
-                "name": file_name,
-                "type": mime_type,
-                "contentType": content_type_category,
-                "size": file_size,
-                "driveId": file_id,
-                "webViewLink": file.get('webViewLink', ''),
-                "thumbnailLink": file.get('thumbnailLink', ''),
-                "iconLink": file.get('iconLink', ''),
-                "source": "drive"
-            }
-            
-            return True, "File processed successfully", file_info
+                # Upload file with content type
+                blob.upload_from_filename(temp_file_path, content_type=mime_type)
+                
+                # Generate a public URL for the file
+                if os.environ.get("GCS_MAKE_PUBLIC", "").lower() == "true":
+                    blob.make_public()
+                    public_url = blob.public_url
+                else:
+                    # Generate a signed URL that expires after a period
+                    expiration = int(os.environ.get("GCS_URL_EXPIRATION", "86400"))  # Default 24 hours
+                    public_url = blob.generate_signed_url(
+                        version="v4", expiration=expiration, method="GET"
+                    )
+                
+                logger.info(f"File uploaded to GCS: {blob_path}")
+                
+                # Delete temp file when done
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                    temp_file_path = None
+                
+                # Store GCS path for internal reference
+                bucket_name = os.environ.get("GCS_BUCKET_NAME")
+                gcs_path = f"gs://{bucket_name}/{blob_path}"
+                
+                # Return file info with Drive metadata
+                file_info = {
+                    "url": public_url,
+                    "name": file_name,
+                    "type": mime_type,
+                    "contentType": content_type_category,
+                    "size": file_size,
+                    "driveId": file_id,
+                    "webViewLink": file.get('webViewLink', ''),
+                    "thumbnailLink": file.get('thumbnailLink', ''),
+                    "iconLink": file.get('iconLink', ''),
+                    "source": "drive",
+                    "gcs_path": gcs_path
+                }
+                
+                return True, "File processed successfully", file_info
+                
+            except Exception as gcs_error:
+                logger.error(f"Failed to upload to GCS: {str(gcs_error)}")
+                return False, f"Failed to store file in Cloud Storage: {str(gcs_error)}", None
             
         except Exception as e:
             logger.error(f"Failed to process Drive file {file_id}: {str(e)}")
@@ -513,6 +532,7 @@ class ContentProcessor:
         Returns:
             Tuple of (success, message, file_info).
         """
+        temp_file_path = None
         try:
             # Get file name from URL or generate one
             file_name = os.path.basename(file_url.split("?")[0])
@@ -562,38 +582,57 @@ class ContentProcessor:
 
             storage_filename = f"{uuid.uuid4()}{file_extension}"
 
-            # Destination in the bucket
-            destination_path = os.path.join(self.bucket_dir, storage_filename)
-
-            # Move file to bucket
+            # Upload to Google Cloud Storage
             try:
-                shutil.copy2(temp_file_path, destination_path)
-
-                # Delete the temporary file
-                os.remove(temp_file_path)
-            except Exception as e:
-                logger.error(f"Failed to move file to bucket: {str(e)}")
+                # Create blob path with folder prefix
+                folder_prefix = os.environ.get("GCS_FOLDER_PREFIX", "uploads")
+                blob_path = f"{folder_prefix}/{storage_filename}"
+                blob = self.bucket.blob(blob_path)
+                
+                # Upload file with content type
+                blob.upload_from_filename(temp_file_path, content_type=content_type)
+                
+                # Generate a public URL for the file
+                if os.environ.get("GCS_MAKE_PUBLIC", "").lower() == "true":
+                    blob.make_public()
+                    public_url = blob.public_url
+                else:
+                    # Generate a signed URL that expires after a period
+                    expiration = int(os.environ.get("GCS_URL_EXPIRATION", "86400"))  # Default 24 hours
+                    public_url = blob.generate_signed_url(
+                        version="v4", expiration=expiration, method="GET"
+                    )
+                
+                logger.info(f"File uploaded to GCS: {blob_path}")
+                
+                # Delete temp file when done
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
-                return False, f"Failed to store file: {str(e)}", None
-
-            # Generate public URL
-            public_url = f"/api/files/{storage_filename}"
-
-            # Return file info
-            file_info = {
-                "url": public_url,
-                "name": file_name,
-                "type": content_type,
-                "size": file_size,
-                "source": "url"
-            }
-
-            return True, "File processed successfully", file_info
+                    temp_file_path = None
+                
+                # Store GCS path for internal reference
+                bucket_name = os.environ.get("GCS_BUCKET_NAME")
+                gcs_path = f"gs://{bucket_name}/{blob_path}"
+                
+                # Return file info
+                file_info = {
+                    "url": public_url,
+                    "name": file_name,
+                    "type": content_type,
+                    "size": file_size,
+                    "source": "url",
+                    "gcs_path": gcs_path
+                }
+                
+                return True, "File processed successfully", file_info
+                
+            except Exception as gcs_error:
+                logger.error(f"Failed to upload to GCS: {str(gcs_error)}")
+                return False, f"Failed to store file in Cloud Storage: {str(gcs_error)}", None
 
         except Exception as e:
             logger.error(f"Error processing file from URL: {str(e)}")
             # Clean up any temp file
-            if "temp_file_path" in locals() and os.path.exists(temp_file_path):
+            if temp_file_path and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
             return False, f"Error processing file: {str(e)}", None

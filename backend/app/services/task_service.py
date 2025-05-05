@@ -38,36 +38,33 @@ class TaskService:
 
             # Use environment variables with proper defaults for App Engine
             # Default to /tmp paths which are writable in App Engine
-            self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
-
-            # Check and create directories
-            try:
-                os.makedirs(self.bucket_dir, exist_ok=True)
-                if not os.path.exists(self.bucket_dir):
-                    raise Exception(f"Directory {self.bucket_dir} could not be created")
-                if not os.access(self.bucket_dir, os.W_OK):
-                    raise Exception(f"Directory {self.bucket_dir} is not writable")
-                logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
-            except Exception as dir_error:
-                logger.error(
-                    f"TaskService: Failed to set up bucket directory: {str(dir_error)}",
-                    exc_info=True,
-                )
-                # Re-raise to fail initialization
-                raise
+            self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
+            os.makedirs(self.temp_dir, exist_ok=True)
+            logger.info(f"TaskService using temp directory: {self.temp_dir}")
 
             # Initialize GCS client if configured
             self.storage_client = None
-            if settings.USE_GCS:
+            self.bucket = None
+            self.use_gcs = settings.USE_GCS
+            
+            if self.use_gcs:
                 try:
                     self.storage_client = storage.Client()
-                    logger.info("TaskService: GCS client initialized")
+                    self.bucket = self.storage_client.bucket(settings.GCS_BUCKET_NAME)
+                    logger.info(f"TaskService: GCS client initialized with bucket {settings.GCS_BUCKET_NAME}")
                 except Exception as gcs_error:
                     logger.error(
                         f"TaskService: Failed to initialize GCS client: {str(gcs_error)}",
                         exc_info=True,
                     )
                     # Don't re-raise - we can continue without GCS
+                    self.use_gcs = False
+            
+            # Fall back to local storage if GCS is not available
+            if not self.use_gcs:
+                self.bucket_dir = os.environ.get("UPLOAD_BUCKET_DIR", "/tmp/bucket")
+                logger.info(f"TaskService using bucket directory: {self.bucket_dir}")
+                os.makedirs(self.bucket_dir, exist_ok=True)
 
             # Initialize Cloud Tasks client if configured
             self.tasks_client = None
@@ -81,6 +78,7 @@ class TaskService:
                         exc_info=True,
                     )
                     # Don't re-raise - we can continue without Cloud Tasks
+                    logger.warning("Using TaskService stub implementation - Cloud Tasks not available")
 
             logger.info("TaskService initialization completed successfully")
 
@@ -115,11 +113,12 @@ class TaskService:
 
             # Upload to GCS if configured, otherwise use local storage
             public_url = None
+            gcs_path = None
 
-            if settings.USE_GCS and self.storage_client:
+            if self.use_gcs and self.storage_client and self.bucket:
                 # Upload to Google Cloud Storage
-                bucket = self.storage_client.bucket(settings.GCS_BUCKET_NAME)
-                blob = bucket.blob(f"{settings.GCS_FOLDER_PREFIX}/{storage_filename}")
+                blob_path = f"{settings.GCS_FOLDER_PREFIX}/{storage_filename}"
+                blob = self.bucket.blob(blob_path)
 
                 # Upload file with content type
                 blob.upload_from_filename(file_path, content_type=content_type)
@@ -135,17 +134,17 @@ class TaskService:
                     )
 
                 # Store GCS path for internal reference
-                gcs_path = f"gs://{settings.GCS_BUCKET_NAME}/{settings.GCS_FOLDER_PREFIX}/{storage_filename}"
+                gcs_path = f"gs://{settings.GCS_BUCKET_NAME}/{blob_path}"
+                logger.info(f"File uploaded to GCS: {gcs_path}")
 
                 # Delete the temporary file after upload
                 os.remove(file_path)
             else:
-                # Local storage fallback (original implementation)
+                # Local storage fallback
                 destination_path = os.path.join(self.bucket_dir, storage_filename)
                 shutil.copy2(file_path, destination_path)
                 os.remove(file_path)
                 public_url = f"/api/files/{storage_filename}"
-                gcs_path = None
 
             # Update content metadata with file URL
             content = self.firestore.get_document("content", content_id)
@@ -156,7 +155,13 @@ class TaskService:
             # Add file URL to content
             file_urls = content.get("fileUrls", [])
             file_urls.append(
-                {"url": public_url, "name": file_name, "type": content_type, "gcs_path": gcs_path}
+                {
+                    "url": public_url, 
+                    "name": file_name, 
+                    "type": content_type, 
+                    "gcs_path": gcs_path,
+                    "source": "upload"
+                }
             )
 
             # Update Firestore document

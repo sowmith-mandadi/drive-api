@@ -1,11 +1,14 @@
 runtime: python39
-entrypoint: bash -c "python diagnose.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app"
+service: default
+instance_class: F4
+entrypoint: bash -c "mkdir -p /tmp/processing /tmp/uploads && python diagnose.py && gunicorn -t 300 -b 0.0.0.0:8080 -w 2 -k uvicorn.workers.UvicornWorker main:app"
 
-# Add explicit scaling configuration
-# automatic_scaling:
-#   max_instances: 10
-#   min_instances: 1
-#   target_cpu_utilization: 0.65
+# Add routing handlers for App Engine to properly direct requests
+handlers:
+  # Route all traffic to the application
+  - url: /.*
+    script: auto
+    secure: optional
 
 # Health check configuration
 health_check:
@@ -21,33 +24,46 @@ env_variables:
   SESSION_SECRET_KEY: "dev-secret-replace-in-production"
   GOOGLE_CLOUD_PROJECT: "conference-cms-project"
 
-  # Completely disable OAuth for initial deployment
+  # Auth settings - App Engine will use the default service account
+  GOOGLE_APPLICATION_CREDENTIALS: ""  # Keep empty to use default credentials
+  USE_APP_ENGINE_CREDENTIALS: "true"
+  
+  # OAuth configuration - Set to true when OAuth is needed
   GOOGLE_CLIENT_ID: ""
   GOOGLE_CLIENT_SECRET: ""
-  GOOGLE_AUTH_DISABLED: "true"
+  GOOGLE_AUTH_DISABLED: "true"  # Change to "false" when enabling OAuth
 
   # Frontend URL for redirects
   FRONTEND_URL: "https://conference-cms-project.uw.r.appspot.com"
 
-  # Debug flag
+  # Debug flag - Set to true to see more detailed errors
   DEBUG: "true"
 
-  # Feature flags - disable advanced features for initial deployment
-  USE_GCS: "false"
-  USE_CLOUD_TASKS: "false"
+  # Feature flags - Enable cloud storage
+  USE_GCS: "true"
+  USE_CLOUD_TASKS: "false"  # Enable when needed
 
   # AI/ML Settings
   VERTEX_RAG_MODEL: "text-bison"
 
-  # Storage settings - all using /tmp for App Engine compatibility
+  # Storage settings - Google Cloud Storage configuration
+  GCS_BUCKET_NAME: "conference-cms-project-content"
   GCS_FOLDER_PREFIX: "uploads"
-  UPLOAD_DIR: "/tmp/uploads"
-  TEMP_UPLOAD_DIR: "/tmp/uploads"
+  GCS_MAKE_PUBLIC: "false"
+  GCS_URL_EXPIRATION: "86400"  # 24 hours in seconds
+  
+  # Temporary processing directories
   TEMP_PROCESSING_DIR: "/tmp/processing"
-  UPLOAD_BUCKET_DIR: "/tmp/bucket"
-
+  TEMP_UPLOAD_DIR: "/tmp/uploads"
+  UPLOAD_DIR: "/tmp/uploads"
+  
   # Cloud Tasks settings
   GCP_LOCATION: "us-central1"
+  VECTOR_PROCESSING_QUEUE: "vector-processing"
 
   # Firestore settings
   FIRESTORE_PROJECT_ID: "conference-cms-project"
+  
+  # OpenAPI Schema Generation
+  OPENAPI_SIMPLE_MODE: "true"
+  DISABLE_OPENAPI_VALIDATION: "true"

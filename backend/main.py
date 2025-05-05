@@ -9,12 +9,13 @@ import traceback
 from datetime import datetime
 from typing import Any, Callable, Dict
 
+import fastapi
 import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.endpoints.auth import router as auth_router
@@ -38,8 +39,10 @@ app = FastAPI(
     title="Conference Content Management API",
     description="API for managing conference materials with Google Drive integration and RAG capabilities",
     version="1.0.0",
-    docs_url=None,  # Disable default docs
-    redoc_url=None,  # Disable default redoc
+    # Enable standard docs at /docs and /redoc for better compatibility
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",  # Standard OpenAPI schema URL
 )
 
 
@@ -152,11 +155,22 @@ async def root() -> Dict[str, Any]:
 
         # Simplified response for health checks
         if os.environ.get("DEBUG", "false").lower() == "true":
-            diagnostics = json.dumps(system_status)
+            diagnostics = system_status
         else:
-            diagnostics = "Diagnostics hidden in production mode"
+            diagnostics = {"hidden": "Diagnostics hidden in production mode"}
 
-        return {"status": "ok", "diagnostics": diagnostics}
+        # Return available documentation URLs
+        return {
+            "status": "ok",
+            "diagnostics": diagnostics,
+            "documentation": {
+                "standard_docs": "/docs",
+                "redoc": "/redoc",
+                "api_docs": "/api/docs",
+                "openapi_schema": "/openapi.json",
+                "api_openapi_schema": "/api/openapi.json",
+            },
+        }
     except Exception as e:
         # Enhanced error logging in root endpoint
         logger.error(
@@ -172,6 +186,12 @@ async def root() -> Dict[str, Any]:
             if os.environ.get("DEBUG", "false").lower() == "true"
             else "An error occurred",
         }
+
+
+@app.get("/health")
+async def health() -> RedirectResponse:
+    """Redirect /health to /api/health for better compatibility"""
+    return RedirectResponse(url="/api/health")
 
 
 @app.get("/api/health")
@@ -233,7 +253,7 @@ async def custom_swagger_ui_html() -> Any:
     Returns:
         HTML: Customized Swagger UI interface
     """
-    logger.info("API documentation accessed")
+    logger.info("API documentation accessed via /api/docs")
     return get_swagger_ui_html(
         openapi_url="/api/openapi.json",
         title=app.title + " - API Documentation",
@@ -243,19 +263,166 @@ async def custom_swagger_ui_html() -> Any:
 
 
 @app.get("/api/openapi.json", include_in_schema=False)
-async def get_open_api_endpoint() -> Dict[str, Any]:
+async def get_api_open_api_endpoint() -> JSONResponse:
     """
     Endpoint to serve the OpenAPI schema.
 
     Returns:
-        Dict[str, Any]: The OpenAPI schema for the API
+        Dict[str, Any]: The OpenAPI schema for the API with proper headers
     """
-    return get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
-        routes=app.routes,
+    try:
+        logger.info("OpenAPI schema requested via /api/openapi.json")
+        # Filter routes to avoid problematic ones
+        filtered_routes = [
+            route
+            for route in app.routes
+            if getattr(route, "include_in_schema", True)
+            and not str(route.path).startswith("/docs")
+            and not str(route.path).startswith("/redoc")
+            and not str(route.path).startswith("/openapi.json")
+        ]
+
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=filtered_routes,  # Use filtered routes
+        )
+        logger.info(f"Successfully generated OpenAPI schema with {len(filtered_routes)} routes")
+        return JSONResponse(content=openapi_schema, media_type="application/json")
+    except Exception as e:
+        logger.error(f"Error generating OpenAPI schema: {str(e)}", exc_info=True)
+        # Return a basic error response with details
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to generate OpenAPI schema", "details": str(e)},
+            media_type="application/json",
+        )
+
+
+# Add a test OpenAPI endpoint with minimal schema
+@app.get("/api/openapi-test", include_in_schema=False)
+async def get_test_open_api_endpoint():
+    """Simple test endpoint to debug OpenAPI issues"""
+    try:
+        # Return a basic hard-coded schema to verify endpoint works
+        basic_schema = {
+            "openapi": "3.0.2",
+            "info": {
+                "title": app.title,
+                "version": app.version,
+                "description": "Test schema - simplified version",
+            },
+            "paths": {
+                "/api/health": {
+                    "get": {
+                        "summary": "Health check",
+                        "responses": {
+                            "200": {
+                                "description": "Successful response",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {"status": {"type": "string"}},
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                    }
+                }
+            },
+        }
+        logger.info("Successfully generated test OpenAPI schema")
+        return JSONResponse(content=basic_schema, media_type="application/json")
+    except Exception as e:
+        logger.error(f"Error generating test OpenAPI schema: {str(e)}", exc_info=True)
+        # Return a basic error response with details
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to generate test OpenAPI schema", "details": str(e)},
+            media_type="application/json",
+        )
+
+
+# Add a test Swagger UI endpoint
+@app.get("/api/docs-test", include_in_schema=False)
+async def custom_swagger_ui_html_test():
+    """
+    Test version of Swagger UI documentation.
+    """
+    logger.info("Test API documentation accessed via /api/docs-test")
+    return get_swagger_ui_html(
+        openapi_url="/api/openapi-test",  # Use the test endpoint
+        title=app.title + " - API Documentation (Test)",
+        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
     )
+
+
+# Add a debug endpoint to help troubleshoot schema generation
+@app.get("/api/debug", include_in_schema=False)
+async def debug_endpoint():
+    """Debug endpoint to help diagnose App Engine issues"""
+    try:
+        # Check environment
+        env_info = {
+            "python_version": sys.version,
+            "fastapi_version": fastapi.__version__,
+            "app_engine": bool(os.environ.get("GAE_APPLICATION")),
+            "env_vars": {
+                k: v for k, v in os.environ.items() if k.startswith(("GOOGLE", "GAE", "CLOUD"))
+            },
+        }
+
+        # Check tmp directories
+        dir_info = {}
+        for path in ["/tmp", "/tmp/processing", "/tmp/uploads"]:
+            try:
+                exists = os.path.exists(path)
+                if not exists:
+                    try:
+                        os.makedirs(path, exist_ok=True)
+                        exists = True
+                    except Exception as e:
+                        dir_info[f"{path}_create_error"] = str(e)
+
+                writable = os.access(path, os.W_OK) if exists else False
+                dir_info[path] = {"exists": exists, "writable": writable}
+            except Exception as e:
+                dir_info[path] = {"error": str(e)}
+
+        # Try to write a test file in /tmp
+        file_test = {}
+        try:
+            test_file = "/tmp/test.txt"
+            with open(test_file, "w") as f:
+                f.write("test")
+            file_test["success"] = True
+            # Clean up
+            os.remove(test_file)
+        except Exception as e:
+            file_test["error"] = str(e)
+
+        # Check routes count
+        routes_info = {
+            "total_routes": len(app.routes),
+            "include_in_schema": len(
+                [r for r in app.routes if getattr(r, "include_in_schema", False)]
+            ),
+        }
+
+        return {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "environment": env_info,
+            "directories": dir_info,
+            "file_test": file_test,
+            "routes": routes_info,
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
 
 # Include routers
