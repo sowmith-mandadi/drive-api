@@ -1,0 +1,21 @@
+# Firebase / Firestore Configuration
+FIREBASE_PROJECT_ID=your-firebase-project-id
+GOOGLE_APPLICATION_CREDENTIALS=path/to/firebase-credentials.json
+
+# Storage settings
+UPLOAD_BUCKET_DIR=/tmp/bucket
+TEMP_PROCESSING_DIR=/tmp/processing
+
+# Google Drive API Configuration
+GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/drive-service-account-key.json
+GOOGLE_DRIVE_SCOPES=https://www.googleapis.com/auth/drive.readonly
+
+# API settings
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+ENVIRONMENT=development
+
+# Security
+SECRET_KEY=your-secret-key
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com 
