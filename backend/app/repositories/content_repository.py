@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
 from app.db.firestore_client import FirestoreClient
-from app.models.content import ContentCreate, ContentInDB, ContentUpdate
+from app.models.content import ContentCreate, ContentInDB, ContentUpdate, Speaker
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -319,22 +319,82 @@ class ContentRepository:
         metadata = doc.get("metadata") or {}
         used = bool(doc.get("used", False))
 
-        # Create ContentInDB model
+        # Process speakers if present
+        speakers = []
+        doc_speakers = doc.get("speakers", [])
+        if doc_speakers and isinstance(doc_speakers, list):
+            for speaker_data in doc_speakers:
+                if isinstance(speaker_data, dict):
+                    # Convert presenter data to Speaker model
+                    speaker = Speaker(
+                        full_name=speaker_data.get("full_name") or speaker_data.get("name"),
+                        job_title=speaker_data.get("job_title") or speaker_data.get("title"),
+                        company=speaker_data.get("company"),
+                        type=speaker_data.get("type"),
+                        industry=speaker_data.get("industry"),
+                        region=speaker_data.get("region"),
+                    )
+                    speakers.append(speaker)
+
+        # Process categorization
+        categorization = doc.get("categorization", {})
+        if not isinstance(categorization, dict):
+            categorization = {}
+
+        # Process assets
+        assets = doc.get("assets", {})
+        if not isinstance(assets, dict):
+            assets = {}
+
+        # Create ContentInDB model with all fields
         return ContentInDB(
             id=doc_id,
             title=title,
             description=doc.get("description"),
             content_type=content_type,
             source=doc.get("source", "upload"),
+            # New fields - basic session info
+            session_id=doc.get("session_id"),
+            status=doc.get("status"),
+            # Date fields
+            created_at=created_at,
+            updated_at=updated_at,
+            # File related fields
             file_path=doc.get("file_path"),
             drive_id=doc.get("drive_id"),
             drive_link=doc.get("drive_link"),
+            # Content metadata fields
+            abstract=doc.get("abstract"),
+            demo_type=doc.get("demo_type") or doc.get("session_type"),
+            duration_minutes=doc.get("duration_minutes"),
             tags=tags,
             metadata=metadata,
+            used=used,
+            # Text and embedding fields
             extracted_text=doc.get("extracted_text"),
             page_content=doc.get("page_content"),
-            used=used,
             embedding_id=doc.get("embedding_id"),
-            created_at=created_at,
-            updated_at=updated_at,
+            ai_tags=doc.get("ai_tags") or doc.get("aiTags"),
+            # Categorization fields
+            categorization=categorization,
+            track=doc.get("track"),
+            learning_level=doc.get("learning_level") or doc.get("learningLevel"),
+            topics=doc.get("topics"),
+            target_job_roles=doc.get("target_job_roles") or doc.get("targetJobRoles"),
+            area_of_interest=doc.get("area_of_interest") or doc.get("areaOfInterest"),
+            # Presenter information
+            speakers=speakers,
+            # Assets
+            assets=assets,
+            presentation_slides_url=doc.get("presentation_slides_url"),
+            recap_slides_url=doc.get("recap_slides_url"),
+            video_recording_status=doc.get("video_recording_status"),
+            video_source_file_url=doc.get("video_source_file_url"),
+            video_youtube_url=doc.get("video_youtube_url"),
+            # YouTube publishing info
+            youtube_url=doc.get("youtube_url"),
+            youtube_channel=doc.get("youtube_channel"),
+            youtube_visibility=doc.get("youtube_visibility"),
+            yt_video_title=doc.get("yt_video_title"),
+            yt_description=doc.get("yt_description"),
         )

@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, HttpUrl
 
 from app.core.logging import configure_logging
 from app.db.firestore_client import FirestoreClient
@@ -31,6 +31,11 @@ class Presenter(BaseModel):
     email: Optional[str] = None
     bio: Optional[str] = None
     photo: Optional[str] = None
+    company: Optional[str] = None
+    title: Optional[str] = None
+    type: Optional[str] = None
+    industry: Optional[str] = None
+    region: Optional[str] = None
 
 
 class Comment(BaseModel):
@@ -45,20 +50,55 @@ class Comment(BaseModel):
 class ContentUpload(BaseModel):
     """Model for content upload metadata."""
 
-    title: str
-    description: str = ""
-    track: str
-    tags: List[str] = []
-    sessionType: str
-    sessionDate: Optional[str] = None
-    learningLevel: Optional[str] = None
-    topic: Optional[str] = None
-    jobRole: Optional[str] = None
-    areaOfInterest: Optional[str] = None
-    industry: Optional[str] = None
-    presenters: List[Presenter] = []
-    used: Optional[bool] = False
-    aiTags: Optional[List[str]] = None
+    # Core fields
+    title: str = Field(..., description="Title of the content", max_length=75)
+    description: str = Field("", description="Description of the content")
+    abstract: Optional[str] = Field(None, description="Abstract summary", max_length=550)
+    session_id: Optional[str] = Field(None, description="Unique session identifier")
+    status: Optional[str] = Field(
+        None, description="Status: 'Scheduled', 'Published', 'Completed', 'Canceled'"
+    )
+
+    # Categorization
+    track: str = Field(..., description="Primary category/track")
+    tags: List[str] = Field([], description="Tags associated with the content")
+    sessionType: str = Field(..., description="Type of session")
+    demoType: Optional[str] = Field(
+        None, description="Type of demo: 'Keynote', 'Breakout', 'Workshop', 'Single Screen Demo'"
+    )
+    sessionDate: Optional[str] = Field(None, description="Date of the session")
+    durationMinutes: Optional[str] = Field(None, description="Total run time in minutes")
+    learningLevel: Optional[str] = Field(
+        None, description="Learning level: 'Beginner', 'Intermediate', 'Advanced', 'All'"
+    )
+    topic: Optional[str] = Field(None, description="Main topic")
+    topics: Optional[List[str]] = Field(None, description="Array of topic keywords")
+    jobRole: Optional[str] = Field(None, description="Job role")
+    targetJobRoles: Optional[List[str]] = Field(None, description="Array of target job roles")
+    areaOfInterest: Optional[str] = Field(None, description="Area of interest")
+    areasOfInterest: Optional[List[str]] = Field(None, description="Array of broader interests")
+    industry: Optional[str] = Field(None, description="Industry")
+
+    # Presenters
+    presenters: List[Presenter] = Field([], description="List of presenters")
+
+    # Assets
+    presentationSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to presentation slides")
+    recapSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to recap slides")
+    videoRecordingStatus: Optional[str] = Field(None, description="Status of video recording")
+    videoSourceFileUrl: Optional[HttpUrl] = Field(None, description="URL to raw video file")
+    videoYoutubeUrl: Optional[HttpUrl] = Field(None, description="URL to YouTube video")
+
+    # YouTube Publishing
+    youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
+    youtubeChannel: Optional[str] = Field(None, description="YouTube channel")
+    youtubeVisibility: Optional[str] = Field(None, description="YouTube visibility")
+    ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
+    ytDescription: Optional[str] = Field(None, description="YouTube video description")
+
+    # Other
+    used: Optional[bool] = Field(False, description="Whether the content has been used")
+    aiTags: Optional[List[str]] = Field(None, description="AI-generated tags")
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -66,16 +106,28 @@ async def upload_content(
     background_tasks: BackgroundTasks,
     title: str = Form(...),
     description: str = Form(""),
+    abstract: Optional[str] = Form(None),
+    session_id: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
     track: str = Form(...),
     tags: str = Form("[]"),  # JSON string of tags
     sessionType: str = Form(...),
+    demoType: Optional[str] = Form(None),
     sessionDate: Optional[str] = Form(None),
+    durationMinutes: Optional[str] = Form(None),
     learningLevel: Optional[str] = Form(None),
     topic: Optional[str] = Form(None),
+    topics: Optional[str] = Form(None),  # JSON string of topics
     jobRole: Optional[str] = Form(None),
+    targetJobRoles: Optional[str] = Form(None),  # JSON string of job roles
     areaOfInterest: Optional[str] = Form(None),
+    areasOfInterest: Optional[str] = Form(None),  # JSON string of areas
     industry: Optional[str] = Form(None),
     presenters: str = Form("[]"),  # JSON string of presenters
+    # Asset URLs
+    presentationSlidesUrl: Optional[str] = Form(None),
+    recapSlidesUrl: Optional[str] = Form(None),
+    videoRecordingStatus: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
 ):
     """
@@ -88,6 +140,9 @@ async def upload_content(
         # Parse JSON strings
         tags_list = json.loads(tags)
         presenters_list = json.loads(presenters)
+        topics_list = json.loads(topics) if topics else []
+        target_job_roles_list = json.loads(targetJobRoles) if targetJobRoles else []
+        areas_of_interest_list = json.loads(areasOfInterest) if areasOfInterest else []
 
         # Generate a new ID
         content_id = firestore.generate_id()
@@ -115,14 +170,22 @@ async def upload_content(
             "id": content_id,
             "title": title,
             "description": description,
+            "abstract": abstract,
+            "session_id": session_id,
+            "status": status,
             "track": track,
             "tags": tags_list,
             "sessionType": sessionType,
+            "demoType": demoType,
             "sessionDate": sessionDate,
+            "durationMinutes": durationMinutes,
             "learningLevel": learningLevel,
             "topic": topic,
+            "topics": topics_list,
             "jobRole": jobRole,
+            "targetJobRoles": target_job_roles_list,
             "areaOfInterest": areaOfInterest,
+            "areasOfInterest": areas_of_interest_list,
             "industry": industry,
             "presenters": presenters_list,
             "dateCreated": now.isoformat(),
@@ -130,6 +193,10 @@ async def upload_content(
             "fileUrls": [],
             "driveUrls": [],
             "used": False,
+            # Asset URLs
+            "presentationSlidesUrl": presentationSlidesUrl,
+            "recapSlidesUrl": recapSlidesUrl,
+            "videoRecordingStatus": videoRecordingStatus,
         }
 
         # Store in Firestore
