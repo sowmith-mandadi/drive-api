@@ -118,10 +118,48 @@ class ContentProcessor:
             content_data["updated_at"] = now
             content_data["fileUrls"] = []
 
+            # Check for and process presentation slides URL
+            presentation_url = content_data.get("presentation_slides_url")
+            if presentation_url and isinstance(presentation_url, str) and presentation_url.strip():
+                # Extract drive ID if it's a Google Drive link
+                drive_id = self._extract_drive_id(presentation_url)
+                if drive_id:
+                    # Process presentation via Drive API
+                    success, message, file_info = await self._process_file_from_drive(
+                        content_id, drive_id
+                    )
+                    if success and file_info:
+                        content_data["fileUrls"].append(file_info)
+                        # Keep the original URL as well
+                        content_data["drive_presentation_id"] = drive_id
+                        content_data["drive_presentation_link"] = presentation_url
+
+            # Check for YouTube URL
+            youtube_url = content_data.get("video_youtube_url")
+            if youtube_url and isinstance(youtube_url, str) and youtube_url.strip():
+                # Store YouTube link directly, no need to download
+                youtube_id = self._extract_youtube_id(youtube_url)
+                if youtube_id:
+                    # Set YouTube specific fields according to content model
+                    content_data["youtube_url"] = youtube_url
+
+                    # Also add to fileUrls for backward compatibility
+                    youtube_info = {
+                        "url": youtube_url,
+                        "name": f"YouTube Video ({youtube_id})",
+                        "type": "video/youtube",
+                        "size": 0,
+                        "youtubeId": youtube_id,
+                        "source": "youtube",
+                    }
+                    content_data["fileUrls"].append(youtube_info)
+
             # Ensure source is set properly
             if drive_file_id or (file_url and self._extract_drive_id(file_url)):
                 content_data["source"] = "drive"
             elif file_url and ("youtube.com" in file_url or "youtu.be" in file_url):
+                content_data["source"] = "external"
+            elif youtube_url and ("youtube.com" in youtube_url or "youtu.be" in youtube_url):
                 content_data["source"] = "external"
             else:
                 content_data["source"] = "upload"
@@ -233,6 +271,10 @@ class ContentProcessor:
         # If it's a YouTube link, return None to handle it separately
         if "youtube.com" in url_or_id or "youtu.be" in url_or_id:
             return None
+            
+        # If empty or None, return None
+        if not url_or_id:
+            return None
 
         # If it's a short string with no slashes, might be a direct file ID
         if len(url_or_id) >= 25 and len(url_or_id) <= 44 and "/" not in url_or_id:
@@ -244,13 +286,22 @@ class ContentProcessor:
             r"drive\.google\.com/open\?id=([^&]+)",
             r"docs\.google\.com/\w+/d/([^/]+)",
             r"docs\.google\.com/presentation/d/([^/]+)",
+            r"docs\.google\.com/document/d/([^/]+)",
+            r"docs\.google\.com/spreadsheets/d/([^/]+)",
             r"drive\.google\.com/drive/folders/([^?&/]+)",
         ]
 
         for pattern in file_id_patterns:
             match = re.search(pattern, url_or_id)
             if match:
-                return match.group(1)
+                # Extract ID and remove any trailing characters (like /edit#slide=id.xxx)
+                drive_id = match.group(1)
+                # If the ID contains a hash or question mark, trim it
+                if '#' in drive_id:
+                    drive_id = drive_id.split('#')[0]
+                if '?' in drive_id:
+                    drive_id = drive_id.split('?')[0]
+                return drive_id
 
         return None
 
@@ -398,7 +449,7 @@ class ContentProcessor:
                     if "document" in mime_type:
                         # Export as PDF
                         request = drive_service.files().export_media(
-                            fileId=file_id, mimeType="application/pdf", supportsAllDrives=True
+                            fileId=file_id, mimeType="application/pdf"
                         )
                         file_extension = ".pdf"
                         export_mime_type = "application/pdf"
@@ -406,8 +457,7 @@ class ContentProcessor:
                         # Export as Excel
                         request = drive_service.files().export_media(
                             fileId=file_id,
-                            mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            supportsAllDrives=True
+                            mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
                         file_extension = ".xlsx"
                         export_mime_type = (
@@ -417,15 +467,14 @@ class ContentProcessor:
                         # Export as PowerPoint
                         request = drive_service.files().export_media(
                             fileId=file_id,
-                            mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                            supportsAllDrives=True
+                            mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation"
                         )
                         file_extension = ".pptx"
                         export_mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                     else:
                         # Default to PDF for other Google formats
                         request = drive_service.files().export_media(
-                            fileId=file_id, mimeType="application/pdf", supportsAllDrives=True
+                            fileId=file_id, mimeType="application/pdf"
                         )
                         file_extension = ".pdf"
                         export_mime_type = "application/pdf"
@@ -456,24 +505,150 @@ class ContentProcessor:
 
             # Download file content
             try:
+                # For large files, use a chunked download approach
+                CHUNK_SIZE = 1024 * 1024 * 5  # 5MB chunks
+                file_size = int(file.get("size", 0))
+                
+                # If file is very large (over 100MB), use a different approach
+                if file_size > 100 * 1024 * 1024:  # 100MB
+                    logger.warning(f"File is very large ({file_size} bytes), using webViewLink instead")
+                    # Return a special file info that just contains the link
+                    file_info = {
+                        "url": file.get("webViewLink", ""),
+                        "name": file.get("name", f"file_{uuid.uuid4()}"),
+                        "type": mime_type,
+                        "contentType": content_type_category,
+                        "size": file_size,
+                        "driveId": file_id,
+                        "webViewLink": file.get("webViewLink", ""),
+                        "thumbnailLink": file.get("thumbnailLink", ""),
+                        "iconLink": file.get("iconLink", ""),
+                        "source": "drive",
+                        "tooLargeToDownload": True
+                    }
+                    return True, "File link saved (too large to download)", file_info
+                
+                # Standard download with improved chunking and retry logic
                 with open(temp_file_path, "wb") as f:
-                    downloader = MediaIoBaseDownload(f, request)
+                    downloader = MediaIoBaseDownload(f, request, chunksize=CHUNK_SIZE)
                     done = False
                     retry_count = 0
-                    max_retries = 3
+                    max_retries = 5  # Increased retries for large files
+                    backoff_time = 1  # Starting backoff in seconds
 
                     while not done and retry_count < max_retries:
                         try:
                             status, done = downloader.next_chunk()
+                            # Log progress for large files
+                            if file_size > 10 * 1024 * 1024:  # 10MB
+                                if status:
+                                    logger.info(f"Downloaded {int(status.progress() * 100)}% of file {file_id}")
+                            # Reset backoff on successful chunk
+                            backoff_time = 1
                         except Exception as chunk_error:
+                            error_str = str(chunk_error)
                             logger.warning(
-                                f"Error downloading chunk, attempt {retry_count+1}: {str(chunk_error)}"
+                                f"Error downloading chunk, attempt {retry_count+1}: {error_str}"
                             )
+                            
+                            # For export size limits, break immediately and use fallback
+                            if "exportSizeLimitExceeded" in error_str or "This file is too large to be exported" in error_str:
+                                raise chunk_error
+                                
+                            # For rate limits or temporary issues, use exponential backoff
+                            import time
+                            time.sleep(backoff_time)
+                            backoff_time *= 2  # Exponential backoff
                             retry_count += 1
+                            
                             if retry_count >= max_retries:
                                 raise chunk_error
             except Exception as download_error:
                 logger.error(f"Failed to download Drive file: {str(download_error)}")
+                
+                # Check if this is an export size limit error
+                error_str = str(download_error)
+                if "exportSizeLimitExceeded" in error_str or "This file is too large to be exported" in error_str:
+                    logger.info(f"File is too large to export in requested format, attempting alternative format")
+                    
+                    # For presentations, try PDF format which often has better export size limits
+                    pdf_export_successful = False
+                    if "presentation" in mime_type.lower():
+                        try:
+                            logger.info("Attempting to export presentation as PDF instead")
+                            # Close and remove the temp file if it exists
+                            if os.path.exists(temp_file_path):
+                                os.remove(temp_file_path)
+                            
+                            # Create a new temp file path with PDF extension
+                            pdf_file_name = f"{os.path.splitext(file_name)[0]}.pdf"
+                            temp_pdf_name = f"{uuid.uuid4()}_{pdf_file_name}"
+                            temp_pdf_path = os.path.join(self.temp_dir, temp_pdf_name)
+                            
+                            # Try exporting as PDF
+                            pdf_request = drive_service.files().export_media(
+                                fileId=file_id, mimeType="application/pdf"
+                            )
+                            
+                            with open(temp_pdf_path, "wb") as f:
+                                downloader = MediaIoBaseDownload(f, pdf_request, chunksize=CHUNK_SIZE)
+                                done = False
+                                retry_count = 0
+                                
+                                while not done and retry_count < max_retries:
+                                    try:
+                                        status, done = downloader.next_chunk()
+                                    except Exception as pdf_error:
+                                        retry_count += 1
+                                        if retry_count >= max_retries:
+                                            raise pdf_error
+                            
+                            # Check if PDF was successfully downloaded
+                            pdf_size = os.path.getsize(temp_pdf_path)
+                            if pdf_size > 0:
+                                logger.info(f"Successfully exported presentation as PDF ({pdf_size} bytes)")
+                                # Update variables to use this PDF file instead
+                                temp_file_path = temp_pdf_path
+                                file_extension = ".pdf"
+                                mime_type = "application/pdf"
+                                file_name = pdf_file_name
+                                pdf_export_successful = True
+                        except Exception as pdf_error:
+                            logger.error(f"Failed to export as PDF: {str(pdf_error)}")
+                            # Clean up PDF temp file if it exists
+                            if 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
+                                os.remove(temp_pdf_path)
+                        
+                        # If PDF export was successful, continue with normal processing
+                        if pdf_export_successful:
+                            # Skip to file size check
+                            pass
+                        else:
+                            # If we get here, all export attempts have failed, use webViewLink
+                            logger.info(f"All export attempts failed, using webViewLink instead")
+                            
+                            # Return a special file info that just contains the link
+                            file_info = {
+                                "url": file.get("webViewLink", ""),
+                                "name": file.get("name", f"file_{uuid.uuid4()}"),
+                                "type": "application/link",
+                                "contentType": "link",
+                                "size": 0,
+                                "driveId": file_id,
+                                "webViewLink": file.get("webViewLink", ""),
+                                "thumbnailLink": file.get("thumbnailLink", ""),
+                                "iconLink": file.get("iconLink", ""),
+                                "source": "drive",
+                                "tooLargeToExport": True
+                            }
+                            
+                            # Clean up the temp file if it exists
+                            if os.path.exists(temp_file_path):
+                                os.remove(temp_file_path)
+                                
+                            return True, "File link saved (too large to export)", file_info
+                
+                # For other errors, proceed with the standard error handling
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
                 return False, f"Failed to download Drive file: {str(download_error)}", None

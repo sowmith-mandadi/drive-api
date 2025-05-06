@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, HttpUrl
 class Speaker(BaseModel):
     """Model for a presenter/speaker."""
 
-    full_name: Optional[str] = Field(None, description="Speaker's full name")
-    job_title: Optional[str] = Field(None, description="Speaker's job title")
+    fullName: Optional[str] = Field(None, description="Speaker's full name")
+    jobTitle: Optional[str] = Field(None, description="Speaker's job title")
     company: Optional[str] = Field(None, description="Speaker's company")
     type: Optional[str] = Field(
         None, description="Type of speaker: 'Googler', 'Partner', 'Customer', 'Community'"
@@ -25,7 +25,7 @@ class ContentBase(BaseModel):
 
     title: str = Field(..., description="Title of the content", max_length=75)
     description: Optional[str] = Field(None, description="Description of the content")
-    content_type: str = Field(..., description="Type of content")
+    contentType: str = Field(..., description="Type of content")
     source: str = Field("upload", description="Source of content: 'upload', 'drive', 'external'")
 
 
@@ -33,57 +33,57 @@ class Session(BaseModel):
     """Full session model based on the complete schema."""
 
     # Core Identification & Status
-    session_id: str = Field(..., description="Unique identifier for the session")
+    sessionId: str = Field(..., description="Unique identifier for the session")
     status: str = Field(
         ..., description="Status: 'Scheduled', 'Published', 'Completed', 'Canceled'"
     )
     title: str = Field(..., description="Title of the session", max_length=75)
     abstract: str = Field(..., description="Abstract summary", max_length=550)
-    demo_type: str = Field(
+    demoType: str = Field(
         ..., description="Type of demo: 'Keynote', 'Breakout', 'Workshop', 'Single Screen Demo'"
     )
-    duration_minutes: Optional[str] = Field(None, description="Total run time in minutes")
+    durationMinutes: Optional[str] = Field(None, description="Total run time in minutes")
 
     # Categorization details
     categorization: Dict[str, Any] = Field(
         default_factory=dict, description="Categorization details"
     )
     track: Optional[str] = Field(None, description="Primary category/track")
-    learning_level: Optional[str] = Field(
+    learningLevel: Optional[str] = Field(
         None, description="Learning level: 'Beginner', 'Intermediate', 'Advanced', 'All'"
     )
     topics: Optional[List[str]] = Field(None, description="Array of topic keywords")
-    target_job_roles: Optional[List[str]] = Field(None, description="Array of target job roles")
-    area_of_interest: Optional[List[str]] = Field(None, description="Array of broader interests")
+    targetJobRoles: Optional[List[str]] = Field(None, description="Array of target job roles")
+    areasOfInterest: Optional[List[str]] = Field(None, description="Array of areas of interest")
 
     # Speakers/Presenters
     speakers: List[Speaker] = Field(default_factory=list, description="List of speakers")
 
     # Assets
     assets: Dict[str, Any] = Field(default_factory=dict, description="Asset details")
-    presentation_slides_url: Optional[HttpUrl] = Field(
+    presentationSlidesUrl: Optional[HttpUrl] = Field(
         None, description="URL to presentation slides"
     )
-    recap_slides_url: Optional[HttpUrl] = Field(None, description="URL to recap slides")
-    video_recording_status: Optional[str] = Field(
+    recapSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to recap slides")
+    videoRecordingStatus: Optional[str] = Field(
         None,
         description="Status of video recording: 'Available', 'Processing', 'Not Available', 'Pending'",
     )
-    video_source_file_url: Optional[HttpUrl] = Field(None, description="URL to raw video file")
-    video_youtube_url: Optional[HttpUrl] = Field(None, description="URL to YouTube video")
+    videoSourceFileUrl: Optional[HttpUrl] = Field(None, description="URL to raw video file")
+    videoYoutubeUrl: Optional[HttpUrl] = Field(None, description="URL to YouTube video")
 
     # YouTube Publishing
-    youtube_url: Optional[HttpUrl] = Field(None, description="YouTube URL")
-    youtube_channel: Optional[str] = Field(None, description="YouTube channel")
-    youtube_visibility: Optional[str] = Field(None, description="YouTube visibility setting")
-    yt_video_title: Optional[str] = Field(None, description="YouTube video title")
-    yt_description: Optional[str] = Field(None, description="YouTube video description")
+    youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
+    youtubeChannel: Optional[str] = Field(None, description="YouTube channel")
+    youtubeVisibility: Optional[str] = Field(None, description="YouTube visibility setting")
+    ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
+    ytDescription: Optional[str] = Field(None, description="YouTube video description")
 
     # System fields
-    created_at: datetime = Field(
+    createdAt: datetime = Field(
         default_factory=datetime.now, description="When the session was created"
     )
-    updated_at: datetime = Field(
+    updatedAt: datetime = Field(
         default_factory=datetime.now, description="When the session was last updated"
     )
 
@@ -93,11 +93,11 @@ class ContentCreate(BaseModel):
 
     title: str = Field(..., description="Title of the content", max_length=75)
     description: Optional[str] = Field(None, description="Description of the content")
-    content_type: str = Field(..., description="Type of content")
+    contentType: str = Field(..., description="Type of content")
     source: str = Field("upload", description="Source of content: 'upload', 'drive', 'external'")
     tags: Optional[List[str]] = Field([], description="Tags associated with the content")
     metadata: Optional[Dict[str, Any]] = Field({}, description="Additional metadata")
-    file_id: Optional[str] = Field(None, description="For Google Drive files")
+    fileId: Optional[str] = Field(None, description="For Google Drive files")
 
 
 class ContentUpdate(BaseModel):
@@ -114,61 +114,61 @@ class ContentInDB(ContentBase):
     """Model for content in database."""
 
     id: str
-    session_id: Optional[str] = Field(None, description="Unique identifier for the session")
+    sessionId: Optional[str] = Field(None, description="Unique identifier for the session")
     status: Optional[str] = Field(
         None, description="Status: 'Scheduled', 'Published', 'Completed', 'Canceled'"
     )
-    created_at: datetime
-    updated_at: datetime
+    createdAt: datetime
+    updatedAt: datetime
 
     # File and storage related fields
-    file_path: Optional[str] = None
-    drive_id: Optional[str] = None
-    drive_link: Optional[str] = None
+    filePath: Optional[str] = None
+    driveId: Optional[str] = None
+    driveLink: Optional[str] = None
 
     # Basic content metadata
     abstract: Optional[str] = Field(None, description="Abstract summary", max_length=550)
-    demo_type: Optional[str] = Field(
+    demoType: Optional[str] = Field(
         None, description="Type of demo: 'Keynote', 'Breakout', 'Workshop', 'Single Screen Demo'"
     )
-    duration_minutes: Optional[str] = None
+    durationMinutes: Optional[str] = None
     tags: List[str] = []
     metadata: Dict[str, Any] = {}
-    extracted_text: Optional[str] = None
-    page_content: Optional[Dict[str, str]] = None  # Map of page/slide numbers to content
+    extractedText: Optional[str] = None
+    pageContent: Optional[Dict[str, str]] = None  # Map of page/slide numbers to content
     used: bool = False
-    embedding_id: Optional[str] = None
-    ai_tags: Optional[List[str]] = None
+    embeddingId: Optional[str] = None
+    aiTags: Optional[List[str]] = None
 
     # Categorization
     categorization: Dict[str, Any] = Field(
         default_factory=dict, description="Categorization details"
     )
     track: Optional[str] = None
-    learning_level: Optional[str] = None  # "Beginner", "Intermediate", "Advanced", "All"
+    learningLevel: Optional[str] = None  # "Beginner", "Intermediate", "Advanced", "All"
     topics: Optional[List[str]] = None
-    target_job_roles: Optional[List[str]] = None
-    area_of_interest: Optional[List[str]] = None
+    targetJobRoles: Optional[List[str]] = None
+    areasOfInterest: Optional[List[str]] = None
 
     # Presenter information
     speakers: List[Speaker] = Field(default_factory=list, description="List of speakers/presenters")
 
     # Assets
     assets: Dict[str, Any] = Field(default_factory=dict, description="Asset details")
-    presentation_slides_url: Optional[HttpUrl] = None
-    recap_slides_url: Optional[HttpUrl] = None
-    video_recording_status: Optional[
+    presentationSlidesUrl: Optional[HttpUrl] = None
+    recapSlidesUrl: Optional[HttpUrl] = None
+    videoRecordingStatus: Optional[
         str
     ] = None  # "Available", "Processing", "Not Available", "Pending"
-    video_source_file_url: Optional[HttpUrl] = None
-    video_youtube_url: Optional[HttpUrl] = None
+    videoSourceFileUrl: Optional[HttpUrl] = None
+    videoYoutubeUrl: Optional[HttpUrl] = None
 
     # YouTube publishing info
-    youtube_url: Optional[HttpUrl] = None
-    youtube_channel: Optional[str] = None
-    youtube_visibility: Optional[str] = None
-    yt_video_title: Optional[str] = None
-    yt_description: Optional[str] = None
+    youtubeUrl: Optional[HttpUrl] = None
+    youtubeChannel: Optional[str] = None
+    youtubeVisibility: Optional[str] = None
+    ytVideoTitle: Optional[str] = None
+    ytDescription: Optional[str] = None
 
 
 class Content(ContentInDB):

@@ -11,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Uploa
 
 from app.core.logging import configure_logging
 from app.models.batch import BatchJob, BatchJobCreate, BatchJobError, BatchJobStatus, BatchJobUpdate
+from app.models.content import Content, ContentCreate, Speaker
 from app.services.batch_service import BatchService
 from app.services.content_processor import ContentProcessor
 # Using stub implementation
@@ -66,23 +67,20 @@ async def bulk_upload_content(
                 detail="File must be a CSV or Excel file",
             )
 
-        # Create a temporary file to store the uploaded content
-        temp_file_path = os.path.join(os.getcwd(), "uploads", "temp", file.filename)
-        os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
-
-        # Save the uploaded file
-        with open(temp_file_path, "wb") as f:
-            contents = await file.read()
-            f.write(contents)
-
-        # Read the file using pandas
+        # Read the file contents directly
+        contents = await file.read()
+        
+        # Read the file using pandas from memory
         try:
             if file_extension == ".csv":
-                df = pd.read_csv(temp_file_path)
+                # Use StringIO to read from memory instead of creating a file
+                from io import StringIO
+                df = pd.read_csv(StringIO(contents.decode('utf-8')))
             else:  # Excel file
-                df = pd.read_excel(temp_file_path)
+                # Use BytesIO to read from memory instead of creating a file
+                from io import BytesIO
+                df = pd.read_excel(BytesIO(contents))
         except Exception as e:
-            os.remove(temp_file_path)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Error reading file: {str(e)}",
@@ -92,7 +90,6 @@ async def bulk_upload_content(
         required_columns = ["title", "track", "sessionType"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            os.remove(temp_file_path)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Missing required columns: {', '.join(missing_columns)}",
@@ -100,7 +97,6 @@ async def bulk_upload_content(
 
         # Check if we have any rows
         if df.empty:
-            os.remove(temp_file_path)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="File contains no data rows",
@@ -119,7 +115,6 @@ async def bulk_upload_content(
 
         batch_job = batch_service.create_job(job_data)
         if not batch_job:
-            os.remove(temp_file_path)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create batch job",
@@ -129,7 +124,7 @@ async def bulk_upload_content(
         background_tasks.add_task(
             process_batch_upload,
             batch_job.id,
-            temp_file_path,
+            contents,
             file_extension,
         )
 
@@ -212,13 +207,13 @@ async def cancel_batch_job(job_id: str):
     return {"message": f"Batch job with ID {job_id} cancelled"}
 
 
-async def process_batch_upload(job_id: str, file_path: str, file_extension: str):
+async def process_batch_upload(job_id: str, contents: bytes, file_extension: str):
     """
     Process a batch upload file.
 
     Args:
         job_id: ID of the batch job.
-        file_path: Path to the uploaded file.
+        contents: File contents.
         file_extension: File extension.
     """
     try:
@@ -228,15 +223,33 @@ async def process_batch_upload(job_id: str, file_path: str, file_extension: str)
         # Read the file using pandas
         try:
             if file_extension == ".csv":
-                df = pd.read_csv(file_path)
+                # Use StringIO to read from memory instead of creating a file
+                from io import StringIO
+                df = pd.read_csv(StringIO(contents.decode('utf-8')))
             else:  # Excel file
-                df = pd.read_excel(file_path)
+                # Use BytesIO to read from memory instead of creating a file
+                from io import BytesIO
+                df = pd.read_excel(BytesIO(contents))
         except Exception as e:
-            logger.error(f"Failed to read file {file_path}: {str(e)}")
+            logger.error(f"Failed to read file: {str(e)}")
             batch_service.mark_job_failed(job_id, f"Failed to read file: {str(e)}")
-            if os.path.exists(file_path):
-                os.remove(file_path)
             return
+
+        # Validate required columns
+        required_columns = ["title", "track", "sessionType"]
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Missing required columns: {', '.join(missing_columns)}",
+            )
+
+        # Check if we have any rows
+        if df.empty:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File contains no data rows",
+            )
 
         # Keep track of success/failure
         total_rows = len(df)
@@ -325,19 +338,68 @@ async def process_batch_upload(job_id: str, file_path: str, file_extension: str)
                     "learningLevel": row_dict.get("learningLevel"),
                     "topic": row_dict.get("topic"),
                     "jobRole": row_dict.get("jobRole"),
-                    "areaOfInterest": row_dict.get("areaOfInterest"),
+                    "areasOfInterest": row_dict.get("areasOfInterest"),
                     "industry": row_dict.get("industry"),
                     "presenters": presenters,
                     "used": False,
+                    # Add additional URL fields from CSV
+                    "presentationSlidesUrl": row_dict.get("presentationSlidesUrl"),
+                    "recapSlidesUrl": row_dict.get("recapSlidesUrl"),
+                    "videoRecordingStatus": row_dict.get("videoRecordingStatus"),
+                    "videoSourceFileUrl": row_dict.get("videoSourceFileUrl"),
+                    "videoYoutubeUrl": row_dict.get("videoYoutubeUrl"),
+                    "youtubeChannel": row_dict.get("youtubeChannel"),
+                    "youtubeVisibility": row_dict.get("youtubeVisibility"),
+                    "ytVideoTitle": row_dict.get("ytVideoTitle"),
+                    "ytDescription": row_dict.get("ytDescription"),
+                    # Include all root-level metadata in the metadata field
+                    "metadata": {
+                        "abstract": row_dict.get("abstract"),
+                        "status": row_dict.get("status"),
+                        "track": row_dict.get("track"),
+                        "sessionType": row_dict.get("sessionType"),
+                        "demoType": row_dict.get("demoType"),
+                        "sessionDate": row_dict.get("sessionDate"),
+                        "durationMinutes": row_dict.get("durationMinutes"),
+                        "learningLevel": row_dict.get("learningLevel"),
+                        "topic": row_dict.get("topic"),
+                        "topics": row_dict.get("topics"),
+                        "jobRole": row_dict.get("jobRole"),
+                        "targetJobRoles": row_dict.get("targetJobRoles"),
+                        "areasOfInterest": row_dict.get("areasOfInterest"),
+                        "industry": row_dict.get("industry"),
+                        "presentationSlidesUrl": row_dict.get("presentationSlidesUrl"),
+                        "recapSlidesUrl": row_dict.get("recapSlidesUrl"),
+                        "videoRecordingStatus": row_dict.get("videoRecordingStatus"),
+                        "videoSourceFileUrl": row_dict.get("videoSourceFileUrl"),
+                        "videoYoutubeUrl": row_dict.get("videoYoutubeUrl"),
+                        "youtubeChannel": row_dict.get("youtubeChannel"),
+                        "youtubeVisibility": row_dict.get("youtubeVisibility"),
+                        "ytVideoTitle": row_dict.get("ytVideoTitle"),
+                        "ytDescription": row_dict.get("ytDescription")
+                    }
                 }
 
                 # Process file URL if present
                 file_url = row_dict.get("fileUrl")
+                drive_file_id = row_dict.get("driveFileId")
 
                 # Process the content item
                 success, message, created_content = await content_processor.process_content_item(
-                    content_data, file_url
+                    content_data, file_url, drive_file_id
                 )
+
+                # Check if we have any special handling for linked files
+                if success and created_content and "fileUrls" in created_content:
+                    for file_url_entry in created_content["fileUrls"]:
+                        if file_url_entry.get("tooLargeToExport") or file_url_entry.get("tooLargeToDownload"):
+                            # This file was too large to process normally, but we have a link
+                            logger.info(f"File was too large to download, but saved as a link: {file_url_entry.get('webViewLink')}")
+                            
+                            # If it's a presentation, make sure the presentation_slides_url field is set
+                            if "presentation" in file_url_entry.get("type", "") or file_url_entry.get("contentType") == "presentation":
+                                if not content_data.get("presentationSlidesUrl"):
+                                    content_data["presentationSlidesUrl"] = file_url_entry.get("webViewLink")
 
                 # Update progress
                 processed_rows += 1
@@ -379,10 +441,6 @@ async def process_batch_upload(job_id: str, file_path: str, file_extension: str)
         # Mark job as completed
         batch_service.mark_job_completed(job_id)
 
-        # Clean up
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
         logger.info(f"Batch upload completed: {successful_rows} successful, {failed_rows} failed")
 
     except Exception as e:
@@ -390,7 +448,3 @@ async def process_batch_upload(job_id: str, file_path: str, file_extension: str)
 
         # Mark job as failed
         batch_service.mark_job_failed(job_id, str(e))
-
-        # Clean up
-        if os.path.exists(file_path):
-            os.remove(file_path)

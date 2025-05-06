@@ -32,14 +32,21 @@ class DriveService:
             
             if service_account_path and os.path.exists(service_account_path):
                 # Use service account if available
-                self.creds = service_account.Credentials.from_service_account_file(
-                    service_account_path,
-                    scopes=settings.GOOGLE_DRIVE_SCOPES
-                )
-                self.service = build("drive", "v3", credentials=self.creds)
-                logger.info(f"Drive service initialized with service account from {service_account_path}")
+                try:
+                    logger.info(f"Initializing Drive service with service account from {service_account_path}")
+                    self.creds = service_account.Credentials.from_service_account_file(
+                        service_account_path,
+                        scopes=["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file", 
+                                "https://www.googleapis.com/auth/drive.readonly"]
+                    )
+                    self.service = build("drive", "v3", credentials=self.creds)
+                    logger.info(f"Successfully initialized Drive service with service account: {self.creds.service_account_email}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize with service account: {str(e)}")
+                    raise RuntimeError(f"Service account initialization failed: {str(e)}")
             elif credentials:
                 # Use OAuth credentials if provided
+                logger.info("Initializing Drive service with OAuth credentials")
                 self.creds = Credentials(
                     token=credentials.get("token"),
                     refresh_token=credentials.get("refresh_token"),
@@ -49,14 +56,17 @@ class DriveService:
                     scopes=settings.GOOGLE_DRIVE_SCOPES,
                 )
                 self.service = build("drive", "v3", credentials=self.creds)
-                logger.info("Drive service initialized with OAuth credentials")
+                logger.info("Successfully initialized Drive service with OAuth credentials")
             else:
-                # Try to use default credentials
-                self.service = build("drive", "v3", cache_discovery=False)
-                logger.info("Drive service initialized with default credentials")
+                # Last resort: Try to use application default credentials
+                logger.info("No explicit credentials provided, attempting to use application default credentials")
+                from google.auth import default
+                creds, project = default()
+                self.service = build("drive", "v3", credentials=creds)
+                logger.info(f"Drive service initialized with application default credentials, project: {project}")
         except Exception as e:
             logger.error(f"Failed to initialize Drive service: {str(e)}")
-            raise
+            raise RuntimeError(f"Drive service initialization failed: {str(e)}")
 
     def list_files(self, page_size: int = 100) -> List[Dict[str, Any]]:
         """List files from Google Drive.

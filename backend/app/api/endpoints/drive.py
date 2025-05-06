@@ -72,24 +72,22 @@ async def list_drive_files(
             logger.info("Drive API is disabled, returning mock data")
             return {
                 "files": [
-                    {
-                        "id": "mock_file_1",
-                        "name": "Sample Document.docx",
-                        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "web_view_link": "https://example.com/sample",
-                        "thumbnail_link": None,
-                        "modified_time": "2025-05-01T10:00:00Z",
-                        "size": 12345,
-                    },
-                    {
-                        "id": "mock_file_2",
-                        "name": "Example Presentation.pptx",
-                        "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        "web_view_link": "https://example.com/example",
-                        "thumbnail_link": None,
-                        "modified_time": "2025-05-01T11:00:00Z",
-                        "size": 54321,
-                    },
+                    DriveFile(
+                        id="mock_file_1",
+                        name="Sample Document.docx",
+                        mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        webViewLink="https://example.com/sample",
+                        thumbnailLink=None,
+                        size=12345,
+                    ).model_dump(),
+                    DriveFile(
+                        id="mock_file_2",
+                        name="Example Presentation.pptx",
+                        mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        webViewLink="https://example.com/example",
+                        thumbnailLink=None,
+                        size=54321,
+                    ).model_dump(),
                 ],
                 "next_page_token": None,
             }
@@ -99,15 +97,14 @@ async def list_drive_files(
             logger.info("Using mock credentials, returning sample data")
             return {
                 "files": [
-                    {
-                        "id": "sample_file_1",
-                        "name": "Example Document.docx",
-                        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "web_view_link": "https://example.com/doc",
-                        "thumbnail_link": None,
-                        "modified_time": "2025-05-01T09:00:00Z",
-                        "size": 23456,
-                    }
+                    DriveFile(
+                        id="sample_file_1",
+                        name="Example Document.docx",
+                        mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        webViewLink="https://example.com/doc",
+                        thumbnailLink=None,
+                        size=23456,
+                    ).model_dump(),
                 ],
                 "next_page_token": None,
             }
@@ -153,10 +150,10 @@ async def list_drive_files(
                 {
                     "id": file.get("id", ""),
                     "name": file.get("name", ""),
-                    "mime_type": file.get("mimeType", ""),
-                    "web_view_link": file.get("webViewLink"),
-                    "thumbnail_link": file.get("thumbnailLink"),
-                    "modified_time": file.get("modifiedTime"),
+                    "mimeType": file.get("mimeType", ""),
+                    "webViewLink": file.get("webViewLink"),
+                    "thumbnailLink": file.get("thumbnailLink"),
+                    "modifiedTime": file.get("modifiedTime"),
                     "size": file.get("size"),
                 }
             )

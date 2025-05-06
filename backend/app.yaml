@@ -31,7 +31,7 @@ env_variables:
   # 3. Add the service account to your shared drive with appropriate permissions
   # 4. Set GOOGLE_SERVICE_ACCOUNT_PATH to the path of the key file (relative to app directory)
   # 5. Make sure service account has domain-wide delegation if needed
-  GOOGLE_SERVICE_ACCOUNT_PATH: ""  # Set to path of service account key file
+  GOOGLE_SERVICE_ACCOUNT_PATH: "./credentials.json"  # Set to path of service account key file
   GOOGLE_APPLICATION_CREDENTIALS: ""  # Keep empty to use default credentials
   USE_APP_ENGINE_CREDENTIALS: "true"
 

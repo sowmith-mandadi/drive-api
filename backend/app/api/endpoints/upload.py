@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from app.core.logging import configure_logging
 from app.db.firestore_client import FirestoreClient
+from app.models.content import Content, ContentCreate, Speaker
 from app.services.task_service import TaskService
 
 # Setup logging
@@ -54,7 +55,7 @@ class ContentUpload(BaseModel):
     title: str = Field(..., description="Title of the content", max_length=75)
     description: str = Field("", description="Description of the content")
     abstract: Optional[str] = Field(None, description="Abstract summary", max_length=550)
-    session_id: Optional[str] = Field(None, description="Unique session identifier")
+    sessionId: Optional[str] = Field(None, description="Unique session identifier")
     status: Optional[str] = Field(
         None, description="Status: 'Scheduled', 'Published', 'Completed', 'Canceled'"
     )
@@ -75,8 +76,7 @@ class ContentUpload(BaseModel):
     topics: Optional[List[str]] = Field(None, description="Array of topic keywords")
     jobRole: Optional[str] = Field(None, description="Job role")
     targetJobRoles: Optional[List[str]] = Field(None, description="Array of target job roles")
-    areaOfInterest: Optional[str] = Field(None, description="Area of interest")
-    areasOfInterest: Optional[List[str]] = Field(None, description="Array of broader interests")
+    areasOfInterest: Optional[List[str]] = Field(None, description="Array of areas of interest")
     industry: Optional[str] = Field(None, description="Industry")
 
     # Presenters
@@ -107,7 +107,7 @@ async def upload_content(
     title: str = Form(...),
     description: str = Form(""),
     abstract: Optional[str] = Form(None),
-    session_id: Optional[str] = Form(None),
+    sessionId: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
     track: str = Form(...),
     tags: str = Form("[]"),  # JSON string of tags
@@ -120,7 +120,6 @@ async def upload_content(
     topics: Optional[str] = Form(None),  # JSON string of topics
     jobRole: Optional[str] = Form(None),
     targetJobRoles: Optional[str] = Form(None),  # JSON string of job roles
-    areaOfInterest: Optional[str] = Form(None),
     areasOfInterest: Optional[str] = Form(None),  # JSON string of areas
     industry: Optional[str] = Form(None),
     presenters: str = Form("[]"),  # JSON string of presenters
@@ -171,7 +170,7 @@ async def upload_content(
             "title": title,
             "description": description,
             "abstract": abstract,
-            "session_id": session_id,
+            "sessionId": sessionId,
             "status": status,
             "track": track,
             "tags": tags_list,
@@ -184,7 +183,6 @@ async def upload_content(
             "topics": topics_list,
             "jobRole": jobRole,
             "targetJobRoles": target_job_roles_list,
-            "areaOfInterest": areaOfInterest,
             "areasOfInterest": areas_of_interest_list,
             "industry": industry,
             "presenters": presenters_list,
@@ -197,6 +195,27 @@ async def upload_content(
             "presentationSlidesUrl": presentationSlidesUrl,
             "recapSlidesUrl": recapSlidesUrl,
             "videoRecordingStatus": videoRecordingStatus,
+            # Include a metadata field with all root level metadata
+            "metadata": {
+                "abstract": abstract,
+                "sessionId": sessionId,
+                "status": status,
+                "track": track,
+                "sessionType": sessionType,
+                "demoType": demoType,
+                "sessionDate": sessionDate,
+                "durationMinutes": durationMinutes,
+                "learningLevel": learningLevel,
+                "topic": topic,
+                "topics": topics_list,
+                "jobRole": jobRole,
+                "targetJobRoles": target_job_roles_list,
+                "areasOfInterest": areas_of_interest_list,
+                "industry": industry,
+                "presentationSlidesUrl": presentationSlidesUrl,
+                "recapSlidesUrl": recapSlidesUrl,
+                "videoRecordingStatus": videoRecordingStatus
+            }
         }
 
         # Store in Firestore
@@ -213,10 +232,10 @@ async def upload_content(
         if file_path:
             # Add to background tasks or Cloud Tasks
             task_data = {
-                "content_id": content_id,
-                "file_path": file_path,
-                "file_name": file_name,
-                "content_type": file.content_type if hasattr(file, "content_type") else None,
+                "contentId": content_id,
+                "filePath": file_path,
+                "fileName": file_name,
+                "contentType": file.content_type if hasattr(file, "content_type") else None,
             }
 
             # Either use background tasks for local development
