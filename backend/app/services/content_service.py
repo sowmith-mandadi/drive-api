@@ -99,13 +99,13 @@ class ContentService:
                 id=content_id,
                 title=content_data.title,
                 description=content_data.description,
-                content_type=content_data.content_type,
+                contentType=content_data.contentType,
                 source=content_data.source,
                 tags=content_data.tags or [],
                 metadata=content_data.metadata or {},
-                created_at=now,
-                updated_at=now,
-                drive_id=content_data.file_id if content_data.source == "drive" else None,
+                createdAt=now,
+                updatedAt=now,
+                driveId=content_data.fileId if content_data.source == "drive" else None,
             )
 
         logger.info(f"Created content item with ID {content_id}")
@@ -148,12 +148,34 @@ class ContentService:
             if not content:
                 return None
 
+            # Map any camelCase fields to snake_case for Firestore storage
+            mapped_fields = {}
+            for key, value in fields.items():
+                # Convert camelCase to snake_case if needed
+                if key in [
+                    "contentType", "sessionId", "createdAt", "updatedAt", 
+                    "filePath", "driveId", "driveLink", "demoType", 
+                    "durationMinutes", "extractedText", "pageContent", 
+                    "embeddingId", "aiTags", "learningLevel", "targetJobRoles", 
+                    "areasOfInterest", "presentationSlidesUrl", "recapSlidesUrl", 
+                    "sessionRecordingStatus", "videoSourceFileUrl", "videoYoutubeUrl", 
+                    "youtubeUrl", "youtubeChannel", "youtubeVisibility", 
+                    "ytVideoTitle", "ytDescription"
+                ]:
+                    # Convert camelCase to snake_case
+                    snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key])
+                    snake_key = snake_key.lstrip('_')
+                    mapped_fields[snake_key] = value
+                else:
+                    # Keep original key if not in the mapping list
+                    mapped_fields[key] = value
+
             # Add updated timestamp
-            fields["updated_at"] = None  # Will be handled by the repository
+            mapped_fields["updated_at"] = datetime.now().isoformat()
 
             # Update in repository
             success = self.repository.firestore.update_document(
-                self.repository.collection, content_id, fields
+                self.repository.collection, content_id, mapped_fields
             )
 
             if not success:
@@ -185,7 +207,7 @@ class ContentService:
             return False
 
         # Clean up file if exists
-        file_path = content.file_path
+        file_path = content.filePath  # Use camelCase field name
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
@@ -288,8 +310,8 @@ class ContentService:
         # Get content with pagination
         content_items = self.repository.get_all(limit=page_size, offset=offset)
 
-        # Sort by created_at (most recent first)
-        content_items.sort(key=lambda x: x.created_at, reverse=True)
+        # Sort by createdAt (most recent first)
+        content_items.sort(key=lambda x: x.createdAt, reverse=True)
 
         # Get total count (for pagination)
         total_count = len(self.repository.get_all())  # This is inefficient but works for now

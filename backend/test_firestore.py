@@ -1,180 +1,61 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-Test script to verify that the service account can access Firestore.
-
-Usage:
-  python test_firestore.py --service-account-path credentials.json
-
-This script will attempt to connect to Firestore and perform basic operations
-to verify that the service account has the proper permissions.
+Test script to check Firestore access and add test data.
 """
-
-import argparse
-import json
 import os
 import sys
+import json
+import datetime
+import uuid
+from google.cloud import firestore
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Print environment info
+print(f"GOOGLE_APPLICATION_CREDENTIALS: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+print(f"FIRESTORE_COLLECTION_CONTENT: {os.environ.get('FIRESTORE_COLLECTION_CONTENT', 'content')}")
 
-
-def test_firestore_access():
-    """
-    Test whether the service account can access Firestore.
+try:
+    # Initialize Firestore
+    db = firestore.Client()
+    print("Successfully connected to Firestore")
     
-    Returns:
-        True if the test is successful, False otherwise.
-    """
-    print("=== Testing Service Account Access to Firestore ===\n")
+    # List collections
+    collections = db.collections()
+    print("Collections:")
+    for collection in collections:
+        print(f"- {collection.id}")
+        # Count documents
+        docs = list(collection.limit(5).stream())
+        print(f"  - Documents: {len(docs)}")
+        if docs:
+            # Print a sample document
+            sample = docs[0].to_dict()
+            sample_id = docs[0].id
+            print(f"  - Sample document ID: {sample_id}")
+            print(f"  - Sample fields: {list(sample.keys())[:5]}")
     
-    # 1. Check if service account credentials file exists
-    service_account_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-    if not service_account_path:
-        print("❌ Error: GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
-        print("   Set this environment variable to the path of your service account key file.")
-        return False
-        
-    if not os.path.exists(service_account_path):
-        print(f"❌ Error: Service account key file not found at '{service_account_path}'")
-        print("   Please check that the file exists and the path is correct.")
-        return False
-        
-    print(f"✅ Service account key file found at '{service_account_path}'")
+    # Create a test document in both 'content' and 'Content' collections
+    collections_to_try = ['content', 'Content']
+    test_id = f"test-{uuid.uuid4()}"
+    test_data = {
+        "title": "Test Document",
+        "description": "Created for testing Firestore access",
+        "content_type": "test",
+        "created_at": datetime.datetime.now().isoformat(),
+        "updated_at": datetime.datetime.now().isoformat()
+    }
     
-    # 2. Check the credentials file
-    try:
-        with open(service_account_path, 'r') as f:
-            creds_data = json.load(f)
-            if 'type' not in creds_data or creds_data['type'] != 'service_account':
-                print("⚠️ Warning: The credentials file doesn't appear to be a valid service account key.")
-                print("   Make sure you're using a JSON key file downloaded from the Google Cloud Console.")
-                
-            print(f"✅ Service account info:")
-            print(f"   Project ID: {creds_data.get('project_id', 'unknown')}")
-            print(f"   Client email: {creds_data.get('client_email', 'unknown')}")
-            
-    except json.JSONDecodeError:
-        print("⚠️ Warning: Could not parse the credentials file as JSON.")
-        print("   Make sure the file contains valid JSON data.")
-        return False
-    except Exception as e:
-        print(f"⚠️ Warning: Error reading credentials file: {str(e)}")
-        return False
+    print("\nAttempting to create test documents:")
+    for collection in collections_to_try:
+        try:
+            db.collection(collection).document(test_id).set(test_data)
+            print(f"Successfully created document in '{collection}' with ID: {test_id}")
+        except Exception as e:
+            print(f"Error creating document in '{collection}': {str(e)}")
     
-    # 3. Initialize Firestore client
-    try:
-        from google.cloud import firestore
-        
-        print("✅ Successfully imported Firestore client library")
-        
-        # Create a client
-        db = firestore.Client()
-        print(f"✅ Successfully created Firestore client")
-        
-        # Print client details
-        print(f"   Project ID: {db.project}")
-        
-    except Exception as e:
-        print(f"❌ Error initializing Firestore client: {str(e)}")
-        return False
+    print("\nTest completed successfully")
     
-    # 4. Test basic Firestore operations
-    try:
-        # Try listing collections
-        collections = list(db.collections())
-        print(f"✅ Successfully listed {len(collections)} collections")
-        
-        for i, collection in enumerate(collections[:5]):  # Show up to 5 collections
-            print(f"   - Collection {i+1}: {collection.id}")
-        
-        # Try a simple query
-        docs = list(db.collection("_verification").limit(1).get())
-        print(f"✅ Successfully queried test collection")
-        
-        # Try a test write
-        test_ref = db.collection("_test_verification").document("service-account-test")
-        test_ref.set({
-            "timestamp": firestore.SERVER_TIMESTAMP,
-            "test": "Service account test",
-        })
-        print(f"✅ Successfully wrote test document")
-        
-        # Read it back
-        test_doc = test_ref.get()
-        print(f"✅ Successfully read test document")
-        
-        # Delete it
-        test_ref.delete()
-        print(f"✅ Successfully deleted test document")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error testing Firestore operations: {str(e)}")
-        print("   This could mean the service account doesn't have proper permissions.")
-        print("   Make sure the service account has the Cloud Datastore User or Owner role.")
-        return False
-
-
-def test_firestore_default_credentials():
-    """Test Firestore access with application default credentials."""
-    print("\n=== Testing Application Default Credentials for Firestore ===\n")
-    
-    try:
-        # Remove specific credential path to test defaults
-        original_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        if original_creds:
-            del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-        
-        from google.cloud import firestore
-        
-        # Create a client with default credentials
-        db = firestore.Client()
-        print("✅ Successfully created Firestore client with default credentials")
-        
-        # Print client details
-        print(f"   Project ID: {db.project}")
-        
-        # Restore original credentials
-        if original_creds:
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = original_creds
-            
-        return True
-    except Exception as e:
-        print(f"❌ Error with default credentials: {str(e)}")
-        
-        # Restore original credentials
-        if original_creds:
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = original_creds
-            
-        return False
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Test service account access to Firestore")
-    parser.add_argument(
-        "--service-account-path", 
-        help="Path to the service account key file"
-    )
-    parser.add_argument(
-        "--test-default",
-        action="store_true",
-        help="Also test with application default credentials"
-    )
-    
-    args = parser.parse_args()
-    
-    # Set environment variable if provided
-    if args.service_account_path:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = args.service_account_path
-        
-    # Run the test with service account credentials
-    success = test_firestore_access()
-    
-    # Optionally test with default credentials
-    default_success = True
-    if args.test_default:
-        default_success = test_firestore_default_credentials()
-    
-    # Exit with appropriate code
-    sys.exit(0 if success and default_success else 1) 
+except Exception as e:
+    print(f"Error: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)

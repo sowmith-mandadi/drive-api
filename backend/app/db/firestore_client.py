@@ -130,6 +130,7 @@ class FirestoreClient:
             List of document data.
         """
         try:
+            print(f"DEBUG (Firestore): Listing from collection '{collection}' with limit={limit}, offset={offset}, order_by='{order_by}'")
             # Start with the collection reference
             query = self.db.collection(collection)
 
@@ -137,21 +138,37 @@ class FirestoreClient:
             if filters:
                 for field, op, value in filters:
                     query = query.where(field, op, value)
+                    print(f"DEBUG (Firestore): Added filter {field} {op} {value}")
 
             # Apply order if provided
             if order_by:
                 query = query.order_by(order_by)
+                print(f"DEBUG (Firestore): Ordering by '{order_by}'")
 
             # Apply pagination
             if offset > 0:
                 # Firestore doesn't have a direct offset, so we need to use a limit+start approach
                 # This is not as efficient for large offsets
                 query = query.limit(offset + limit).offset(offset)
+                print(f"DEBUG (Firestore): Using offset={offset}")
             else:
                 query = query.limit(limit)
 
             # Execute query
+            print(f"DEBUG (Firestore): Executing query...")
             docs = query.stream()
+
+            # Check if collection exists with a direct approach
+            try:
+                # Check if this collection even exists by doing a count
+                count_query = self.db.collection(collection).limit(1)
+                count_docs = list(count_query.stream())
+                if not count_docs:
+                    print(f"DEBUG (Firestore): Collection '{collection}' appears to be empty or doesn't exist")
+                else:
+                    print(f"DEBUG (Firestore): Collection '{collection}' exists and contains documents")
+            except Exception as count_error:
+                print(f"DEBUG (Firestore): Error checking collection existence: {str(count_error)}")
 
             # Convert to list of dictionaries with document ID
             results = []
@@ -160,8 +177,10 @@ class FirestoreClient:
                 doc_data["id"] = doc.id  # Add document ID to the data
                 results.append(doc_data)
 
+            print(f"DEBUG (Firestore): Query returned {len(results)} documents")
             return results
         except Exception as e:
+            print(f"DEBUG (Firestore): Error listing documents from {collection}: {str(e)}")
             logger.error(f"Error listing documents from {collection}: {str(e)}")
             return []
 

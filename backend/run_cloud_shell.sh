@@ -14,18 +14,30 @@ PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
 echo -e "${BLUE}Detected Python version: ${PYTHON_VERSION}${NC}"
 
 # Process command line arguments
-RECREATE_VENV=true
-SKIP_DEPS=false
+RECREATE_VENV=false  # Default to false to keep venv for speed
+SKIP_DEPS=true      # Default to true to skip deps for speed
+QUICK_START=true    # Default to true to start quickly
+ADD_DEBUG=true      # Default to true to add debug logs
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --keep-venv)
-      RECREATE_VENV=false
+    --recreate-venv)
+      RECREATE_VENV=true
       shift
       ;;
-    --skip-deps)
-      SKIP_DEPS=true
+    --install-deps)
+      SKIP_DEPS=false
+      shift
+      ;;
+    --full-setup)
+      RECREATE_VENV=true
+      SKIP_DEPS=false
+      QUICK_START=false
+      shift
+      ;;
+    --no-debug)
+      ADD_DEBUG=false
       shift
       ;;
     *)
@@ -111,6 +123,10 @@ if [ -f "credentials.json" ]; then
     export USE_GCS="true"
     export DEBUG="true"
     
+    # TESTING DIFFERENT COLLECTION NAMES
+    export FIRESTORE_COLLECTION_CONTENT="Content"  # Try capitalized version
+    echo -e "${YELLOW}TESTING ENVIRONMENT VARIABLE: FIRESTORE_COLLECTION_CONTENT=${FIRESTORE_COLLECTION_CONTENT}${NC}"
+    
     # Try to extract the service account email
     if command -v python &> /dev/null; then
         SERVICE_EMAIL=$(python -c "import json; f=open('$GOOGLE_APPLICATION_CREDENTIALS'); data=json.load(f); print(f'Service account email: {data.get(\"client_email\", \"unknown\")}')")
@@ -121,6 +137,175 @@ if [ -f "credentials.json" ]; then
 else
     echo -e "${YELLOW}Warning: credentials.json file not found. Some features may not work.${NC}"
     echo -e "${YELLOW}The application will use default or stub implementations where possible.${NC}"
+fi
+
+# Add debugging for empty API response issue
+if [ "$ADD_DEBUG" = true ]; then
+    echo -e "${BLUE}Adding debug code to fix empty API response issue...${NC}"
+
+    # Make a backup of the content repository file
+    if [ -f "app/repositories/content_repository.py" ]; then
+        cp app/repositories/content_repository.py app/repositories/content_repository.py.bak
+    fi
+    
+    # Add a test endpoint to app/api/endpoints/content.py to check Firestore access
+    if [ -f "app/api/endpoints/content.py" ]; then
+        cp app/api/endpoints/content.py app/api/endpoints/content.py.bak
+        
+        # Add a test endpoint to try different collection names
+        cat > /tmp/test_endpoint.py << 'EOF'
+
+@router.get("/test-firestore", response_model=Dict[str, Any])
+async def test_firestore():
+    """Test Firestore connection and collection access."""
+    from app.db.firestore_client import FirestoreClient
+    from app.core.config import settings
+    import datetime
+    import uuid
+    import traceback
+    
+    result = {
+        "success": False,
+        "collections": [],
+        "test_write": False,
+        "errors": []
+    }
+    
+    try:
+        # Initialize client
+        firestore = FirestoreClient()
+        result["client_initialized"] = True
+        
+        # Get settings
+        result["project_id"] = settings.FIRESTORE_PROJECT_ID
+        result["collection"] = settings.FIRESTORE_COLLECTION_CONTENT
+        
+        # List collections
+        collections = firestore.db.collections()
+        for col in collections:
+            result["collections"].append(col.id)
+            
+        # Try to read from content collection 
+        collection = settings.FIRESTORE_COLLECTION_CONTENT
+        docs = list(firestore.db.collection(collection).limit(5).stream())
+        result["documents_found"] = len(docs)
+        
+        # If no documents, try to create a test one
+        if len(docs) == 0:
+            # Try a different capitalization
+            alt_collection = "Content" if collection == "content" else "content"
+            alt_docs = list(firestore.db.collection(alt_collection).limit(5).stream())
+            result["alt_documents_found"] = len(alt_docs)
+            result["alt_collection"] = alt_collection
+            
+            # Create a test document
+            test_id = f"test-{uuid.uuid4()}"
+            test_data = {
+                "title": "Test Document",
+                "description": "Created for testing Firestore access",
+                "content_type": "test",
+                "created_at": datetime.datetime.now().isoformat(),
+                "updated_at": datetime.datetime.now().isoformat()
+            }
+            
+            # Try to write to both collections
+            try:
+                firestore.db.collection(collection).document(test_id).set(test_data)
+                result["test_write"] = True
+                result["test_write_collection"] = collection
+                result["test_document_id"] = test_id
+            except Exception as write_err:
+                result["errors"].append(f"Write error: {str(write_err)}")
+                # Try alternate collection
+                try:
+                    firestore.db.collection(alt_collection).document(test_id).set(test_data)
+                    result["test_write"] = True
+                    result["test_write_collection"] = alt_collection
+                    result["test_document_id"] = test_id
+                except Exception as alt_write_err:
+                    result["errors"].append(f"Alt write error: {str(alt_write_err)}")
+        
+        result["success"] = True
+    except Exception as e:
+        result["errors"].append(f"Error: {str(e)}")
+        result["traceback"] = traceback.format_exc()
+        
+    return result
+EOF
+
+        # Append the test endpoint to the content.py file
+        cat /tmp/test_endpoint.py >> app/api/endpoints/content.py
+        echo -e "${GREEN}Added test Firestore endpoint to content.py${NC}"
+    fi
+    
+    # Create a simple test script to add test data to Firestore
+    cat > test_firestore.py << 'EOF'
+#!/usr/bin/env python
+"""
+Test script to check Firestore access and add test data.
+"""
+import os
+import sys
+import json
+import datetime
+import uuid
+from google.cloud import firestore
+
+# Print environment info
+print(f"GOOGLE_APPLICATION_CREDENTIALS: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+print(f"FIRESTORE_COLLECTION_CONTENT: {os.environ.get('FIRESTORE_COLLECTION_CONTENT', 'content')}")
+
+try:
+    # Initialize Firestore
+    db = firestore.Client()
+    print("Successfully connected to Firestore")
+    
+    # List collections
+    collections = db.collections()
+    print("Collections:")
+    for collection in collections:
+        print(f"- {collection.id}")
+        # Count documents
+        docs = list(collection.limit(5).stream())
+        print(f"  - Documents: {len(docs)}")
+        if docs:
+            # Print a sample document
+            sample = docs[0].to_dict()
+            sample_id = docs[0].id
+            print(f"  - Sample document ID: {sample_id}")
+            print(f"  - Sample fields: {list(sample.keys())[:5]}")
+    
+    # Create a test document in both 'content' and 'Content' collections
+    collections_to_try = ['content', 'Content']
+    test_id = f"test-{uuid.uuid4()}"
+    test_data = {
+        "title": "Test Document",
+        "description": "Created for testing Firestore access",
+        "content_type": "test",
+        "created_at": datetime.datetime.now().isoformat(),
+        "updated_at": datetime.datetime.now().isoformat()
+    }
+    
+    print("\nAttempting to create test documents:")
+    for collection in collections_to_try:
+        try:
+            db.collection(collection).document(test_id).set(test_data)
+            print(f"Successfully created document in '{collection}' with ID: {test_id}")
+        except Exception as e:
+            print(f"Error creating document in '{collection}': {str(e)}")
+    
+    print("\nTest completed successfully")
+    
+except Exception as e:
+    print(f"Error: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+EOF
+
+    chmod +x test_firestore.py
+    echo -e "${GREEN}Created test_firestore.py script${NC}"
+    echo -e "${YELLOW}You can run it with: python test_firestore.py${NC}"
 fi
 
 # Check if dependencies should be skipped
@@ -368,15 +553,24 @@ mkdir -p uploads/temp uploads/bucket || handle_error "Failed to create upload di
 mkdir -p /tmp/processing /tmp/uploads || handle_error "Failed to create temp directories"
 
 # Final setup message
-echo -e "${GREEN}Setup complete!${NC}"
-echo -e "${BLUE}Run options:${NC}"
-echo -e "  ${GREEN}--keep-venv${NC} : Keep existing virtual environment"
-echo -e "  ${GREEN}--skip-deps${NC} : Skip dependency installation"
+echo -e "${GREEN}Setup complete with quick-start options!${NC}"
+echo -e "${YELLOW}The script now defaults to keep the virtual environment and skip dependency installation for speed.${NC}"
+echo -e "${BLUE}Run options for future runs:${NC}"
+echo -e "  ${GREEN}--recreate-venv${NC} : Create a new virtual environment"
+echo -e "  ${GREEN}--install-deps${NC} : Install all dependencies"
+echo -e "  ${GREEN}--full-setup${NC} : Perform full setup (recreate venv + install deps)"
+echo -e "  ${GREEN}--no-debug${NC} : Disable debug logging for the API"
 echo -e "${BLUE}To run the application:${NC}"
 echo -e "  ${GREEN}python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload${NC}"
-echo -e "${BLUE}Or start it now by pressing Enter...${NC}"
-read -p "Press Enter to start the server or Ctrl+C to exit..."
 
-# Run the application
-echo -e "${BLUE}Starting uvicorn server...${NC}"
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+if [ "$QUICK_START" = true ]; then
+    echo -e "${BLUE}Starting the server automatically in 3 seconds...${NC}"
+    sleep 3
+    echo -e "${BLUE}Starting uvicorn server...${NC}"
+    python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+else
+    echo -e "${BLUE}Press Enter to start the server or Ctrl+C to exit...${NC}"
+    read -p ""
+    echo -e "${BLUE}Starting uvicorn server...${NC}"
+    python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+fi
