@@ -322,6 +322,15 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                 else:
                     areas_of_interest = []
 
+                # Process topics
+                topics = row_dict.get("topics", "")
+                if isinstance(topics, str) and "," in topics:
+                    topics = [topic.strip() for topic in topics.split(",")]
+                elif isinstance(topics, str) and topics:
+                    topics = [topics]  # Single topic as array
+                else:
+                    topics = []
+
                 # Handle tags if present
                 tags = row_dict.get("tags", [])
                 if isinstance(tags, str):
@@ -345,15 +354,13 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     name_key = f"presenterFullName{i}"
                     job_title_key = f"presenterJobTitle{i}"
                     company_key = f"presenterCompany{i}"
-                    industry_key = f"presenterIndustry{i}"
                     
                     # Only add presenter if name exists
                     if row_dict.get(name_key):
                         presenter = {
                             "fullName": row_dict.get(name_key),
                             "jobTitle": row_dict.get(job_title_key),
-                            "company": row_dict.get(company_key),
-                            "industry": row_dict.get(industry_key)
+                            "company": row_dict.get(company_key)
                         }
                         presenters.append(presenter)
 
@@ -456,7 +463,7 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     fileUrls.append({
                         "contentType": "video",
                         "presentation_type": "youtube_video",
-                        "name": row_dict.get("ytVideoTitle") or "YouTube Video",
+                        "name": "YouTube Video",
                         "source": "youtube",
                         "drive_url": youtube_url,
                         "driveId": youtube_id,
@@ -472,6 +479,7 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     "status": row_dict.get("status", ""),
                     "track": row_dict.get("track", ""),
                     "tags": tags,
+                    "topics": topics,
                     "sessionType": row_dict.get("sessionType", ""),
                     "demoType": row_dict.get("demoType", ""),
                     "sessionDate": row_dict.get("sessionDate"),
@@ -490,10 +498,8 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     # Keep all original URL fields for backward compatibility
                     "presentationSlidesUrl": row_dict.get("presentationSlidesUrl"),
                     "recapSlidesUrl": row_dict.get("recapSlidesUrl"),
-                    "videoRecordingStatus": row_dict.get("videoRecordingStatus"),
+                    "sessionRecordingStatus": row_dict.get("sessionRecordingStatus") or row_dict.get("videoRecordingStatus"),
                     "videoYoutubeUrl": row_dict.get("videoYoutubeUrl"),
-                    "ytVideoTitle": row_dict.get("ytVideoTitle"),
-                    "ytDescription": row_dict.get("ytDescription"),
                     # Set fileUrls directly
                     "fileUrls": fileUrls,
                     # Include metadata
@@ -502,6 +508,7 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                         "abstract": row_dict.get("abstract"),
                         "status": row_dict.get("status"),
                         "track": row_dict.get("track"),
+                        "topics": topics,
                         "sessionType": row_dict.get("sessionType"),
                         "demoType": row_dict.get("demoType"),
                         "sessionDate": row_dict.get("sessionDate"),
@@ -512,10 +519,8 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                         "industry": row_dict.get("industry"),
                         "presentationSlidesUrl": row_dict.get("presentationSlidesUrl"),
                         "recapSlidesUrl": row_dict.get("recapSlidesUrl"),
-                        "videoRecordingStatus": row_dict.get("videoRecordingStatus"),
-                        "videoYoutubeUrl": row_dict.get("videoYoutubeUrl"),
-                        "ytVideoTitle": row_dict.get("ytVideoTitle"),
-                        "ytDescription": row_dict.get("ytDescription")
+                        "sessionRecordingStatus": row_dict.get("sessionRecordingStatus") or row_dict.get("videoRecordingStatus"),
+                        "videoYoutubeUrl": row_dict.get("videoYoutubeUrl")
                     }
                 }
 

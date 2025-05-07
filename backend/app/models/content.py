@@ -13,11 +13,6 @@ class Speaker(BaseModel):
     fullName: Optional[str] = Field(None, description="Speaker's full name")
     jobTitle: Optional[str] = Field(None, description="Speaker's job title")
     company: Optional[str] = Field(None, description="Speaker's company")
-    type: Optional[str] = Field(
-        None, description="Type of speaker: 'Googler', 'Partner', 'Customer', 'Community'"
-    )
-    industry: Optional[str] = Field(None, description="Speaker's industry")
-    region: Optional[str] = Field(None, description="Speaker's region")
 
 
 class ContentBase(BaseModel):
@@ -65,7 +60,7 @@ class Session(BaseModel):
         None, description="URL to presentation slides"
     )
     recapSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to recap slides")
-    videoRecordingStatus: Optional[str] = Field(
+    sessionRecordingStatus: Optional[str] = Field(
         None,
         description="Status of video recording: 'Available', 'Processing', 'Not Available', 'Pending'",
     )
@@ -74,7 +69,6 @@ class Session(BaseModel):
 
     # YouTube Publishing
     youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
-    ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
 
     # System fields
     createdAt: datetime = Field(
@@ -143,7 +137,7 @@ class ContentInDB(ContentBase):
     )
     track: Optional[str] = None
     learningLevel: Optional[str] = None  # "Beginner", "Intermediate", "Advanced", "All"
-    topics: Optional[List[str]] = None
+    topics: Optional[List[str]] = Field(None, description="Array of topic keywords")
     targetJobRoles: Optional[List[str]] = None
     areasOfInterest: Optional[List[str]] = None
 
@@ -154,7 +148,7 @@ class ContentInDB(ContentBase):
     assets: Dict[str, Any] = Field(default_factory=dict, description="Asset details")
     presentationSlidesUrl: Optional[HttpUrl] = None
     recapSlidesUrl: Optional[HttpUrl] = None
-    videoRecordingStatus: Optional[
+    sessionRecordingStatus: Optional[
         str
     ] = None  # "Available", "Processing", "Not Available", "Pending"
     videoSourceFileUrl: Optional[HttpUrl] = None
@@ -162,7 +156,6 @@ class ContentInDB(ContentBase):
 
     # YouTube publishing info
     youtubeUrl: Optional[HttpUrl] = None
-    ytVideoTitle: Optional[str] = None
 
 
 class Content(ContentInDB):

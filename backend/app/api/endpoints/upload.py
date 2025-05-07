@@ -83,13 +83,12 @@ class ContentUpload(BaseModel):
     # Assets
     presentationSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to presentation slides")
     recapSlidesUrl: Optional[HttpUrl] = Field(None, description="URL to recap slides")
-    videoRecordingStatus: Optional[str] = Field(None, description="Status of video recording")
+    sessionRecordingStatus: Optional[str] = Field(None, description="Status of video recording")
     videoSourceFileUrl: Optional[HttpUrl] = Field(None, description="URL to raw video file")
     videoYoutubeUrl: Optional[HttpUrl] = Field(None, description="URL to YouTube video")
 
     # YouTube Publishing
     youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
-    ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
 
     # Other
     used: Optional[bool] = Field(False, description="Whether the content has been used")
@@ -121,11 +120,9 @@ async def upload_content(
     # Asset URLs
     presentationSlidesUrl: Optional[str] = Form(None),
     recapSlidesUrl: Optional[str] = Form(None),
-    videoRecordingStatus: Optional[str] = Form(None),
+    sessionRecordingStatus: Optional[str] = Form(None),
     driveLink: Optional[str] = Form(None),
     videoYoutubeUrl: Optional[str] = Form(None),
-    ytVideoTitle: Optional[str] = Form(None),
-    ytDescription: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
 ):
     """
@@ -249,11 +246,9 @@ async def upload_content(
             # Asset URLs - keep for backward compatibility
             "presentationSlidesUrl": presentationSlidesUrl,
             "recapSlidesUrl": recapSlidesUrl,
-            "videoRecordingStatus": videoRecordingStatus,
+            "sessionRecordingStatus": sessionRecordingStatus,
             "driveLink": driveLink,
             "videoYoutubeUrl": videoYoutubeUrl,
-            "ytVideoTitle": ytVideoTitle,
-            "ytDescription": ytDescription,
             # Include a metadata field with all root level metadata
             "metadata": {
                 "abstract": abstract,
@@ -273,10 +268,8 @@ async def upload_content(
                 "industry": industry,
                 "presentationSlidesUrl": presentationSlidesUrl,
                 "recapSlidesUrl": recapSlidesUrl,
-                "videoRecordingStatus": videoRecordingStatus,
+                "sessionRecordingStatus": sessionRecordingStatus,
                 "videoYoutubeUrl": videoYoutubeUrl,
-                "ytVideoTitle": ytVideoTitle,
-                "ytDescription": ytDescription
             }
         }
 
