@@ -6,6 +6,7 @@ import os
 import urllib.request
 import requests
 import random
+import asyncio
 from datetime import datetime
 from typing import List, Optional
 
@@ -223,6 +224,12 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
         file_extension: File extension.
     """
     try:
+        # Verify GCS configuration
+        if not content_processor.bucket:
+            logger.error("Storage bucket not configured - file uploads will fail")
+            batch_service.mark_job_failed(job_id, "Storage bucket not configured - file uploads will fail")
+            return
+
         # Update job status to processing
         batch_service.mark_job_processing(job_id)
 
@@ -727,23 +734,27 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     )
                     batch_service.update_job_progress(job_id, processed=1, failed=1, error=error)
 
-                # Check for large files that need direct download
+                # Check for large files that need background processing
                 for entry in content_data["fileUrls"]:
                     needs_background_processing = False
+                    processing_reason = ""
                     
                     # Check if this entry is marked as too large to export
                     if entry.get("tooLargeToExport") is True:
                         needs_background_processing = True
+                        processing_reason = "file marked as too large to export"
                         logger.info(f"Found file marked as too large to export: {entry.get('presentation_type')}")
                     
                     # Check if it has an exportUrl but no gcs_path
                     elif entry.get("exportUrl") and not entry.get("gcs_path"):
                         needs_background_processing = True
+                        processing_reason = "file has exportUrl but no gcs_path"
                         logger.info(f"Found file with exportUrl but no gcs_path: {entry.get('presentation_type')}")
                     
                     # Check if it's a presentation with a driveId but no gcs_path
                     elif entry.get("driveId") and not entry.get("gcs_path") and entry.get("presentation_type") in ["presentation_slides", "recap_slides"]:
                         needs_background_processing = True
+                        processing_reason = "presentation has driveId but no gcs_path"
                         logger.info(f"Found presentation with driveId but no gcs_path: {entry.get('presentation_type')}")
                     
                     if needs_background_processing and entry.get("presentation_type") in ["presentation_slides", "recap_slides"]:
@@ -751,6 +762,10 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                         logger.info(f"Found large file needing background processing: {entry.get('presentation_type')}")
                         logger.info(f"File details: driveId={entry.get('driveId')}, tooLargeToExport={entry.get('tooLargeToExport')}")
                         logger.info(f"Export URL: {entry.get('exportUrl')}")
+                        
+                        # Add processing status to track progress
+                        entry["processing_status"] = "queued"
+                        entry["processing_reason"] = processing_reason
                         
                         # Ensure we have an exportUrl for presentations
                         if not entry.get("exportUrl") and entry.get("driveId"):
@@ -774,7 +789,10 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                             if content_id:
                                 large_files_to_process.append({
                                     "entry": entry,
-                                    "content_id": content_id
+                                    "content_id": content_id,
+                                    "processed": False,
+                                    "retries": 0,
+                                    "max_retries": 3
                                 })
                                 logger.info(f"Queued large {entry.get('presentation_type')} for background download with content_id: {content_id}")
                             else:
@@ -809,7 +827,7 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
             logger.info(f"Starting background processing of {len(large_files_to_process)} large files")
             logger.info(f"Large files details: {[f['entry'].get('presentation_type') for f in large_files_to_process]}")
             
-            # Process each file
+            # Process each file with retries
             for file_info in large_files_to_process:
                 try:
                     # Make sure we have all required information
@@ -821,19 +839,59 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     logger.info(f"File driveId: {file_info['entry'].get('driveId')}")
                     logger.info(f"Using export URL: {file_info['entry'].get('exportUrl')}")
                     
-                    success, updated_entry = await drive_downloader.download_and_store_presentation(
-                        file_info["entry"], file_info["content_id"]
-                    )
-                    if success:
-                        logger.info(f"Successfully processed large file for content {file_info['content_id']}")
-                        logger.info(f"New gcs_path: {updated_entry.get('gcs_path')}")
-                        logger.info(f"New URL: {updated_entry.get('url')}")
-                    else:
-                        logger.warning(f"Failed to process large file for content {file_info['content_id']}")
+                    # Update processing status
+                    file_info['entry']['processing_status'] = "processing"
+                    
+                    # Use retry mechanism for background processing
+                    success = False
+                    max_retries = file_info.get("max_retries", 3)
+                    
+                    for attempt in range(max_retries):
+                        file_info["retries"] = attempt + 1
+                        
+                        if attempt > 0:
+                            logger.info(f"Retry attempt {attempt+1}/{max_retries} for {file_info['entry'].get('presentation_type')} with content_id: {file_info['content_id']}")
+                        
+                        success, updated_entry = await drive_downloader.download_and_store_presentation(
+                            file_info["entry"], file_info["content_id"]
+                        )
+                        
+                        if success:
+                            logger.info(f"Successfully processed large file for content {file_info['content_id']}")
+                            logger.info(f"New gcs_path: {updated_entry.get('gcs_path')}")
+                            logger.info(f"New URL: {updated_entry.get('url')}")
+                            file_info['entry']['processing_status'] = "completed"
+                            file_info['processed'] = True
+                            break
+                        elif attempt < max_retries - 1:
+                            # Wait before retrying
+                            wait_time = (2 ** attempt) + random.random()  # Exponential backoff with jitter
+                            logger.warning(f"Failed attempt {attempt+1}, waiting {wait_time:.2f}s before retrying")
+                            await asyncio.sleep(wait_time)
+                    
+                    if not success:
+                        logger.warning(f"Failed to process large file for content {file_info['content_id']} after {max_retries} attempts")
                         logger.warning(f"Reasons may include: download failure, permissions, or storage issues")
+                        file_info['entry']['processing_status'] = "failed"
+                        
                 except Exception as file_error:
                     logger.error(f"Error in background file processing: {str(file_error)}")
                     logger.error(f"Error details: {file_error}", exc_info=True)
+                    file_info['entry']['processing_status'] = "failed"
+                    file_info['entry']['error_message'] = str(file_error)
+            
+            # Log summary of background processing
+            processed_count = sum(1 for f in large_files_to_process if f.get('processed', False))
+            failed_count = len(large_files_to_process) - processed_count
+            
+            logger.info(f"Background processing summary: {processed_count} successful, {failed_count} failed")
+            
+            if failed_count > 0:
+                for file_info in large_files_to_process:
+                    if not file_info.get('processed', False):
+                        logger.warning(f"Failed to process: {file_info['entry'].get('presentation_type')} "
+                                      f"for content {file_info['content_id']}, "
+                                      f"status: {file_info['entry'].get('processing_status')}")
         else:
             logger.info("No large files queued for background processing")
 

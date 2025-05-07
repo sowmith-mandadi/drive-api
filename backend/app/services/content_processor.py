@@ -49,18 +49,31 @@ class ContentProcessor:
                 self.storage_client = storage.Client()
                 bucket_name = os.environ.get("GCS_BUCKET_NAME")
                 if not bucket_name:
-                    logger.warning("GCS_BUCKET_NAME not set, file uploads will fail")
+                    logger.error("GCS_BUCKET_NAME environment variable not set - file uploads will fail")
+                    logger.error("Please set GCS_BUCKET_NAME to the name of your Google Cloud Storage bucket")
                     self.bucket = None
                 else:
-                    self.bucket = self.storage_client.bucket(bucket_name)
-                    logger.info(f"ContentProcessor: Storage client initialized with bucket {bucket_name}")
+                    try:
+                        self.bucket = self.storage_client.bucket(bucket_name)
+                        # Verify bucket access by attempting to get metadata
+                        self.bucket.reload()
+                        logger.info(f"ContentProcessor: Storage bucket '{bucket_name}' initialized and verified")
+                    except Exception as bucket_error:
+                        logger.error(f"ContentProcessor: Storage bucket '{bucket_name}' could not be accessed: {str(bucket_error)}")
+                        logger.error("Please check bucket permissions or bucket name")
+                        self.bucket = None
             except Exception as storage_error:
                 logger.error(
                     f"ContentProcessor: Failed to initialize Storage client: {str(storage_error)}",
                     exc_info=True,
                 )
                 self.bucket = None
+                logger.error("File uploads will fail due to Storage client initialization error")
 
+            # Verify if critical components are initialized
+            if not self.bucket:
+                logger.warning("ContentProcessor: Running without Cloud Storage bucket - file uploads will be disabled")
+            
             logger.info("ContentProcessor initialization completed successfully")
 
         except Exception as e:
@@ -144,6 +157,12 @@ class ContentProcessor:
                     fields="id,name,mimeType,size,webViewLink,thumbnailLink,iconLink",
                     supportsAllDrives=True
                 ).execute()
+                
+                # Verify file was returned
+                if not file:
+                    logger.error(f"No file metadata returned for Drive ID: {drive_id}")
+                    return False, f"File metadata not found for Drive ID: {drive_id}", None
+                    
             except Exception as meta_error:
                 logger.error(f"Failed to get Drive file metadata: {str(meta_error)}")
                 return False, f"Failed to access Drive file: {str(meta_error)}", None
@@ -257,10 +276,10 @@ class ContentProcessor:
                     file_info["presentation_type"] = presentation_type
                     return True, "Presentation file processed successfully", [file_info]
                 else:
-                    return False, message, None
+                    return False, message or f"Processing failed for Drive ID: {drive_id}", None
                     
         except Exception as e:
-            logger.error(f"Error processing slides from Drive: {str(e)}")
+            logger.error(f"Error processing slides from Drive: {str(e)}", exc_info=True)
             return False, f"Error processing slides: {str(e)}", None
             
     async def process_content_item(

@@ -44,6 +44,17 @@ class DriveDownloader:
         try:
             logger.info(f"Starting file download process for content_id: {content_id}")
             
+            # Validate required dependencies
+            if not self.bucket:
+                logger.error(f"GCS bucket not available for content {content_id}")
+                entry["error_message"] = "GCS bucket not configured"
+                return False, entry
+                
+            if not self.firestore:
+                logger.error(f"Firestore client not available for content {content_id}")
+                entry["error_message"] = "Firestore client not configured"
+                return False, entry
+            
             # Get the export URL or driveId
             export_url = entry.get("exportUrl") or entry.get("url")
             drive_id = entry.get("driveId")
@@ -53,7 +64,9 @@ class DriveDownloader:
                 presentation_name = None
                 
             if not export_url and not drive_id:
-                logger.warning(f"No valid export URL or driveId found for content {content_id}")
+                error_msg = f"No valid export URL or driveId found for content {content_id}"
+                logger.warning(error_msg)
+                entry["error_message"] = error_msg
                 return False, entry
             
             # Generate a temp file path
@@ -71,14 +84,21 @@ class DriveDownloader:
                 
             # Verify file was actually downloaded
             if not success or not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
-                logger.error("Downloaded file is missing or empty")
+                error_msg = f"Downloaded file is missing or empty for content {content_id}"
+                logger.error(error_msg)
+                entry["error_message"] = error_msg
                 return False, entry
                 
             file_size = os.path.getsize(temp_file_path)
+            logger.info(f"Successfully downloaded file, size: {file_size} bytes")
             
             # Upload to GCS bucket
             public_url, gcs_path = self._upload_to_storage(temp_file_path, file_name)
             if not public_url or not gcs_path:
+                error_msg = f"Failed to upload file to GCS for content {content_id}"
+                logger.error(error_msg)
+                entry["error_message"] = error_msg
+                
                 # Clean up temp file
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
@@ -90,6 +110,7 @@ class DriveDownloader:
             entry["size"] = file_size
             entry["directlyDownloaded"] = True
             entry["type"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            entry["lastProcessed"] = time.time()
             
             # Update name if we found a better one
             if presentation_name:
@@ -99,12 +120,18 @@ class DriveDownloader:
             os.remove(temp_file_path)
             
             # Update the content in database
-            self._update_content_document(content_id, entry)
+            update_success = self._update_content_document(content_id, entry)
+            if not update_success:
+                logger.warning(f"File downloaded and stored but database update failed for content {content_id}")
+                # Still consider this a success since the file was processed
                 
+            logger.info(f"File successfully processed and stored at {gcs_path}")
             return True, entry
             
         except Exception as e:
-            logger.error(f"Error downloading and storing presentation: {str(e)}", exc_info=True)
+            error_msg = f"Error downloading and storing presentation: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            entry["error_message"] = error_msg
             return False, entry
 
     def _download_file(self, drive_id: Optional[str], export_url: Optional[str], 
@@ -136,11 +163,12 @@ class DriveDownloader:
                     # Get file metadata
                     try:
                         file_metadata = drive_service.get_file_metadata(drive_id)
-                    except Exception:
-                        pass
+                    except Exception as meta_error:
+                        logger.warning(f"Got file but failed to get metadata: {str(meta_error)}")
                     return True, file_metadata
-            except Exception:
+            except Exception as api_error:
                 logger.warning(f"Drive API download failed for ID: {drive_id}", exc_info=True)
+                logger.warning(f"Error details: {str(api_error)}")
         
         # Extract drive ID from export URL if possible and try API download
         if export_url and not drive_id:
@@ -150,6 +178,7 @@ class DriveDownloader:
                 match = re.search(r"/presentation/d/([^/]+)", export_url)
                 if match:
                     url_drive_id = match.group(1)
+                    logger.info(f"Extracted Drive ID from URL: {url_drive_id}")
                     
             if url_drive_id:
                 try:
@@ -164,11 +193,12 @@ class DriveDownloader:
                         # Get file metadata
                         try:
                             file_metadata = drive_service.get_file_metadata(url_drive_id)
-                        except Exception:
-                            pass
+                        except Exception as meta_error:
+                            logger.warning(f"Got file but failed to get metadata: {str(meta_error)}")
                         return True, file_metadata
-                except Exception:
+                except Exception as url_api_error:
                     logger.warning(f"Drive API download failed for URL-extracted ID: {url_drive_id}")
+                    logger.warning(f"Error details: {str(url_api_error)}")
         
         # If Drive API methods failed, try with direct export URL
         if export_url:
@@ -176,11 +206,13 @@ class DriveDownloader:
                 from app.services.drive_service import build_drive_service
                 drive_service = build_drive_service()
                 
+                logger.info(f"Attempting direct export URL download: {export_url}")
                 success, _ = drive_service._download_with_direct_export_url(export_url, temp_file_path)
                 if success:
+                    logger.info(f"Successfully downloaded file using direct export URL")
                     return True, file_metadata
-            except Exception:
-                logger.warning(f"Authenticated direct URL download failed")
+            except Exception as direct_error:
+                logger.warning(f"Authenticated direct URL download failed: {str(direct_error)}")
         
         # Last resort: try multiple download methods in sequence
         download_methods = [
@@ -189,14 +221,19 @@ class DriveDownloader:
             self._download_with_cookie_auth
         ]
         
-        for download_method in download_methods:
+        for i, download_method in enumerate(download_methods):
+            method_name = download_method.__name__
             try:
+                logger.info(f"Trying download method {i+1}/{len(download_methods)}: {method_name}")
                 success = download_method(export_url, temp_file_path)
                 if success and os.path.exists(temp_file_path) and os.path.getsize(temp_file_path) > 0:
+                    logger.info(f"Successfully downloaded file using {method_name}")
                     return True, file_metadata
-            except Exception:
+            except Exception as method_error:
+                logger.warning(f"Download method {method_name} failed: {str(method_error)}")
                 continue
                 
+        logger.error(f"All download methods failed for {'drive_id: ' + drive_id if drive_id else 'export_url: ' + export_url}")
         return False, None
     
     def _upload_to_storage(self, file_path: str, filename: str) -> Tuple[Optional[str], Optional[str]]:
@@ -226,6 +263,7 @@ class DriveDownloader:
             
             # Upload file with content type
             mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            logger.info(f"Uploading file to GCS path: {blob_path}")
             blob.upload_from_filename(file_path, content_type=mime_type)
             
             # Generate URL for access
@@ -240,6 +278,7 @@ class DriveDownloader:
             # Set GCS path
             gcs_path = f"gs://{bucket_name}/{blob_path}"
             
+            logger.info(f"Successfully uploaded file to {gcs_path}")
             return public_url, gcs_path
             
         except Exception as e:
@@ -272,24 +311,45 @@ class DriveDownloader:
             updated = False
             for i, url_entry in enumerate(content.get("fileUrls", [])):
                 if url_entry.get("presentation_type") == entry.get("presentation_type"):
+                    # Log the changes being made
+                    old_gcs_path = url_entry.get("gcs_path")
+                    new_gcs_path = entry.get("gcs_path")
+                    
+                    if old_gcs_path != new_gcs_path:
+                        logger.info(f"Updating gcs_path for {entry.get('presentation_type')} in {content_id}")
+                        logger.info(f"Old: {old_gcs_path} -> New: {new_gcs_path}")
+                    
                     content["fileUrls"][i] = entry
                     updated = True
                     break
                     
             # If not found, append it
             if not updated and entry.get("presentation_type"):
+                logger.info(f"Adding new fileUrl entry for {entry.get('presentation_type')} in {content_id}")
                 content["fileUrls"].append(entry)
                 
             # If presentation_type is presentation_slides, update presentationSlidesUrl
             if entry.get("presentation_type") == "presentation_slides":
+                old_url = content.get("presentationSlidesUrl")
+                new_url = entry.get("url")
+                if old_url != new_url:
+                    logger.info(f"Updating presentationSlidesUrl in {content_id}")
+                    logger.info(f"Old: {old_url} -> New: {new_url}")
                 content["presentationSlidesUrl"] = entry.get("url")
                 
             # If presentation_type is recap_slides, update recapSlidesUrl
             if entry.get("presentation_type") == "recap_slides":
+                old_url = content.get("recapSlidesUrl")
+                new_url = entry.get("url")
+                if old_url != new_url:
+                    logger.info(f"Updating recapSlidesUrl in {content_id}")
+                    logger.info(f"Old: {old_url} -> New: {new_url}")
                 content["recapSlidesUrl"] = entry.get("url")
                 
             # Update the document
+            logger.info(f"Updating document {content_id} in content collection")
             self.firestore.update_document("content", content_id, content)
+            logger.info(f"Successfully updated document {content_id}")
             return True
             
         except Exception as e:
