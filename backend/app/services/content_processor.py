@@ -5,7 +5,7 @@ import os
 import re
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from google.cloud import storage
@@ -42,46 +42,24 @@ class ContentProcessor:
             # Use environment variables with proper defaults for App Engine
             # Temporary dir for file processing
             self.temp_dir = os.environ.get("TEMP_PROCESSING_DIR", "/tmp/processing")
+            os.makedirs(self.temp_dir, exist_ok=True)
 
-            # Initialize Google Cloud Storage
+            # Initialize Storage client for uploading files
             try:
                 self.storage_client = storage.Client()
                 bucket_name = os.environ.get("GCS_BUCKET_NAME")
                 if not bucket_name:
-                    raise ValueError("GCS_BUCKET_NAME environment variable is not set")
-
-                self.bucket = self.storage_client.bucket(bucket_name)
-                logger.info(f"ContentProcessor: GCS client initialized with bucket {bucket_name}")
-
-                # Ensure the bucket exists
-                if not self.bucket.exists():
-                    logger.info(f"Creating Cloud Storage bucket: {bucket_name}")
-                    self.storage_client.create_bucket(bucket_name)
-
-            except Exception as gcs_error:
+                    logger.warning("GCS_BUCKET_NAME not set, file uploads will fail")
+                    self.bucket = None
+                else:
+                    self.bucket = self.storage_client.bucket(bucket_name)
+                    logger.info(f"ContentProcessor: Storage client initialized with bucket {bucket_name}")
+            except Exception as storage_error:
                 logger.error(
-                    f"ContentProcessor: Failed to initialize GCS client: {str(gcs_error)}",
+                    f"ContentProcessor: Failed to initialize Storage client: {str(storage_error)}",
                     exc_info=True,
                 )
-                # This is critical - we need storage to function
-                raise
-
-            # Check and create temp directory for processing
-            try:
-                # Create processing directory
-                os.makedirs(self.temp_dir, exist_ok=True)
-                if not os.path.exists(self.temp_dir):
-                    raise Exception(f"Directory {self.temp_dir} could not be created")
-                if not os.access(self.temp_dir, os.W_OK):
-                    raise Exception(f"Directory {self.temp_dir} is not writable")
-                logger.info(f"Using temp directory: {self.temp_dir}")
-            except Exception as dir_error:
-                logger.error(
-                    f"ContentProcessor: Failed to set up temp directory: {str(dir_error)}",
-                    exc_info=True,
-                )
-                # Re-raise to fail initialization
-                raise
+                self.bucket = None
 
             logger.info("ContentProcessor initialization completed successfully")
 
@@ -90,6 +68,201 @@ class ContentProcessor:
             # Re-raise to fail initialization
             raise
 
+    def _check_duplicate_session_id(self, session_id: str) -> bool:
+        """
+        Check if a session ID already exists in Firestore.
+        
+        Args:
+            session_id: The session ID to check
+            
+        Returns:
+            True if duplicate exists, False otherwise
+        """
+        if not session_id:
+            return False
+            
+        try:
+            # Query Firestore for documents with matching sessionId
+            filters = [("sessionId", "==", session_id)]
+            results = self.firestore.list_documents("content", limit=1, filters=filters)
+            
+            # If any results found, this is a duplicate
+            return len(results) > 0
+        except Exception as e:
+            logger.error(f"Error checking for duplicate session ID: {str(e)}")
+            # In case of error, assume it's not a duplicate to allow the upload to proceed
+            return False
+
+    async def process_slides_from_drive(
+        self, content_id: str, drive_url: str
+    ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """
+        Process slides from Google Drive URL or folder link.
+        This handles:
+        1. Direct links to presentations
+        2. Folder links that contain presentations
+        
+        Args:
+            content_id: ID of the content
+            drive_url: Google Drive URL (file or folder)
+            
+        Returns:
+            Tuple of (success, message, slides_info)
+        """
+        try:
+            # Extract Drive ID from URL
+            drive_id = self._extract_drive_id(drive_url)
+            if not drive_id:
+                return False, "Invalid Google Drive URL", None
+                
+            # Build Drive service
+            try:
+                # Check if a service account file path is specified
+                service_account_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_PATH")
+                
+                if service_account_path and os.path.exists(service_account_path):
+                    # Use the service account file if provided
+                    from google.oauth2 import service_account
+                    credentials = service_account.Credentials.from_service_account_file(
+                        service_account_path,
+                        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+                    )
+                    drive_service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+                    logger.info("Successfully created Drive service with service account credentials")
+                else:
+                    # Fall back to default credentials
+                    drive_service = build("drive", "v3", cache_discovery=False)
+                    logger.info("Successfully created Drive service with default credentials")
+            except Exception as auth_error:
+                logger.error(f"Failed to authenticate with Google Drive: {str(auth_error)}")
+                return False, f"Drive authentication failed: {str(auth_error)}", None
+                
+            # Get file metadata
+            try:
+                file = drive_service.files().get(
+                    fileId=drive_id,
+                    fields="id,name,mimeType,size,webViewLink,thumbnailLink,iconLink",
+                    supportsAllDrives=True
+                ).execute()
+            except Exception as meta_error:
+                logger.error(f"Failed to get Drive file metadata: {str(meta_error)}")
+                return False, f"Failed to access Drive file: {str(meta_error)}", None
+                
+            # If it's a folder, find presentation files
+            presentation_files = []
+            if file.get("mimeType") == "application/vnd.google-apps.folder":
+                logger.info(f"Processing folder: {drive_id}")
+                try:
+                    # List all files in the folder
+                    results = drive_service.files().list(
+                        q=f"'{drive_id}' in parents",
+                        fields="files(id,name,mimeType,size,webViewLink,thumbnailLink,iconLink)",
+                        pageSize=10,  # Limit to 10 files
+                        supportsAllDrives=True,
+                        includeItemsFromAllDrives=True
+                    ).execute()
+                    
+                    folder_files = results.get("files", [])
+                    if not folder_files:
+                        return False, "Drive folder is empty", None
+                        
+                    # Filter for presentation files
+                    for folder_file in folder_files:
+                        mime_type = folder_file.get("mimeType", "")
+                        if (mime_type == "application/vnd.google-apps.presentation" or
+                            "presentation" in mime_type.lower() or
+                            folder_file.get("name", "").lower().endswith((".ppt", ".pptx"))):
+                            presentation_files.append(folder_file)
+                            
+                    if not presentation_files:
+                        return False, "No presentation files found in folder", None
+                        
+                    # Sort by filename - look for "presentation" or "deck" in the name first
+                    def score_presentation(f):
+                        name = f.get("name", "").lower()
+                        if "presentation" in name: return 0
+                        if "deck" in name: return 1
+                        if "slides" in name: return 2
+                        if "recap" in name: return 3
+                        return 100
+                        
+                    presentation_files.sort(key=score_presentation)
+                    
+                    # Find presentation slides and recap slides if possible
+                    presentation_file = None
+                    recap_file = None
+                    
+                    for pres in presentation_files:
+                        name = pres.get("name", "").lower()
+                        if "recap" in name:
+                            if not recap_file:
+                                recap_file = pres
+                        else:
+                            if not presentation_file:
+                                presentation_file = pres
+                    
+                    # If we still don't have a presentation, use the first available
+                    if not presentation_file and presentation_files:
+                        presentation_file = presentation_files[0]
+                        
+                    # Process each file (presentation and recap if available)
+                    results = []
+                    if presentation_file:
+                        success, message, file_info = await self._process_file_from_drive(
+                            content_id, presentation_file.get("id")
+                        )
+                        if success and file_info:
+                            file_info["presentation_type"] = "presentation_slides"
+                            results.append(file_info)
+                            
+                    if recap_file:
+                        success, message, file_info = await self._process_file_from_drive(
+                            content_id, recap_file.get("id")
+                        )
+                        if success and file_info:
+                            file_info["presentation_type"] = "recap_slides"
+                            results.append(file_info)
+                            
+                    if not results:
+                        return False, "Failed to process presentation files", None
+                        
+                    # Return combined results
+                    return True, "Presentation files processed successfully", results
+                        
+                except Exception as folder_error:
+                    logger.error(f"Failed to process Drive folder: {str(folder_error)}")
+                    return False, f"Failed to process Drive folder: {str(folder_error)}", None
+            
+            # Process single presentation file
+            else:
+                # Check if it's a presentation
+                mime_type = file.get("mimeType", "")
+                if (mime_type != "application/vnd.google-apps.presentation" and
+                    "presentation" not in mime_type.lower() and
+                    not file.get("name", "").lower().endswith((".ppt", ".pptx"))):
+                    logger.warning(f"File is not a presentation: {mime_type}")
+                    # Still try to process it anyway
+                
+                # Determine if this is likely a recap or main presentation
+                presentation_type = "presentation_slides"
+                if "recap" in file.get("name", "").lower():
+                    presentation_type = "recap_slides"
+                    
+                # Process the file
+                success, message, file_info = await self._process_file_from_drive(
+                    content_id, drive_id
+                )
+                
+                if success and file_info:
+                    file_info["presentation_type"] = presentation_type
+                    return True, "Presentation file processed successfully", [file_info]
+                else:
+                    return False, message, None
+                    
+        except Exception as e:
+            logger.error(f"Error processing slides from Drive: {str(e)}")
+            return False, f"Error processing slides: {str(e)}", None
+            
     async def process_content_item(
         self,
         content_data: Dict[str, Any],
@@ -97,109 +270,209 @@ class ContentProcessor:
         drive_file_id: Optional[str] = None,
     ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        Process a content item from bulk upload.
+        Process a single content item from a batch upload.
 
         Args:
             content_data: Content metadata.
-            file_url: Optional URL to download file from.
-            drive_file_id: Optional direct Google Drive file ID.
+            file_url: Optional URL to a file.
+            drive_file_id: Optional Google Drive file ID.
 
         Returns:
-            Tuple of (success, message, created_content).
+            Tuple of (success, message, content_item).
         """
         try:
-            # Generate ID
+            # Generate a content ID
             content_id = self.firestore.generate_id()
 
-            # Set basic fields
+            # Set created and updated timestamps
             now = datetime.now().isoformat()
-            content_data["id"] = content_id
-            content_data["created_at"] = now
-            content_data["updated_at"] = now
-            content_data["fileUrls"] = []
+            content_data["createdAt"] = now
+            content_data["updatedAt"] = now
 
-            # Check for and process presentation slides URL
-            presentation_url = content_data.get("presentation_slides_url")
-            if presentation_url and isinstance(presentation_url, str) and presentation_url.strip():
-                # Extract drive ID if it's a Google Drive link
-                drive_id = self._extract_drive_id(presentation_url)
-                if drive_id:
-                    # Process presentation via Drive API
-                    success, message, file_info = await self._process_file_from_drive(
-                        content_id, drive_id
-                    )
-                    if success and file_info:
-                        content_data["fileUrls"].append(file_info)
-                        # Keep the original URL as well
-                        content_data["drive_presentation_id"] = drive_id
-                        content_data["drive_presentation_link"] = presentation_url
+            # Check for sessionId duplication
+            session_id = content_data.get("sessionId")
+            if session_id and self._check_duplicate_session_id(session_id):
+                logger.warning(f"Duplicate session ID found: {session_id}")
+                return False, f"Duplicate session ID found: {session_id}", None
 
-            # Check for YouTube URL
-            youtube_url = content_data.get("video_youtube_url")
-            if youtube_url and isinstance(youtube_url, str) and youtube_url.strip():
-                # Store YouTube link directly, no need to download
+            # Ensure we have a fileUrls array
+            if "fileUrls" not in content_data:
+                content_data["fileUrls"] = []
+            
+            logger.info(f"Starting processing for content item: {content_id}")
+            
+            # Track which types we've already processed
+            processed_types = set()
+
+            # Check for slide URLs (presentation/recap)
+            presentation_slides_url = content_data.get("presentationSlidesUrl")
+            recap_slides_url = content_data.get("recapSlidesUrl")
+            
+            # Helper function to find existing entry by presentation_type
+            def find_existing_entry(file_urls, ptype):
+                for i, entry in enumerate(file_urls):
+                    if entry.get("presentation_type") == ptype:
+                        return i, entry
+                return -1, None
+            
+            # Helper function to update or add entry
+            def update_or_add_entry(file_urls, new_entry, ptype):
+                idx, existing = find_existing_entry(file_urls, ptype)
+                if idx >= 0:
+                    # Update existing entry
+                    logger.info(f"Updating existing {ptype} entry with processed data")
+                    file_urls[idx].update(new_entry)
+                    return file_urls[idx]
+                else:
+                    # Add new entry
+                    logger.info(f"Adding new {ptype} entry")
+                    file_urls.append(new_entry)
+                    return new_entry
+            
+            # Process presentation slides if a Google Drive URL is provided
+            if presentation_slides_url and self._extract_drive_id(presentation_slides_url):
+                logger.info(f"Processing presentation slides URL: {presentation_slides_url}")
+                success, message, slides_info = await self.process_slides_from_drive(
+                    content_id, presentation_slides_url
+                )
+                if success and slides_info:
+                    # For each slide deck processed
+                    for slide_info in slides_info:
+                        if slide_info.get("presentation_type") == "presentation_slides":
+                            # Add to processed types
+                            processed_types.add("presentation_slides")
+                            # Set URL and update fileUrls
+                            content_data["presentationSlidesUrl"] = str(slide_info["url"])
+                            logger.info(f"Set presentationSlidesUrl to: {slide_info['url']}")
+                            # Ensure correct type values
+                            slide_info["contentType"] = "presentation"
+                            # Update or add to fileUrls
+                            update_or_add_entry(content_data["fileUrls"], slide_info, "presentation_slides")
+                else:
+                    logger.warning(f"Failed to process presentation slides: {message}")
+            
+            # Process the recap slides from recapSlidesUrl if it exists
+            if recap_slides_url and recap_slides_url != presentation_slides_url and self._extract_drive_id(recap_slides_url):
+                logger.info(f"Processing recap slides URL: {recap_slides_url}")
+                success, message, slides_info = await self.process_slides_from_drive(
+                    content_id, recap_slides_url
+                )
+                if success and slides_info:
+                    # For each slide deck processed
+                    for slide_info in slides_info:
+                        if slide_info.get("presentation_type") == "recap_slides":
+                            # Add to processed types
+                            processed_types.add("recap_slides")
+                            # Set URL and update fileUrls
+                            content_data["recapSlidesUrl"] = str(slide_info["url"])
+                            logger.info(f"Set recapSlidesUrl to: {slide_info['url']}")
+                            # Ensure correct type values
+                            slide_info["contentType"] = "presentation"
+                            # Update or add to fileUrls
+                            update_or_add_entry(content_data["fileUrls"], slide_info, "recap_slides")
+                else:
+                    logger.warning(f"Failed to process recap slides: {message}")
+            
+            # Process driveLink if provided - could be a folder containing slide decks
+            # Check both "driveLink" and "drive_link" for maximum compatibility
+            drive_link = content_data.get("driveLink") or content_data.get("drive_link")
+            if drive_link and self._extract_drive_id(drive_link) and not drive_file_id and "drive_folder" not in processed_types:
+                # Only process drive_link if drive_file_id isn't already specified
+                logger.info(f"Processing drive link: {drive_link}")
+                
+                # Create a simple folder entry
+                folder_info = {
+                    "contentType": "folder",
+                    "presentation_type": "drive_folder",
+                    "name": "Drive Folder",
+                    "source": "drive",
+                    "drive_url": drive_link,
+                    "driveId": self._extract_drive_id(drive_link),
+                    "gcs_path": None, # Folders don't have gcs_path
+                    "url": drive_link
+                }
+                
+                # Add to processed types
+                processed_types.add("drive_folder")
+                
+                # Update or add to fileUrls
+                update_or_add_entry(content_data["fileUrls"], folder_info, "drive_folder")
+                logger.info(f"Added drive folder: {drive_link}")
+            
+            # Process YouTube URL if provided
+            youtube_url = content_data.get("videoYoutubeUrl")
+            if youtube_url and "youtube_video" not in processed_types:
                 youtube_id = self._extract_youtube_id(youtube_url)
                 if youtube_id:
-                    # Set YouTube specific fields according to content model
-                    content_data["youtube_url"] = youtube_url
-
-                    # Also add to fileUrls for backward compatibility
+                    # Create YouTube entry
                     youtube_info = {
-                        "url": youtube_url,
-                        "name": f"YouTube Video ({youtube_id})",
-                        "type": "video/youtube",
-                        "size": 0,
-                        "youtubeId": youtube_id,
+                        "contentType": "video",
+                        "presentation_type": "youtube_video",
+                        "name": content_data.get("ytVideoTitle") or "YouTube Video",
                         "source": "youtube",
+                        "drive_url": youtube_url,
+                        "gcs_path": None, # YouTube videos don't have gcs_path
+                        "url": youtube_url
                     }
-                    content_data["fileUrls"].append(youtube_info)
-
-            # Ensure source is set properly
-            if drive_file_id or (file_url and self._extract_drive_id(file_url)):
-                content_data["source"] = "drive"
-            elif file_url and ("youtube.com" in file_url or "youtu.be" in file_url):
-                content_data["source"] = "external"
-            elif youtube_url and ("youtube.com" in youtube_url or "youtu.be" in youtube_url):
-                content_data["source"] = "external"
-            else:
-                content_data["source"] = "upload"
-
-            # Prioritize direct drive file ID if provided
-            if drive_file_id and isinstance(drive_file_id, str) and drive_file_id.strip():
-                drive_id = drive_file_id.strip()
+                    
+                    # Add to processed types
+                    processed_types.add("youtube_video")
+                    
+                    # Update or add to fileUrls
+                    update_or_add_entry(content_data["fileUrls"], youtube_info, "youtube_video")
+                    logger.info(f"Added YouTube video: {youtube_url}")
+            
+            # Continue with regular processing for Drive file ID or file URL
+            if drive_file_id:
                 success, message, file_info = await self._process_file_from_drive(
-                    content_id, drive_id
+                    content_id, drive_file_id
                 )
                 if success and file_info:
-                    content_data["fileUrls"].append(file_info)
-                    content_data["drive_id"] = drive_id
-                    if "webViewLink" in file_info:
-                        content_data["drive_link"] = file_info["webViewLink"]
+                    # Set presentation_type if not already set
+                    if "presentation_type" not in file_info:
+                        mime_type = file_info.get("type", "")
+                        if "presentation" in mime_type:
+                            file_info["presentation_type"] = "presentation_slides"
+                        elif "folder" in mime_type:
+                            file_info["presentation_type"] = "drive_folder"
+                    
+                    # Only add if it's one of our 4 standard types and we haven't already processed this type
+                    ptype = file_info.get("presentation_type")
+                    if ptype in ["presentation_slides", "recap_slides", "drive_folder", "youtube_video"] and ptype not in processed_types:
+                        # Update or add to fileUrls
+                        update_or_add_entry(content_data["fileUrls"], file_info, ptype)
+                        processed_types.add(ptype)
+                        
+                        # Set drive fields according to content model
+                        content_data["drive_id"] = drive_file_id
+                        content_data["drive_link"] = file_info.get("webViewLink", "")
+
+                        # Set proper URL fields based on file type
+                        if ptype == "presentation_slides":
+                            content_data["presentationSlidesUrl"] = file_info["url"]
+                        elif ptype == "recap_slides":
+                            content_data["recapSlidesUrl"] = file_info["url"]
 
             # Process file URL if provided
-            elif file_url and isinstance(file_url, str) and file_url.strip():
-                # Clean up URL
-                file_url = file_url.strip()
-
-                # Check if it's a YouTube URL
-                if "youtube.com" in file_url or "youtu.be" in file_url:
-                    # Store YouTube link directly, no need to download
-                    youtube_id = self._extract_youtube_id(file_url)
-                    if youtube_id:
-                        # Set YouTube specific fields according to content model
-                        content_data["youtube_url"] = file_url
-                        content_data["video_youtube_url"] = file_url
-
-                        # Also add to fileUrls for backward compatibility
-                        youtube_info = {
-                            "url": file_url,
-                            "name": f"YouTube Video ({youtube_id})",
-                            "type": "video/youtube",
-                            "size": 0,
-                            "youtubeId": youtube_id,
-                            "source": "youtube",
-                        }
-                        content_data["fileUrls"].append(youtube_info)
+            if file_url:
+                # Check if it's a YouTube video
+                youtube_id = self._extract_youtube_id(file_url)
+                if youtube_id and "youtube_video" not in processed_types:
+                    # Process as YouTube video
+                    content_data["videoYoutubeUrl"] = file_url
+                    
+                    # Add to fileUrls for consistency
+                    youtube_info = {
+                        "url": file_url,
+                        "name": content_data.get("ytVideoTitle") or "YouTube Video",
+                        "type": "video/youtube",
+                        "contentType": "video",
+                        "presentation_type": "youtube_video",
+                        "source": "youtube",
+                        "gcs_path": None # YouTube videos don't have gcs_path
+                    }
+                    content_data["fileUrls"].append(youtube_info)
+                    processed_types.add("youtube_video")
 
                 # Check if it's a Drive URL
                 else:
@@ -211,17 +484,30 @@ class ContentProcessor:
                             content_id, drive_id
                         )
                         if success and file_info:
-                            content_data["fileUrls"].append(file_info)
-                            # Set drive fields according to content model
-                            content_data["drive_id"] = drive_id
-                            content_data["drive_link"] = file_url
+                            # Set presentation_type if not already set
+                            if "presentation_type" not in file_info:
+                                mime_type = file_info.get("type", "")
+                                if "presentation" in mime_type:
+                                    file_info["presentation_type"] = "presentation_slides"
+                                elif "folder" in mime_type:
+                                    file_info["presentation_type"] = "drive_folder"
+                            
+                            # Only add if it's one of our 4 standard types and we haven't already processed this type
+                            ptype = file_info.get("presentation_type")
+                            if ptype in ["presentation_slides", "recap_slides", "drive_folder", "youtube_video"] and ptype not in processed_types:
+                                # Update or add to fileUrls
+                                update_or_add_entry(content_data["fileUrls"], file_info, ptype)
+                                processed_types.add(ptype)
+                                
+                                # Set drive fields according to content model
+                                content_data["drive_id"] = drive_id
+                                content_data["drive_link"] = file_url
 
-                            # Set proper URL fields based on file type
-                            mime_type = file_info.get("type", "")
-                            if "presentation" in mime_type:
-                                content_data["presentation_slides_url"] = file_info["url"]
-                            elif "video" in mime_type:
-                                content_data["video_source_file_url"] = file_info["url"]
+                                # Set proper URL fields based on file type
+                                if ptype == "presentation_slides":
+                                    content_data["presentationSlidesUrl"] = file_info["url"]
+                                elif ptype == "recap_slides":
+                                    content_data["recapSlidesUrl"] = file_info["url"]
 
                     elif file_url.startswith(("http://", "https://", "ftp://")):
                         # Process regular URL
@@ -229,8 +515,87 @@ class ContentProcessor:
                             content_id, file_url
                         )
                         if success and file_info:
-                            content_data["fileUrls"].append(file_info)
-                            content_data["file_path"] = file_info["url"]
+                            # Set presentation_type if not already set
+                            if "presentation_type" not in file_info:
+                                mime_type = file_info.get("type", "")
+                                if "presentation" in mime_type:
+                                    file_info["presentation_type"] = "presentation_slides"
+                            
+                            # Only add if it's one of our 4 standard types and we haven't already processed this type
+                            ptype = file_info.get("presentation_type")
+                            if ptype in ["presentation_slides", "recap_slides", "drive_folder", "youtube_video"] and ptype not in processed_types:
+                                # Update or add to fileUrls
+                                update_or_add_entry(content_data["fileUrls"], file_info, ptype)
+                                processed_types.add(ptype)
+                                content_data["file_path"] = file_info["url"]
+
+            # Ensure we only have our 4 specified file types
+            standardized_file_urls = []
+            for entry in content_data["fileUrls"]:
+                ptype = entry.get("presentation_type")
+                if ptype in ["presentation_slides", "recap_slides", "drive_folder", "youtube_video"]:
+                    # Create a clean entry with all necessary fields
+                    clean_entry = {
+                        "contentType": entry.get("contentType", "unknown"),
+                        "presentation_type": ptype,
+                        "name": entry.get("name", ""),
+                        "source": entry.get("source", ""),
+                        "drive_url": entry.get("drive_url", ""),
+                        "driveId": entry.get("driveId", ""),
+                        "gcs_path": entry.get("gcs_path"),
+                        "url": entry.get("url"),
+                        "type": entry.get("type", ""),
+                        "size": entry.get("size", 0),
+                        "thumbnailLink": entry.get("thumbnailLink"),
+                    }
+                    
+                    # Add exportUrl if available - important for large files that can't be exported directly
+                    if entry.get("exportUrl"):
+                        clean_entry["exportUrl"] = entry.get("exportUrl")
+                    
+                    # Ensure content type is set correctly
+                    if not clean_entry["contentType"] or clean_entry["contentType"] == "unknown":
+                        if ptype in ["presentation_slides", "recap_slides"]:
+                            clean_entry["contentType"] = "presentation"
+                        elif ptype == "youtube_video":
+                            clean_entry["contentType"] = "video"
+                        elif ptype == "drive_folder":
+                            clean_entry["contentType"] = "folder"
+                    
+                    # Ensure name is set
+                    if not clean_entry["name"]:
+                        if ptype == "presentation_slides":
+                            clean_entry["name"] = "Presentation Slides"
+                        elif ptype == "recap_slides":
+                            clean_entry["name"] = "Recap Slides"
+                        elif ptype == "drive_folder":
+                            clean_entry["name"] = "Drive Folder"
+                        elif ptype == "youtube_video":
+                            clean_entry["name"] = "YouTube Video"
+                    
+                    # Ensure source is set
+                    if not clean_entry["source"]:
+                        if ptype in ["presentation_slides", "recap_slides", "drive_folder"]:
+                            clean_entry["source"] = "drive"
+                        elif ptype == "youtube_video":
+                            clean_entry["source"] = "youtube"
+                            
+                    # Use URL as drive_url if drive_url is missing but URL exists
+                    if not clean_entry["drive_url"] and clean_entry["url"]:
+                        clean_entry["drive_url"] = clean_entry["url"]
+                    
+                    # Use drive_url as URL if URL is missing but drive_url exists
+                    if not clean_entry["url"] and clean_entry["drive_url"]:
+                        clean_entry["url"] = clean_entry["drive_url"]
+                    
+                    # Use exportUrl as URL if URL is missing but exportUrl exists
+                    if not clean_entry["url"] and clean_entry.get("exportUrl"):
+                        clean_entry["url"] = clean_entry["exportUrl"]
+                    
+                    standardized_file_urls.append(clean_entry)
+            
+            # Replace fileUrls with standardized version
+            content_data["fileUrls"] = standardized_file_urls
 
             # Ensure tags field exists
             if "tags" not in content_data:
@@ -248,6 +613,21 @@ class ContentProcessor:
             success = self.firestore.create_document("content", content_id, content_data)
             if not success:
                 return False, "Failed to store content metadata", None
+
+            # Store the content_id in the content_data dictionary so it's available to callers
+            content_data["id"] = content_id
+
+            # Log stored data for debugging purposes
+            logger.info(f"Content created with ID: {content_id}")
+            
+            # Log the fileUrls entries for verification
+            for i, entry in enumerate(content_data.get("fileUrls", [])):
+                logger.info(f"Content {content_id} fileUrl {i}: type={entry.get('presentation_type')}, gcs_path={entry.get('gcs_path')}")
+                
+            if "recapSlidesUrl" in content_data:
+                logger.info(f"recapSlidesUrl stored: {content_data.get('recapSlidesUrl')}")
+            else:
+                logger.warning(f"recapSlidesUrl not present in content_data for content ID: {content_id}")
 
             return True, "Content created successfully", content_data
 
@@ -569,167 +949,157 @@ class ContentProcessor:
                 # Check if this is an export size limit error
                 error_str = str(download_error)
                 if "exportSizeLimitExceeded" in error_str or "This file is too large to be exported" in error_str:
-                    logger.info(f"File is too large to export in requested format, attempting alternative format")
+                    logger.info(f"File is too large to export in requested format, using direct link")
                     
-                    # For presentations, try PDF format which often has better export size limits
-                    pdf_export_successful = False
-                    if "presentation" in mime_type.lower():
-                        try:
-                            logger.info("Attempting to export presentation as PDF instead")
-                            # Close and remove the temp file if it exists
-                            if os.path.exists(temp_file_path):
-                                os.remove(temp_file_path)
-                            
-                            # Create a new temp file path with PDF extension
-                            pdf_file_name = f"{os.path.splitext(file_name)[0]}.pdf"
-                            temp_pdf_name = f"{uuid.uuid4()}_{pdf_file_name}"
-                            temp_pdf_path = os.path.join(self.temp_dir, temp_pdf_name)
-                            
-                            # Try exporting as PDF
-                            pdf_request = drive_service.files().export_media(
-                                fileId=file_id, mimeType="application/pdf"
-                            )
-                            
-                            with open(temp_pdf_path, "wb") as f:
-                                downloader = MediaIoBaseDownload(f, pdf_request, chunksize=CHUNK_SIZE)
-                                done = False
-                                retry_count = 0
-                                
-                                while not done and retry_count < max_retries:
-                                    try:
-                                        status, done = downloader.next_chunk()
-                                    except Exception as pdf_error:
-                                        retry_count += 1
-                                        if retry_count >= max_retries:
-                                            raise pdf_error
-                            
-                            # Check if PDF was successfully downloaded
-                            pdf_size = os.path.getsize(temp_pdf_path)
-                            if pdf_size > 0:
-                                logger.info(f"Successfully exported presentation as PDF ({pdf_size} bytes)")
-                                # Update variables to use this PDF file instead
-                                temp_file_path = temp_pdf_path
-                                file_extension = ".pdf"
-                                mime_type = "application/pdf"
-                                file_name = pdf_file_name
-                                pdf_export_successful = True
-                        except Exception as pdf_error:
-                            logger.error(f"Failed to export as PDF: {str(pdf_error)}")
-                            # Clean up PDF temp file if it exists
-                            if 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
-                                os.remove(temp_pdf_path)
+                    # Get additional metadata if we don't have it already
+                    try:
+                        detailed_file = drive_service.files().get(
+                            fileId=file_id, 
+                            fields="id,name,mimeType,size,webViewLink,webContentLink,exportLinks,thumbnailLink,iconLink"
+                        ).execute()
                         
-                        # If PDF export was successful, continue with normal processing
-                        if pdf_export_successful:
-                            # Skip to file size check
-                            pass
-                        else:
-                            # If we get here, all export attempts have failed, use webViewLink
-                            logger.info(f"All export attempts failed, using webViewLink instead")
+                        # For Google Workspace files, use the exportLinks when available
+                        if "exportLinks" in detailed_file and detailed_file.get("exportLinks"):
+                            # Get available export formats
+                            export_links = detailed_file.get("exportLinks", {})
+                            logger.info(f"Available export formats: {list(export_links.keys())}")
                             
-                            # Return a special file info that just contains the link
+                            # Prioritize PDF format for presentations and documents
+                            export_url = None
+                            mime_type = "application/link"  # Default fallback
+                            
+                            if "application/pdf" in export_links:
+                                export_url = export_links["application/pdf"]
+                                mime_type = "application/pdf"
+                            # Try other common formats if PDF not available
+                            elif "application/vnd.openxmlformats-officedocument.presentationml.presentation" in export_links:
+                                export_url = export_links["application/vnd.openxmlformats-officedocument.presentationml.presentation"]
+                                mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                            elif "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in export_links:
+                                export_url = export_links["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]  
+                                mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            
+                            # If we found an export URL, use it
+                            if export_url:
+                                logger.info(f"Using export link for {mime_type} instead")
+                                
+                                # Also generate a direct export URL for presentations
+                                direct_export_url = None
+                                if "presentation" in mime_type.lower():
+                                    direct_export_url = f"https://docs.google.com/presentation/d/{file_id}/export/pptx"
+                                    logger.info(f"Generated direct export URL: {direct_export_url}")
+                                
+                                # Create a special file info with the export link
+                                file_info = {
+                                    "url": export_url,
+                                    "name": detailed_file.get("name", f"file_{uuid.uuid4()}"),
+                                    "type": mime_type,
+                                    "contentType": content_type_category,
+                                    "size": 0,  # Size unknown for export
+                                    "driveId": file_id,
+                                    "webViewLink": detailed_file.get("webViewLink", ""),
+                                    "thumbnailLink": detailed_file.get("thumbnailLink", ""),
+                                    "iconLink": detailed_file.get("iconLink", ""),
+                                    "source": "drive",
+                                    "gcs_path": None,  # No GCS path since we're using the direct URL
+                                    "exportUrl": direct_export_url or export_url,
+                                    "tooLargeToExport": True  # Set the flag for large files
+                                }
+                                
+                                return True, f"Using direct export link for file (too large to export through API)", file_info
+                        
+                        # Generate direct export URL for presentations even if no exportLinks available
+                        if "presentation" in detailed_file.get("mimeType", "").lower():
+                            direct_export_url = f"https://docs.google.com/presentation/d/{file_id}/export/pptx"
+                            logger.info(f"Generated direct export URL for presentation: {direct_export_url}")
+                            
+                            # If no export links or not a Google Workspace file, use webViewLink and direct export URL
                             file_info = {
-                                "url": file.get("webViewLink", ""),
+                                "url": detailed_file.get("webViewLink", ""),
+                                "name": detailed_file.get("name", f"file_{uuid.uuid4()}"),
+                                "type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                "contentType": "presentation",
+                                "size": 0,
+                                "driveId": file_id,
+                                "webViewLink": detailed_file.get("webViewLink", ""),
+                                "thumbnailLink": detailed_file.get("thumbnailLink", ""),
+                                "iconLink": detailed_file.get("iconLink", ""),
+                                "source": "drive",
+                                "gcs_path": None,  # No GCS path for web links
+                                "exportUrl": direct_export_url,
+                                "tooLargeToExport": True  # Set the flag for large files
+                            }
+                            
+                            return True, "File link saved (too large to export)", file_info
+                        
+                    except Exception as detail_error:
+                        logger.error(f"Failed to get detailed file info: {str(detail_error)}")
+                        
+                        # If the file appears to be a presentation based on the error or our knowledge, generate direct export URL
+                        if "presentation" in error_str.lower() or mime_type.lower() == "application/vnd.google-apps.presentation":
+                            direct_export_url = f"https://docs.google.com/presentation/d/{file_id}/export/pptx"
+                            logger.info(f"Generated direct export URL as fallback: {direct_export_url}")
+                            
+                            # Create minimal file info with direct export URL
+                            file_info = {
+                                "url": f"https://docs.google.com/presentation/d/{file_id}/edit",
                                 "name": file.get("name", f"file_{uuid.uuid4()}"),
-                                "type": "application/link",
-                                "contentType": "link",
+                                "type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                "contentType": "presentation",
                                 "size": 0,
                                 "driveId": file_id,
                                 "webViewLink": file.get("webViewLink", ""),
                                 "thumbnailLink": file.get("thumbnailLink", ""),
                                 "iconLink": file.get("iconLink", ""),
                                 "source": "drive",
-                                "tooLargeToExport": True
+                                "gcs_path": None,
+                                "exportUrl": direct_export_url,
+                                "tooLargeToExport": True  # Set the flag for large files
                             }
                             
-                            # Clean up the temp file if it exists
-                            if os.path.exists(temp_file_path):
-                                os.remove(temp_file_path)
-                                
-                            return True, "File link saved (too large to export)", file_info
-                
-                # For other errors, proceed with the standard error handling
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                return False, f"Failed to download Drive file: {str(download_error)}", None
+                            return True, "File link saved with direct export URL fallback", file_info
+                    
+                    # If we get here, all export attempts have failed, use webViewLink
+                    logger.info(f"All export attempts failed, using webViewLink instead")
+                    
+                    # For Google Presentations, always generate a direct export URL
+                    direct_export_url = None
+                    if mime_type.lower() == "application/vnd.google-apps.presentation":
+                        direct_export_url = f"https://docs.google.com/presentation/d/{file_id}/export/pptx"
+                        logger.info(f"Generated direct export URL as final fallback: {direct_export_url}")
+                    
+                    # Return a special file info that just contains the link
+                    file_info = {
+                        "url": file.get("webViewLink", ""),
+                        "name": file.get("name", f"file_{uuid.uuid4()}"),
+                        "type": "application/link",
+                        "contentType": "link",
+                        "size": 0,
+                        "driveId": file_id,
+                        "webViewLink": file.get("webViewLink", ""),
+                        "thumbnailLink": file.get("thumbnailLink", ""),
+                        "iconLink": file.get("iconLink", ""),
+                        "source": "drive",
+                        "gcs_path": None, # No GCS path for web links
+                        "exportUrl": direct_export_url,
+                        "tooLargeToExport": True
+                    }
+                    
+                    # Clean up the temp file if it exists
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+                        
+                    return True, "File link saved (too large to export)", file_info
 
-            # Check file size
-            file_size = os.path.getsize(temp_file_path)
-            if file_size == 0:
-                os.remove(temp_file_path)
-                return False, "Downloaded file is empty", None
-
-            # Generate unique storage filename
-            file_extension = os.path.splitext(file_name)[1]
-            if not file_extension:
-                # Try to guess extension from MIME type
-                if "pdf" in mime_type.lower():
-                    file_extension = ".pdf"
-                elif "powerpoint" in mime_type.lower() or "presentation" in mime_type.lower():
-                    file_extension = ".pptx"
-                elif "word" in mime_type.lower() or "document" in mime_type.lower():
-                    file_extension = ".docx"
-                elif "excel" in mime_type.lower() or "spreadsheet" in mime_type.lower():
-                    file_extension = ".xlsx"
-                else:
-                    file_extension = ""
-
-            storage_filename = f"{uuid.uuid4()}{file_extension}"
-
-            # Upload to Google Cloud Storage
-            try:
-                # Create blob path with folder prefix
-                folder_prefix = os.environ.get("GCS_FOLDER_PREFIX", "uploads")
-                blob_path = f"{folder_prefix}/{storage_filename}"
-                blob = self.bucket.blob(blob_path)
-
-                # Upload file with content type
-                blob.upload_from_filename(temp_file_path, content_type=mime_type)
-
-                # Generate a public URL for the file
-                if os.environ.get("GCS_MAKE_PUBLIC", "").lower() == "true":
-                    blob.make_public()
-                    public_url = blob.public_url
-                else:
-                    # Generate a signed URL that expires after a period
-                    expiration = int(
-                        os.environ.get("GCS_URL_EXPIRATION", "86400")
-                    )  # Default 24 hours
-                    public_url = blob.generate_signed_url(
-                        version="v4", expiration=expiration, method="GET"
-                    )
-
-                logger.info(f"File uploaded to GCS: {blob_path}")
-
-                # Delete temp file when done
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                    temp_file_path = None
-
-                # Store GCS path for internal reference
-                bucket_name = os.environ.get("GCS_BUCKET_NAME")
-                gcs_path = f"gs://{bucket_name}/{blob_path}"
-
-                # Return file info with Drive metadata
-                file_info = {
-                    "url": public_url,
-                    "name": file_name,
-                    "type": mime_type,
-                    "contentType": content_type_category,
-                    "size": file_size,
-                    "driveId": file_id,
-                    "webViewLink": file.get("webViewLink", ""),
-                    "thumbnailLink": file.get("thumbnailLink", ""),
-                    "iconLink": file.get("iconLink", ""),
-                    "source": "drive",
-                    "gcs_path": gcs_path,
-                }
-
-                return True, "File processed successfully", file_info
-
-            except Exception as gcs_error:
-                logger.error(f"Failed to upload to GCS: {str(gcs_error)}")
-                return False, f"Failed to store file in Cloud Storage: {str(gcs_error)}", None
+            except Exception as e:
+                logger.error(f"Failed to process Drive file {file_id}: {str(e)}")
+                # Clean up temp file if it exists
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.remove(temp_file_path)
+                    except Exception:
+                        pass
+                return False, f"Failed to process Drive file: {str(e)}", None
 
         except Exception as e:
             logger.error(f"Failed to process Drive file {file_id}: {str(e)}")

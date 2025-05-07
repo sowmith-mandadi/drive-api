@@ -4,7 +4,7 @@ Google Firestore client for database operations.
 import logging
 import os
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from google.cloud import firestore
 
@@ -115,7 +115,7 @@ class FirestoreClient:
         limit: int = 100,
         offset: int = 0,
         order_by: Optional[str] = None,
-        filters: Optional[List[tuple[Any, ...]]] = None,
+        filters: Optional[List[Tuple[str, str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """List documents from a collection with optional filtering.
 
@@ -165,27 +165,59 @@ class FirestoreClient:
             logger.error(f"Error listing documents from {collection}: {str(e)}")
             return []
 
-    def create_document(self, collection: str, document_id: str, data: Dict[str, Any]) -> bool:
+    def list_documents_by_field(
+        self, collection: str, field: str, value: Any, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """List documents by a specific field value.
+
+        This is a convenience method for the common use case of querying by a single field.
+
+        Args:
+            collection: Collection name.
+            field: Field name to filter by.
+            value: Field value to match.
+            limit: Maximum number of documents to return.
+
+        Returns:
+            List of document data.
+        """
+        try:
+            # Use a filter tuple for the field
+            filters = [(field, "==", value)]
+            return self.list_documents(collection, limit=limit, filters=filters)
+        except Exception as e:
+            logger.error(f"Error listing documents by field {field} from {collection}: {str(e)}")
+            return []
+
+    def create_document(
+        self, collection: str, document_id: str, data: Dict[str, Any]
+    ) -> bool:
         """Create a document in Firestore.
 
         Args:
             collection: Collection name.
-            document_id: Document ID.
+            document_id: Document ID (empty string to auto-generate).
             data: Document data.
 
         Returns:
             True if successful, False otherwise.
         """
         try:
-            doc_ref = self.db.collection(collection).document(document_id)
-            doc_ref.set(data)
+            # If document_id is empty, auto-generate one
+            if not document_id:
+                document_id = self.generate_id()
+
+            # Set the document
+            self.db.collection(collection).document(document_id).set(data)
             logger.info(f"Created document {document_id} in {collection}")
             return True
         except Exception as e:
-            logger.error(f"Error creating document {document_id} in {collection}: {str(e)}")
+            logger.error(f"Error creating document in {collection}: {str(e)}")
             return False
 
-    def update_document(self, collection: str, document_id: str, data: Dict[str, Any]) -> bool:
+    def update_document(
+        self, collection: str, document_id: str, data: Dict[str, Any]
+    ) -> bool:
         """Update a document in Firestore.
 
         Args:
@@ -197,8 +229,8 @@ class FirestoreClient:
             True if successful, False otherwise.
         """
         try:
-            doc_ref = self.db.collection(collection).document(document_id)
-            doc_ref.update(data)
+            # Update the document
+            self.db.collection(collection).document(document_id).update(data)
             logger.info(f"Updated document {document_id} in {collection}")
             return True
         except Exception as e:
@@ -230,7 +262,7 @@ class FirestoreClient:
         query_text: str,
         fields: List[str],
         limit: int = 100,
-        filters: Optional[List[tuple[Any, ...]]] = None,
+        filters: Optional[List[Tuple[str, str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """Search for documents containing the query text in specified fields.
 

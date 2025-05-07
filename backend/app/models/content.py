@@ -74,10 +74,7 @@ class Session(BaseModel):
 
     # YouTube Publishing
     youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
-    youtubeChannel: Optional[str] = Field(None, description="YouTube channel")
-    youtubeVisibility: Optional[str] = Field(None, description="YouTube visibility setting")
     ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
-    ytDescription: Optional[str] = Field(None, description="YouTube video description")
 
     # System fields
     createdAt: datetime = Field(
@@ -165,10 +162,7 @@ class ContentInDB(ContentBase):
 
     # YouTube publishing info
     youtubeUrl: Optional[HttpUrl] = None
-    youtubeChannel: Optional[str] = None
-    youtubeVisibility: Optional[str] = None
     ytVideoTitle: Optional[str] = None
-    ytDescription: Optional[str] = None
 
 
 class Content(ContentInDB):

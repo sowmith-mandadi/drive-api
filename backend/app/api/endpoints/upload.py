@@ -34,9 +34,7 @@ class Presenter(BaseModel):
     photo: Optional[str] = None
     company: Optional[str] = None
     title: Optional[str] = None
-    type: Optional[str] = None
     industry: Optional[str] = None
-    region: Optional[str] = None
 
 
 class Comment(BaseModel):
@@ -91,10 +89,7 @@ class ContentUpload(BaseModel):
 
     # YouTube Publishing
     youtubeUrl: Optional[HttpUrl] = Field(None, description="YouTube URL")
-    youtubeChannel: Optional[str] = Field(None, description="YouTube channel")
-    youtubeVisibility: Optional[str] = Field(None, description="YouTube visibility")
     ytVideoTitle: Optional[str] = Field(None, description="YouTube video title")
-    ytDescription: Optional[str] = Field(None, description="YouTube video description")
 
     # Other
     used: Optional[bool] = Field(False, description="Whether the content has been used")
@@ -127,6 +122,10 @@ async def upload_content(
     presentationSlidesUrl: Optional[str] = Form(None),
     recapSlidesUrl: Optional[str] = Form(None),
     videoRecordingStatus: Optional[str] = Form(None),
+    driveLink: Optional[str] = Form(None),
+    videoYoutubeUrl: Optional[str] = Form(None),
+    ytVideoTitle: Optional[str] = Form(None),
+    ytDescription: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
 ):
     """
@@ -163,6 +162,63 @@ async def upload_content(
                 contents = await file.read()
                 f.write(contents)
 
+        # Add all URLs directly to fileUrls
+        fileUrls = []
+        
+        # Handle presentation slides URL
+        if presentationSlidesUrl:
+            fileUrls.append({
+                "contentType": "presentation",
+                "presentation_type": "presentation_slides",
+                "name": "Presentation Slides",
+                "source": "drive",
+                "drive_url": presentationSlidesUrl,
+                "driveId": presentationSlidesUrl.split("/d/")[1].split("/")[0] if "/d/" in presentationSlidesUrl else "",
+                "gcs_path": None,
+                "type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "size": 0,
+                "thumbnailLink": None,
+                "url": None
+            })
+        
+        # Handle recap slides URL
+        if recapSlidesUrl:
+            fileUrls.append({
+                "contentType": "presentation",
+                "presentation_type": "recap_slides",
+                "name": "Recap Slides",
+                "source": "drive",
+                "drive_url": recapSlidesUrl,
+                "driveId": recapSlidesUrl.split("/d/")[1].split("/")[0] if "/d/" in recapSlidesUrl else "",
+                "gcs_path": None,
+                "type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "size": 0,
+                "thumbnailLink": None,
+                "url": None
+            })
+        
+        # Handle drive link
+        if driveLink:
+            fileUrls.append({
+                "contentType": "folder",
+                "presentation_type": "drive_folder",
+                "name": "Drive Folder",
+                "source": "drive",
+                "drive_url": driveLink,
+                "gcs_path": None
+            })
+        
+        # Handle YouTube URL
+        if videoYoutubeUrl:
+            fileUrls.append({
+                "contentType": "video",
+                "presentation_type": "youtube_video",
+                "name": "YouTube Video",
+                "source": "youtube",
+                "drive_url": videoYoutubeUrl,
+                "gcs_path": None
+            })
+
         # Create content data
         now = datetime.now()
         content_data = {
@@ -188,13 +244,16 @@ async def upload_content(
             "presenters": presenters_list,
             "dateCreated": now.isoformat(),
             "dateModified": now.isoformat(),
-            "fileUrls": [],
-            "driveUrls": [],
+            "fileUrls": fileUrls,
             "used": False,
-            # Asset URLs
+            # Asset URLs - keep for backward compatibility
             "presentationSlidesUrl": presentationSlidesUrl,
             "recapSlidesUrl": recapSlidesUrl,
             "videoRecordingStatus": videoRecordingStatus,
+            "driveLink": driveLink,
+            "videoYoutubeUrl": videoYoutubeUrl,
+            "ytVideoTitle": ytVideoTitle,
+            "ytDescription": ytDescription,
             # Include a metadata field with all root level metadata
             "metadata": {
                 "abstract": abstract,
@@ -214,7 +273,10 @@ async def upload_content(
                 "industry": industry,
                 "presentationSlidesUrl": presentationSlidesUrl,
                 "recapSlidesUrl": recapSlidesUrl,
-                "videoRecordingStatus": videoRecordingStatus
+                "videoRecordingStatus": videoRecordingStatus,
+                "videoYoutubeUrl": videoYoutubeUrl,
+                "ytVideoTitle": ytVideoTitle,
+                "ytDescription": ytDescription
             }
         }
 
@@ -243,6 +305,20 @@ async def upload_content(
 
             # Or create a Cloud Task for production
             # task_service.create_file_processing_task(task_data)
+        
+        # Ensure we only have the 4 required types in fileUrls
+        content_data["fileUrls"] = [
+            entry for entry in content_data["fileUrls"]
+            if entry.get("presentation_type") in ["presentation_slides", "recap_slides", "drive_folder", "youtube_video"]
+        ]
+        
+        # Remove any iconLink fields and ensure webViewLink is converted to drive_url
+        for entry in content_data["fileUrls"]:
+            if "iconLink" in entry:
+                del entry["iconLink"]
+            if "webViewLink" in entry:
+                entry["drive_url"] = entry["webViewLink"]
+                del entry["webViewLink"]
 
         return {
             "id": content_id,
