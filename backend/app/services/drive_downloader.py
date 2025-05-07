@@ -267,13 +267,55 @@ class DriveDownloader:
             blob.upload_from_filename(file_path, content_type=mime_type)
             
             # Generate URL for access
-            if os.environ.get("GCS_MAKE_PUBLIC", "").lower() == "true":
+            try:
+                if os.environ.get("GCS_MAKE_PUBLIC", "").lower() == "true":
+                    blob.make_public()
+                    public_url = blob.public_url
+                else:
+                    # Generate a signed URL that expires after a period
+                    expiration = int(os.environ.get("GCS_URL_EXPIRATION", "86400"))  # Default 24 hours
+                    
+                    # Try to generate signed URL with the current credentials
+                    try:
+                        public_url = blob.generate_signed_url(version="v4", expiration=expiration, method="GET")
+                    except Exception as sign_error:
+                        # If we get an error about needing a private key, use the explicit service account file
+                        if "you need a private key" in str(sign_error) or "just contains a token" in str(sign_error):
+                            logger.warning("Default credentials lack private key for signing. Using explicit service account credentials.")
+                            
+                            # Try with explicit service account credentials that include a private key
+                            service_account_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_PATH")
+                            if service_account_path and os.path.exists(service_account_path):
+                                from google.oauth2 import service_account
+                                
+                                # Create credentials with the service account file
+                                signing_credentials = service_account.Credentials.from_service_account_file(
+                                    service_account_path, 
+                                    scopes=["https://www.googleapis.com/auth/cloud-platform"]
+                                )
+                                
+                                # Generate the signed URL with these credentials
+                                public_url = blob.generate_signed_url(
+                                    version="v4", 
+                                    expiration=expiration, 
+                                    method="GET",
+                                    credentials=signing_credentials
+                                )
+                                logger.info("Successfully generated signed URL with service account credentials")
+                            else:
+                                # If we can't sign URLs, fall back to a public URL
+                                logger.warning("No service account credentials available for signing. Making blob public as fallback.")
+                                blob.make_public()
+                                public_url = blob.public_url
+                        else:
+                            # Some other error occurred
+                            raise sign_error
+                    
+            except Exception as url_error:
+                logger.error(f"Error generating URL: {str(url_error)}")
+                # Fallback to making it public
                 blob.make_public()
                 public_url = blob.public_url
-            else:
-                # Generate a signed URL that expires after a period
-                expiration = int(os.environ.get("GCS_URL_EXPIRATION", "86400"))  # Default 24 hours
-                public_url = blob.generate_signed_url(version="v4", expiration=expiration, method="GET")
                 
             # Set GCS path
             gcs_path = f"gs://{bucket_name}/{blob_path}"
