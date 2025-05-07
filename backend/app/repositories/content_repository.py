@@ -19,7 +19,10 @@ class ContentRepository:
     def __init__(self) -> None:
         """Initialize the content repository."""
         self.firestore = FirestoreClient()
-        self.collection = settings.FIRESTORE_COLLECTION_CONTENT
+        self.collection = settings.FIRESTORE_COLLECTION_CONTENT.lower()  # Ensure lowercase collection name
+        print(f"\n\nDEBUG INIT: ContentRepository using collection: {self.collection}")
+        print(f"DEBUG INIT: FIRESTORE_COLLECTION_CONTENT from settings: {settings.FIRESTORE_COLLECTION_CONTENT}")
+        print(f"DEBUG INIT: FIRESTORE_PROJECT_ID from settings: {settings.FIRESTORE_PROJECT_ID}")
 
     def get_all(self, limit: int = 100, offset: int = 0) -> List[ContentInDB]:
         """Get all content items with pagination.
@@ -32,12 +35,52 @@ class ContentRepository:
             List of content items.
         """
         # Get documents from Firestore
+        print("\n\nDEBUG: Retrieving documents from Firestore...")
+        print(f"DEBUG: Using collection: '{self.collection}'")
+        print(f"DEBUG: Ordering by 'created_at'")
         docs = self.firestore.list_documents(
             self.collection, limit=limit, offset=offset, order_by="created_at"
         )
-
+        
+        # Log the number of documents retrieved
+        print(f"DEBUG: Retrieved {len(docs)} documents from Firestore")
+        if docs:
+            print(f"DEBUG: First document: {dict(sorted(docs[0].items())[:5])}")
+        else:
+            # Let's try to list all collections in the Firestore db
+            try:
+                print("DEBUG: Checking available collections...")
+                collections = self.firestore.db.collections()
+                for collection in collections:
+                    print(f"DEBUG: Found collection: {collection.id}")
+                    # Try to get a sample document
+                    try:
+                        sample_docs = list(collection.limit(1).stream())
+                        if sample_docs:
+                            doc_data = sample_docs[0].to_dict()
+                            doc_id = sample_docs[0].id
+                            print(f"DEBUG: Sample document in '{collection.id}': ID={doc_id}, Keys={list(doc_data.keys())[:5]}")
+                        else:
+                            print(f"DEBUG: Collection '{collection.id}' is empty")
+                    except Exception as e:
+                        print(f"DEBUG: Error accessing collection '{collection.id}': {str(e)}")
+            except Exception as e:
+                print(f"DEBUG: Error listing collections: {str(e)}")
+        
         # Convert to ContentInDB models
-        return [self._to_content_model(doc) for doc in docs]
+        result = []
+        for i, doc in enumerate(docs):
+            try:
+                model = self._to_content_model(doc)
+                result.append(model)
+                print(f"DEBUG: Successfully converted document {i+1}/{len(docs)}")
+            except Exception as e:
+                print(f"DEBUG: Error converting document {i+1}/{len(docs)}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        
+        print(f"DEBUG: Successfully converted {len(result)}/{len(docs)} documents to models")
+        return result
 
     def get_by_id(self, content_id: str) -> Optional[ContentInDB]:
         """Get content by ID.
@@ -70,11 +113,11 @@ class ContentRepository:
             # Prepare data
             now = datetime.now().isoformat()
 
-            # Create content object
+            # Create content object with snake_case keys for Firestore
             content_dict = {
                 "title": content_data.title,
                 "description": content_data.description,
-                "content_type": content_data.content_type,
+                "content_type": content_data.contentType,  # Map contentType to content_type
                 "source": content_data.source,
                 "tags": content_data.tags or [],
                 "metadata": content_data.metadata or {},
@@ -84,8 +127,8 @@ class ContentRepository:
             }
 
             # Add Drive ID if available
-            if content_data.source == "drive" and content_data.file_id:
-                content_dict["drive_id"] = content_data.file_id
+            if content_data.source == "drive" and content_data.fileId:  # Use fileId instead of file_id
+                content_dict["drive_id"] = content_data.fileId  # Map fileId to drive_id
 
             # Create in Firestore
             success = self.firestore.create_document(
@@ -120,7 +163,7 @@ class ContentRepository:
             if not existing_content:
                 return None
 
-            # Prepare update data
+            # Prepare update data with snake_case keys for Firestore
             update_dict: Dict[str, Any] = {}
 
             if update_data.title is not None:
@@ -265,6 +308,7 @@ class ContentRepository:
         Returns:
             True if successful, False otherwise.
         """
+        # Use snake_case for Firestore fields
         update_dict = {
             "extracted_text": extracted_text,
             "page_content": page_content,
@@ -283,6 +327,7 @@ class ContentRepository:
         Returns:
             True if successful, False otherwise.
         """
+        # Use snake_case for Firestore fields
         update_dict = {"file_path": file_path, "updated_at": datetime.now().isoformat()}
 
         return self.firestore.update_document(self.collection, content_id, update_dict)
@@ -325,14 +370,11 @@ class ContentRepository:
         if doc_speakers and isinstance(doc_speakers, list):
             for speaker_data in doc_speakers:
                 if isinstance(speaker_data, dict):
-                    # Convert presenter data to Speaker model
+                    # Convert presenter data to Speaker model - map snake_case to camelCase
                     speaker = Speaker(
-                        full_name=speaker_data.get("full_name") or speaker_data.get("name"),
-                        job_title=speaker_data.get("job_title") or speaker_data.get("title"),
+                        fullName=speaker_data.get("full_name") or speaker_data.get("name"),
+                        jobTitle=speaker_data.get("job_title") or speaker_data.get("title"),
                         company=speaker_data.get("company"),
-                        type=speaker_data.get("type"),
-                        industry=speaker_data.get("industry"),
-                        region=speaker_data.get("region"),
                     )
                     speakers.append(speaker)
 
@@ -346,55 +388,51 @@ class ContentRepository:
         if not isinstance(assets, dict):
             assets = {}
 
-        # Create ContentInDB model with all fields
+        # Create ContentInDB model with all fields - explicitly map snake_case to camelCase
         return ContentInDB(
             id=doc_id,
             title=title,
             description=doc.get("description"),
-            content_type=content_type,
+            contentType=content_type,  # Map content_type to contentType
             source=doc.get("source", "upload"),
             # New fields - basic session info
-            session_id=doc.get("session_id"),
+            sessionId=doc.get("session_id"),  # Map session_id to sessionId
             status=doc.get("status"),
             # Date fields
-            created_at=created_at,
-            updated_at=updated_at,
+            createdAt=created_at,  # Map created_at to createdAt
+            updatedAt=updated_at,  # Map updated_at to updatedAt
             # File related fields
-            file_path=doc.get("file_path"),
-            drive_id=doc.get("drive_id"),
-            drive_link=doc.get("drive_link"),
+            filePath=doc.get("file_path"),  # Map file_path to filePath
+            driveId=doc.get("drive_id"),  # Map drive_id to driveId
+            driveLink=doc.get("drive_link"),  # Map drive_link to driveLink
             # Content metadata fields
             abstract=doc.get("abstract"),
-            demo_type=doc.get("demo_type") or doc.get("session_type"),
-            duration_minutes=doc.get("duration_minutes"),
+            demoType=doc.get("demo_type") or doc.get("session_type"),  # Map demo_type to demoType
+            durationMinutes=doc.get("duration_minutes"),  # Map duration_minutes to durationMinutes
             tags=tags,
             metadata=metadata,
             used=used,
             # Text and embedding fields
-            extracted_text=doc.get("extracted_text"),
-            page_content=doc.get("page_content"),
-            embedding_id=doc.get("embedding_id"),
-            ai_tags=doc.get("ai_tags") or doc.get("aiTags"),
+            extractedText=doc.get("extracted_text"),  # Map extracted_text to extractedText
+            pageContent=doc.get("page_content"),  # Map page_content to pageContent
+            embeddingId=doc.get("embedding_id"),  # Map embedding_id to embeddingId
+            aiTags=doc.get("ai_tags") or doc.get("aiTags"),  # Map ai_tags to aiTags
             # Categorization fields
             categorization=categorization,
             track=doc.get("track"),
-            learning_level=doc.get("learning_level") or doc.get("learningLevel"),
+            learningLevel=doc.get("learning_level") or doc.get("learningLevel"),  # Map learning_level to learningLevel
             topics=doc.get("topics"),
-            target_job_roles=doc.get("target_job_roles") or doc.get("targetJobRoles"),
-            area_of_interest=doc.get("area_of_interest") or doc.get("areaOfInterest"),
+            targetJobRoles=doc.get("target_job_roles") or doc.get("targetJobRoles"),  # Map target_job_roles to targetJobRoles
+            areasOfInterest=doc.get("area_of_interest") or doc.get("areaOfInterest"),  # Map area_of_interest to areasOfInterest
             # Presenter information
             speakers=speakers,
             # Assets
             assets=assets,
-            presentation_slides_url=doc.get("presentation_slides_url"),
-            recap_slides_url=doc.get("recap_slides_url"),
-            video_recording_status=doc.get("video_recording_status"),
-            video_source_file_url=doc.get("video_source_file_url"),
-            video_youtube_url=doc.get("video_youtube_url"),
+            presentationSlidesUrl=doc.get("presentation_slides_url"),  # Map presentation_slides_url to presentationSlidesUrl
+            recapSlidesUrl=doc.get("recap_slides_url"),  # Map recap_slides_url to recapSlidesUrl
+            sessionRecordingStatus=doc.get("video_recording_status"),  # Map video_recording_status to sessionRecordingStatus
+            videoSourceFileUrl=doc.get("video_source_file_url"),  # Map video_source_file_url to videoSourceFileUrl
+            videoYoutubeUrl=doc.get("video_youtube_url"),  # Map video_youtube_url to videoYoutubeUrl
             # YouTube publishing info
-            youtube_url=doc.get("youtube_url"),
-            youtube_channel=doc.get("youtube_channel"),
-            youtube_visibility=doc.get("youtube_visibility"),
-            yt_video_title=doc.get("yt_video_title"),
-            yt_description=doc.get("yt_description"),
+            youtubeUrl=doc.get("youtube_url"),  # Map youtube_url to youtubeUrl
         )

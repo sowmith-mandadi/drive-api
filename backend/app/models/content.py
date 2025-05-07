@@ -2,7 +2,7 @@
 Models for content management.
 """
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -37,7 +37,7 @@ class Session(BaseModel):
     demoType: str = Field(
         ..., description="Type of demo: 'Keynote', 'Breakout', 'Workshop', 'Single Screen Demo'"
     )
-    durationMinutes: Optional[str] = Field(None, description="Total run time in minutes")
+    durationMinutes: Optional[Union[str, int]] = Field(None, description="Total run time in minutes")
 
     # Categorization details
     categorization: Dict[str, Any] = Field(
@@ -122,7 +122,7 @@ class ContentInDB(ContentBase):
     demoType: Optional[str] = Field(
         None, description="Type of demo: 'Keynote', 'Breakout', 'Workshop', 'Single Screen Demo'"
     )
-    durationMinutes: Optional[str] = None
+    durationMinutes: Optional[Union[str, int]] = None
     tags: List[str] = []
     metadata: Dict[str, Any] = {}
     extractedText: Optional[str] = None
