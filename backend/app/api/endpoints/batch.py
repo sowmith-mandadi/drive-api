@@ -263,24 +263,6 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
             batch_service.mark_job_failed(job_id, "File contains no data rows")
             return
 
-        # Create a batch job
-        job_data = BatchJobCreate(
-            job_type="content_upload",
-            total_items=len(df),
-            metadata={
-                "filename": file.filename,
-                "total_rows": len(df),
-            },
-            created_by=user_id,
-        )
-
-        batch_job = batch_service.create_job(job_data)
-        if not batch_job:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create batch job",
-            )
-
         # Keep track of success/failure
         total_rows = len(df)
         processed_rows = 0
@@ -562,6 +544,15 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
 
                 # Update fileUrls with processed information
                 if success and created_content and "fileUrls" in created_content:
+                    # Extract content ID from created_content
+                    content_id = None
+                    if created_content.get("id"):
+                        content_id = created_content.get("id")
+                        logger.info(f"Found content ID in returned data: {content_id}")
+                    elif "_id" in created_content:
+                        content_id = created_content.get("_id")
+                        logger.info(f"Found content ID as '_id': {content_id}")
+                    
                     # Direct mapping from processed fileUrls
                     processed_urls = {}
                     
@@ -754,7 +745,11 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                     batch_service.update_job_progress(job_id, processed=1, successful=1)
                     
                     # Add to list of content to be indexed
-                    processed_content_ids.append(content_id)
+                    if content_id:  # Only add if we have a valid content_id
+                        processed_content_ids.append(content_id)
+                        logger.info(f"Added content ID {content_id} to indexing list")
+                    else:
+                        logger.warning(f"Content created but could not extract ID for indexing")
                 else:
                     failed_rows += 1
                     error = BatchJobError(
@@ -802,33 +797,18 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                             entry["exportUrl"] = f"https://docs.google.com/presentation/d/{entry.get('driveId')}/export/pptx"
                             logger.info(f"Generated export URL for background processing: {entry['exportUrl']}")
                         
-                        # Add to queue for background processing - include the content_id from the created_content
-                        if created_content:
-                            # Get the content ID from the created_content dictionary
-                            content_id = None
-                            
-                            # First check if the ID is in created_content (our updated processor now adds it)
-                            if created_content.get("id"):
-                                content_id = created_content.get("id")
-                                logger.info(f"Found content ID in returned data: {content_id}")
-                            # As fallback, try to get it from logging context if possible
-                            elif "_id" in created_content:
-                                content_id = created_content.get("_id")
-                                logger.info(f"Found content ID as '_id': {content_id}")
-                            
-                            if content_id:
-                                large_files_to_process.append({
-                                    "entry": entry,
-                                    "content_id": content_id,
-                                    "processed": False,
-                                    "retries": 0,
-                                    "max_retries": 3
-                                })
-                                logger.info(f"Queued large {entry.get('presentation_type')} for background download with content_id: {content_id}")
-                            else:
-                                logger.warning(f"Skipping background processing for {entry.get('presentation_type')} - missing content ID")
+                        # Add to queue for background processing - use the content_id we extracted earlier
+                        if created_content and content_id:
+                            large_files_to_process.append({
+                                "entry": entry,
+                                "content_id": content_id,
+                                "processed": False,
+                                "retries": 0,
+                                "max_retries": 3
+                            })
+                            logger.info(f"Queued large {entry.get('presentation_type')} for background download with content_id: {content_id}")
                         else:
-                            logger.warning(f"Skipping background processing for {entry.get('presentation_type')} - missing content data")
+                            logger.warning(f"Skipping background processing for {entry.get('presentation_type')} - missing content ID")
 
             except Exception as e:
                 # Log error
