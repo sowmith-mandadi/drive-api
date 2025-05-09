@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 class FirestoreClient:
     """Client for Google Firestore database operations."""
 
+    # Special value to indicate field deletion
+    DELETE_FIELD = firestore.DELETE_FIELD
+
     def __init__(self) -> None:
         """Initialize the Firestore client."""
         try:
@@ -298,61 +301,82 @@ class FirestoreClient:
     def search_documents(
         self,
         collection: str,
-        query_text: str,
-        fields: List[str],
-        limit: int = 100,
+        query: str,
+        search_fields: List[str],
         filters: Optional[List[Tuple[str, str, Any]]] = None,
+        limit: int = 100,
+        offset: int = 0,
+        order_by: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Search for documents containing the query text in specified fields.
-
-        Note: This is a simplified search that works for small collections.
-        For production, consider using a dedicated search service like
-        Elasticsearch or Google's Vector Search.
+        """Search for documents using a combined approach of filters and simple text matching.
 
         Args:
             collection: Collection name.
-            query_text: Text to search for.
-            fields: Fields to search in.
-            limit: Maximum number of documents to return.
-            filters: List of filter tuples (field, op, value).
+            query: Text query.
+            search_fields: Fields to search in.
+            filters: List of filter tuples (field, operator, value).
+            limit: Maximum number of results.
+            offset: Number of results to skip.
+            order_by: Field to order by.
 
         Returns:
-            List of document data.
+            List of document dictionaries.
         """
         try:
-            # This is a very basic implementation that does client-side filtering
-            # Not recommended for large collections
-            results = []
+            if not collection:
+                logger.error("Collection name cannot be empty")
+                return []
 
-            # Get all documents (up to a reasonable limit)
-            max_docs = 1000  # Set a reasonable upper bound
-            query = self.db.collection(collection).limit(max_docs)
+            if not isinstance(query, str):
+                query = str(query) if query is not None else ""
+
+            # Start query
+            ref = self.db.collection(collection)
+            search_query = ref
 
             # Apply filters if provided
             if filters:
                 for field, op, value in filters:
-                    query = query.where(field, op, value)
+                    search_query = search_query.where(field, op, value)
 
-            docs = query.stream()
+            # Apply ordering if specified
+            if order_by:
+                search_query = search_query.order_by(order_by, direction=firestore.Query.DESCENDING)
 
-            # Client-side text search
-            query_text = query_text.lower()
+            # Apply limit and offset
+            search_query = search_query.limit(limit).offset(offset)
+
+            # Execute query
+            docs = list(search_query.stream())
+            
+            result_docs = []
             for doc in docs:
-                doc_data = doc.to_dict()
-                doc_data["id"] = doc.id
+                doc_dict = doc.to_dict()
+                # Add document ID as a field
+                doc_dict["id"] = doc.id
+                result_docs.append(doc_dict)
 
-                # Check if query text exists in any of the specified fields
-                for field in fields:
-                    if field in doc_data and isinstance(doc_data[field], str):
-                        if query_text in doc_data[field].lower():
-                            results.append(doc_data)
-                            break
-
-                # Stop once we have enough results
-                if len(results) >= limit:
-                    break
-
-            return results
+            # No full-text search in basic Firestore, but we can simulate it
+            if query and search_fields:
+                query = query.lower()
+                filtered_docs = []
+                # Simple text filtering
+                for doc in result_docs:
+                    for field in search_fields:
+                        if field in doc:
+                            field_value = doc[field]
+                            if isinstance(field_value, str) and query in field_value.lower():
+                                filtered_docs.append(doc)
+                                break
+                            elif isinstance(field_value, list):
+                                # Handle list fields (like tags)
+                                for item in field_value:
+                                    if isinstance(item, str) and query in item.lower():
+                                        filtered_docs.append(doc)
+                                        break
+                return filtered_docs
+            
+            return result_docs
         except Exception as e:
-            logger.error(f"Error searching documents in {collection}: {str(e)}")
+            logger.error(f"Error searching documents: {str(e)}")
             return []

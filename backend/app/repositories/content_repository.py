@@ -154,6 +154,42 @@ class ContentRepository:
 
         return self._to_content_model(doc)
 
+    def get_by_session_id(self, session_id: str) -> Optional[ContentInDB]:
+        """Get content by session ID.
+
+        Args:
+            session_id: Session ID of the content.
+
+        Returns:
+            Content item or None if not found.
+        """
+        try:
+            # Try with snake_case field name first since that's how it's stored in the database
+            firestore_filters = [("session_id", "==", session_id)]
+            
+            docs = self.firestore.search_documents(
+                self.collection, "", [], filters=firestore_filters, limit=1
+            )
+            
+            # Return first matching document if found
+            if docs and len(docs) > 0:
+                return self._to_content_model(docs[0])
+            
+            # If no document found, try with camelCase field name as fallback
+            firestore_filters = [("sessionId", "==", session_id)]
+            docs = self.firestore.search_documents(
+                self.collection, "", [], filters=firestore_filters, limit=1
+            )
+            
+            # Return first matching document if found
+            if docs and len(docs) > 0:
+                return self._to_content_model(docs[0])
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error retrieving content by session ID: {str(e)}")
+            return None
+
     def create(
         self, content_data: ContentCreate, content_id: Optional[str] = None
     ) -> Optional[ContentInDB]:
@@ -236,6 +272,9 @@ class ContentRepository:
             if update_data.used is not None:
                 # Ensure used is a boolean
                 update_dict["used"] = update_data.used
+            if update_data.sessionId is not None:
+                # Store only snake_case version for standardization
+                update_dict["session_id"] = update_data.sessionId
 
             # Add updated timestamp
             update_dict["updated_at"] = datetime.now().isoformat()
@@ -449,6 +488,9 @@ class ContentRepository:
         if not isinstance(assets, dict):
             assets = {}
 
+        # Check both camelCase and snake_case for session_id
+        session_id = doc.get("session_id") or doc.get("sessionId")
+
         # Create ContentInDB model with all fields - explicitly map snake_case to camelCase
         return ContentInDB(
             id=doc_id,
@@ -457,7 +499,7 @@ class ContentRepository:
             contentType=content_type,  # Map content_type to contentType
             source=doc.get("source", "upload"),
             # New fields - basic session info
-            sessionId=doc.get("session_id"),  # Map session_id to sessionId
+            sessionId=session_id,  # Use our combined value
             status=doc.get("status"),
             # Date fields
             createdAt=created_at,  # Map created_at to createdAt
