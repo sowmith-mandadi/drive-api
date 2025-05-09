@@ -42,14 +42,35 @@ async def get_recommended_content(limit: int = 10) -> List[Content]:
     return [Content.model_validate(item.model_dump()) for item in content_items]
 
 
-@router.get("/{content_id}", response_model=Content)
-async def get_content(content_id: str) -> Content:
-    """Get content by ID."""
-    content = content_service.get_content_by_id(content_id)
-    if not content:
+@router.get("/{id_or_session_id}", response_model=Content)
+async def get_content(id_or_session_id: str) -> Content:
+    """Get content by ID or session ID."""
+    if not id_or_session_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Content with ID {content_id} not found"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="ID or session ID cannot be empty"
         )
+    
+    # Try to get content by session_id first
+    content = content_service.get_content_by_session_id(id_or_session_id)
+    
+    if not content:
+        # Log the issue for debugging
+        print(f"DEBUG: Content not found by session_id='{id_or_session_id}', trying to get by ID instead")
+        
+        # Try by ID as fallback
+        content = content_service.get_content_by_id(id_or_session_id)
+        if not content:
+            # Log more detailed error information
+            print(f"DEBUG: Content not found by ID='{id_or_session_id}' either, returning 404")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail=f"Content with ID or session ID '{id_or_session_id}' not found"
+            )
+        else:
+            print(f"DEBUG: Content found by ID='{id_or_session_id}', returning it")
+    else:
+        print(f"DEBUG: Content found by session_id='{id_or_session_id}', returning it")
+    
     # Convert ContentInDB to Content
     return Content.model_validate(content.model_dump())
 
@@ -62,7 +83,7 @@ async def create_content(
     content_type: str = Form(...),
     source: str = Form("upload"),
     abstract: Optional[str] = Form(None),
-    session_id: Optional[str] = Form(None),
+    session_id: str = Form(...),  # Now required
     status: Optional[str] = Form(None),
     demo_type: Optional[str] = Form(None),
     # Promotional flags
@@ -89,6 +110,14 @@ async def create_content(
 ) -> Content:
     """Create new content with optional file upload."""
     try:
+        # Check if session_id already exists
+        existing_content = content_service.get_content_by_session_id(session_id)
+        if existing_content:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Content with session ID {session_id} already exists"
+            )
+            
         # Parse JSON strings
         tags_list = json.loads(tags)
         metadata_dict = json.loads(metadata)
@@ -186,6 +215,15 @@ async def create_content(
 @router.put("/{content_id}", response_model=Content)
 async def update_content(content_id: str, update_data: ContentUpdate) -> Content:
     """Update existing content."""
+    # Check session_id uniqueness if it's being updated
+    if hasattr(update_data, 'sessionId') and update_data.sessionId:
+        existing_content = content_service.get_content_by_session_id(update_data.sessionId)
+        if existing_content and existing_content.id != content_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Content with session ID {update_data.sessionId} already exists"
+            )
+    
     updated_content = content_service.update_content(content_id, update_data)
     if not updated_content:
         raise HTTPException(
@@ -284,83 +322,6 @@ async def get_recent_content(page: int = 1, page_size: int = 10) -> Dict[str, An
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recent content: {str(e)}",
         )
-
-@router.get("/test-firestore", response_model=Dict[str, Any])
-async def test_firestore():
-    """Test Firestore connection and collection access."""
-    from app.db.firestore_client import FirestoreClient
-    from app.core.config import settings
-    import datetime
-    import uuid
-    import traceback
-    
-    result = {
-        "success": False,
-        "collections": [],
-        "test_write": False,
-        "errors": []
-    }
-    
-    try:
-        # Initialize client
-        firestore = FirestoreClient()
-        result["client_initialized"] = True
-        
-        # Get settings
-        result["project_id"] = settings.FIRESTORE_PROJECT_ID
-        result["collection"] = settings.FIRESTORE_COLLECTION_CONTENT
-        
-        # List collections
-        collections = firestore.db.collections()
-        for col in collections:
-            result["collections"].append(col.id)
-            
-        # Try to read from content collection 
-        collection = settings.FIRESTORE_COLLECTION_CONTENT
-        docs = list(firestore.db.collection(collection).limit(5).stream())
-        result["documents_found"] = len(docs)
-        
-        # If no documents, try to create a test one
-        if len(docs) == 0:
-            # Try a different capitalization
-            alt_collection = "Content" if collection == "content" else "content"
-            alt_docs = list(firestore.db.collection(alt_collection).limit(5).stream())
-            result["alt_documents_found"] = len(alt_docs)
-            result["alt_collection"] = alt_collection
-            
-            # Create a test document
-            test_id = f"test-{uuid.uuid4()}"
-            test_data = {
-                "title": "Test Document",
-                "description": "Created for testing Firestore access",
-                "content_type": "test",
-                "created_at": datetime.datetime.now().isoformat(),
-                "updated_at": datetime.datetime.now().isoformat()
-            }
-            
-            # Try to write to both collections
-            try:
-                firestore.db.collection(collection).document(test_id).set(test_data)
-                result["test_write"] = True
-                result["test_write_collection"] = collection
-                result["test_document_id"] = test_id
-            except Exception as write_err:
-                result["errors"].append(f"Write error: {str(write_err)}")
-                # Try alternate collection
-                try:
-                    firestore.db.collection(alt_collection).document(test_id).set(test_data)
-                    result["test_write"] = True
-                    result["test_write_collection"] = alt_collection
-                    result["test_document_id"] = test_id
-                except Exception as alt_write_err:
-                    result["errors"].append(f"Alt write error: {str(alt_write_err)}")
-        
-        result["success"] = True
-    except Exception as e:
-        result["errors"].append(f"Error: {str(e)}")
-        result["traceback"] = traceback.format_exc()
-        
-    return result
 
 @router.put("/{content_id}/promotional-status", response_model=Content)
 async def update_promotional_status(

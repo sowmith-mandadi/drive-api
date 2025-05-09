@@ -426,6 +426,20 @@ async def debug_endpoint():
         return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
 
+# Add direct routes for latest and recommended content at the API level for easier access
+@app.get("/api/latest", tags=["Content"])
+async def get_latest_content(limit: int = 10):
+    """Get the latest content items."""
+    from app.api.endpoints.content import get_latest_content
+    return await get_latest_content(limit=limit)
+
+@app.get("/api/recommended", tags=["Content"])
+async def get_recommended_content(limit: int = 10):
+    """Get the recommended content items."""
+    from app.api.endpoints.content import get_recommended_content
+    return await get_recommended_content(limit=limit)
+
+
 # Include routers
 app.include_router(drive_router, prefix="/api", tags=["Google Drive Integration"])
 app.include_router(content_router, prefix="/api", tags=["Content Management"])

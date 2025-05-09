@@ -100,6 +100,17 @@ class ContentService:
         """
         return self.repository.get_by_id(content_id)
 
+    def get_content_by_session_id(self, session_id: str) -> Optional[ContentInDB]:
+        """Get content by session ID.
+
+        Args:
+            session_id: Session ID of the content.
+
+        Returns:
+            Content item or None if not found.
+        """
+        return self.repository.get_by_session_id(session_id)
+
     def create_content(self, content_data: ContentCreate) -> ContentInDB:
         """Create a new content item.
 
@@ -175,25 +186,13 @@ class ContentService:
             # Map any camelCase fields to snake_case for Firestore storage
             mapped_fields = {}
             for key, value in fields.items():
-                # Convert camelCase to snake_case if needed
-                if key in [
-                    "contentType", "sessionId", "createdAt", "updatedAt", 
-                    "filePath", "driveId", "driveLink", "demoType", 
-                    "durationMinutes", "extractedText", "pageContent", 
-                    "embeddingId", "aiTags", "learningLevel", "targetJobRoles", 
-                    "areasOfInterest", "presentationSlidesUrl", "recapSlidesUrl", 
-                    "sessionRecordingStatus", "videoSourceFileUrl", "videoYoutubeUrl", 
-                    "youtubeUrl", "youtubeChannel", "youtubeVisibility", 
-                    "ytVideoTitle", "ytDescription", "isLatest", "isRecommended"
-                ]:
-                    # Convert camelCase to snake_case
-                    snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key])
-                    snake_key = snake_key.lstrip('_')
-                    mapped_fields[snake_key] = value
-                else:
-                    # Keep original key if not in the mapping list
-                    mapped_fields[key] = value
-
+                # Convert camelCase to snake_case
+                snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key])
+                snake_key = snake_key.lstrip('_')
+                mapped_fields[snake_key] = value
+                
+                # No special handling for sessionId - we now use only snake_case consistently
+            
             # Add updated timestamp
             mapped_fields["updated_at"] = datetime.now().isoformat()
 

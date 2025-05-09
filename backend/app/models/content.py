@@ -103,6 +103,7 @@ class ContentUpdate(BaseModel):
     used: Optional[bool] = None
     isLatest: Optional[bool] = None
     isRecommended: Optional[bool] = None
+    sessionId: Optional[str] = None
 
 
 class ContentInDB(ContentBase):
