@@ -6,11 +6,13 @@ import shutil
 import uuid
 from typing import Any, Dict
 
+from fastapi import BackgroundTasks
 from google.cloud import storage, tasks_v2
 
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.db.firestore_client import FirestoreClient
+from app.services.index_service import IndexService
 
 # Setup logging
 logger = configure_logging()
@@ -35,6 +37,18 @@ class TaskService:
                 )
                 # Re-raise to fail initialization
                 raise
+
+            # Initialize IndexService for sending content to indexer
+            try:
+                self.index_service = IndexService()
+                logger.info("TaskService: IndexService initialized successfully")
+            except Exception as index_error:
+                logger.error(
+                    f"TaskService: Failed to initialize IndexService: {str(index_error)}",
+                    exc_info=True,
+                )
+                # We can continue without IndexService - it's not critical
+                self.index_service = None
 
             # Use environment variables with proper defaults for App Engine
             # Default to /tmp paths which are writable in App Engine
@@ -169,7 +183,7 @@ class TaskService:
             )
 
             # Update Firestore document
-            update_data = {"fileUrls": file_urls, "status": "processing"}
+            update_data = {"fileUrls": file_urls, "status": "processed"}
             success = self.firestore.update_document("content", content_id, update_data)
             if not success:
                 logger.error(f"Failed to update content metadata: {content_id}")
@@ -188,6 +202,24 @@ class TaskService:
                 )
             else:
                 logger.info(f"Would create task for vector processing: {content_id}")
+
+            # Send content to indexer when file is ready
+            # Only do this for content that has at least one GCS path
+            if self.index_service and gcs_path:
+                try:
+                    logger.info(f"Starting indexing for content {content_id}")
+                    
+                    # Call the indexing service asynchronously
+                    # We don't want to wait for the indexing to complete
+                    # This will be executed in the background
+                    background_tasks = BackgroundTasks()
+                    background_tasks.add_task(self.index_service.index_content, content_id)
+                    
+                    logger.info(f"Indexing task created for content {content_id}")
+                except Exception as index_error:
+                    logger.error(f"Error triggering indexing for content {content_id}: {str(index_error)}")
+                    # Continue processing even if indexing fails
+                    # The indexing can be retried later
 
             logger.info(f"File processed successfully: {content_id}")
             return True
@@ -283,4 +315,36 @@ class TaskService:
             return True
         except Exception as e:
             logger.error(f"Error creating vector processing task: {str(e)}")
+            return False
+
+    async def trigger_indexing(self, content_id: str) -> bool:
+        """
+        Trigger the indexing process for a content item.
+        This can be called explicitly when needed, for example when files are uploaded directly.
+        
+        Args:
+            content_id: The ID of the content to index
+            
+        Returns:
+            True if indexing was triggered, False otherwise
+        """
+        if not self.index_service:
+            logger.warning(f"IndexService not available, cannot trigger indexing for {content_id}")
+            return False
+            
+        try:
+            logger.info(f"Manually triggering indexing for content {content_id}")
+            
+            # Call the index service to process this content
+            success, response = await self.index_service.index_content(content_id)
+            
+            if success:
+                logger.info(f"Indexing succeeded for content {content_id}")
+            else:
+                logger.warning(f"Indexing failed for content {content_id}: {response}")
+                
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error triggering indexing for content {content_id}: {str(e)}")
             return False

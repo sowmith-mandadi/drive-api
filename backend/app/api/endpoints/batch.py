@@ -19,6 +19,7 @@ from app.models.content import Content, ContentCreate, Speaker
 from app.services.batch_service import BatchService
 from app.services.content_processor import ContentProcessor
 from app.services.drive_downloader import DriveDownloader
+from app.services.task_service import TaskService
 from app.utils.file_utils import deduplicate_file_urls
 # Using stub implementation
 from app.services.task_service_stub import TaskService
@@ -262,6 +263,24 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
             batch_service.mark_job_failed(job_id, "File contains no data rows")
             return
 
+        # Create a batch job
+        job_data = BatchJobCreate(
+            job_type="content_upload",
+            total_items=len(df),
+            metadata={
+                "filename": file.filename,
+                "total_rows": len(df),
+            },
+            created_by=user_id,
+        )
+
+        batch_job = batch_service.create_job(job_data)
+        if not batch_job:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create batch job",
+            )
+
         # Keep track of success/failure
         total_rows = len(df)
         processed_rows = 0
@@ -270,6 +289,9 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
         
         # Keep track of large files that need background processing
         large_files_to_process = []
+        
+        # Keep track of content IDs for indexing
+        processed_content_ids = []
 
         # Process each row
         for index, row in df.iterrows():
@@ -730,6 +752,9 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                 if success:
                     successful_rows += 1
                     batch_service.update_job_progress(job_id, processed=1, successful=1)
+                    
+                    # Add to list of content to be indexed
+                    processed_content_ids.append(content_id)
                 else:
                     failed_rows += 1
                     error = BatchJobError(
@@ -900,6 +925,23 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
         else:
             logger.info("No large files queued for background processing")
 
+        # Trigger indexing for all successfully processed content
+        if processed_content_ids and task_service:
+            logger.info(f"Batch job completed, triggering indexing for {len(processed_content_ids)} content items")
+            
+            # Process each content item for indexing
+            for content_id in processed_content_ids:
+                try:
+                    # Trigger indexing directly - no need for background tasks here
+                    # as this whole function is already running in the background
+                    asyncio.create_task(task_service.trigger_indexing(content_id))
+                    logger.info(f"Triggered indexing for content {content_id}")
+                except Exception as index_error:
+                    logger.error(f"Error triggering indexing for content {content_id}: {str(index_error)}")
+                    # Continue processing even if indexing fails for some items
+            
+            logger.info(f"Indexing triggered for {len(processed_content_ids)} content items")
+
         # Mark job as completed
         batch_service.mark_job_completed(job_id)
 
@@ -939,3 +981,26 @@ async def download_and_store_large_presentation(entry, content_id):
     except Exception as e:
         logger.error(f"Error downloading and storing large presentation: {str(e)}", exc_info=True)
         return False, entry
+
+
+async def trigger_indexing_for_content(content_id: str, background_tasks: BackgroundTasks):
+    """
+    Trigger indexing for content after file paths are processed and stored.
+    
+    Args:
+        content_id: ID of the content to index
+        background_tasks: Background tasks queue to use
+    """
+    try:
+        # Check if task_service is initialized
+        if not task_service:
+            logger.warning(f"TaskService not available, skipping indexing for content {content_id}")
+            return
+            
+        # Trigger indexing in the background
+        logger.info(f"Triggering indexing for content: {content_id}")
+        background_tasks.add_task(task_service.trigger_indexing, content_id)
+        
+    except Exception as e:
+        logger.error(f"Error triggering indexing for content {content_id}: {str(e)}")
+        # Continue processing even if indexing fails

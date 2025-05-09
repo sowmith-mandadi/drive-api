@@ -4,7 +4,7 @@ Script to generate an indexing payload for content API.
 
 This script reads content from Firestore and creates a JSON payload that matches
 the structure required by the indexing API. It handles YouTube videos and 
-presentations correctly.
+presentations correctly, grouping files by session ID.
 
 Usage:
     python generate_index_payload.py --credentials credentials.json --output payload.json
@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 import uuid
+from collections import defaultdict
 from typing import Dict, List, Any, Optional
 
 from google.cloud import firestore
@@ -83,6 +84,30 @@ class IndexPayloadGenerator:
             print(f"Error retrieving documents: {e}")
             return []
 
+    def get_content_by_id(self, content_id: str, collection: str = "content") -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a specific content document by ID.
+        
+        Args:
+            content_id: The content ID to retrieve
+            collection: Collection name to query
+            
+        Returns:
+            Content document or None if not found
+        """
+        try:
+            doc = self.db.collection(collection).document(content_id).get()
+            if doc.exists:
+                doc_data = doc.to_dict()
+                doc_data["id"] = doc.id
+                return doc_data
+            else:
+                logger.error(f"Content not found with ID: {content_id}")
+                return None
+        except Exception as e:
+            logger.error(f"Error retrieving content {content_id}: {e}")
+            return None
+
     def create_file_entries(self, content_item: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Create file entries for the index payload.
@@ -102,11 +127,11 @@ class IndexPayloadGenerator:
             if file_info.get("contentType") == "folder" or file_info.get("presentation_type") == "drive_folder":
                 continue
                 
-            # Initialize entry with common fields
+            # Initialize entry with common fields - summary should be empty as it will be generated after indexing
             file_entry = {
                 "is_updated": False,
                 "is_summary_updated": False,
-                "summary": content_item.get("abstract", "") or content_item.get("description", ""),
+                "summary": ""
             }
             
             # Handle YouTube videos
@@ -136,8 +161,26 @@ class IndexPayloadGenerator:
                 elif file_info.get("url"):
                     file_entry["file_url"] = file_info.get("url")
             
-            # Include available metadata
-            meta_data = {
+            # Build metadata from the content item's metadata field if it exists
+            meta_data = {}
+            
+            # Use the metadata field from content_item as the primary source
+            if content_item.get("metadata"):
+                for key, value in content_item.get("metadata", {}).items():
+                    # Include only non-null and non-empty values
+                    if value is not None and value != "":
+                        meta_data[key] = value
+            
+            # Add file-specific metadata
+            if file_info.get("type") is not None and file_info.get("type") != "":
+                meta_data["fileType"] = file_info.get("type")
+            if file_info.get("name") is not None and file_info.get("name") != "":
+                meta_data["fileName"] = file_info.get("name")
+            if file_info.get("size") is not None and file_info.get("size") != 0:
+                meta_data["fileSize"] = file_info.get("size")
+            
+            # Include standard fields only if they're not already in metadata and not null/empty
+            standard_fields = {
                 "track": content_item.get("track", ""),
                 "tags": content_item.get("tags", []),
                 "sessionType": content_item.get("sessionType", ""),
@@ -146,22 +189,12 @@ class IndexPayloadGenerator:
                 "sessionId": content_item.get("sessionId", ""),
                 "durationMinutes": content_item.get("durationMinutes"),
                 "sessionDate": content_item.get("sessionDate"),
-                "industry": content_item.get("industry", ""),
+                "industry": content_item.get("industry", "")
             }
             
-            # Add any custom metadata from the content item
-            if content_item.get("metadata"):
-                for key, value in content_item.get("metadata", {}).items():
-                    if key not in meta_data and value:
-                        meta_data[key] = value
-            
-            # Add any file-specific metadata
-            if file_info.get("type"):
-                meta_data["fileType"] = file_info.get("type")
-            if file_info.get("name"):
-                meta_data["fileName"] = file_info.get("name")
-            if file_info.get("size"):
-                meta_data["fileSize"] = file_info.get("size")
+            for key, value in standard_fields.items():
+                if key not in meta_data and value is not None and value != "":
+                    meta_data[key] = value
             
             file_entry["meta_data"] = meta_data
             
@@ -171,11 +204,11 @@ class IndexPayloadGenerator:
         
         # If no file URLs were found in fileUrls array, create a default entry from legacy fields
         if not file_entries:
-            # Build default file entry from the content metadata
+            # Build default file entry from the content metadata - summary should be empty
             default_entry = {
                 "is_updated": False,
                 "is_summary_updated": False,
-                "summary": content_item.get("abstract", "") or content_item.get("description", ""),
+                "summary": ""
             }
             
             # Try to find URLs from legacy fields
@@ -194,8 +227,18 @@ class IndexPayloadGenerator:
                 default_entry["drive_url"] = video_url
                 default_entry["file_url"] = video_url  # For YouTube, both are the same
             
-            # Add metadata
-            meta_data = {
+            # Build metadata from the content item's metadata field if it exists
+            meta_data = {}
+            
+            # Use the metadata field from content_item as the primary source
+            if content_item.get("metadata"):
+                for key, value in content_item.get("metadata", {}).items():
+                    # Include only non-null and non-empty values
+                    if value is not None and value != "":
+                        meta_data[key] = value
+            
+            # Include standard fields only if they're not already in metadata and not null/empty
+            standard_fields = {
                 "track": content_item.get("track", ""),
                 "tags": content_item.get("tags", []),
                 "sessionType": content_item.get("sessionType", ""),
@@ -204,14 +247,12 @@ class IndexPayloadGenerator:
                 "sessionId": content_item.get("sessionId", ""),
                 "durationMinutes": content_item.get("durationMinutes"),
                 "sessionDate": content_item.get("sessionDate"),
-                "industry": content_item.get("industry", ""),
+                "industry": content_item.get("industry", "")
             }
             
-            # Add any custom metadata from the content item
-            if content_item.get("metadata"):
-                for key, value in content_item.get("metadata", {}).items():
-                    if key not in meta_data and value:
-                        meta_data[key] = value
+            for key, value in standard_fields.items():
+                if key not in meta_data and value is not None and value != "":
+                    meta_data[key] = value
                         
             default_entry["meta_data"] = meta_data
             
@@ -220,56 +261,94 @@ class IndexPayloadGenerator:
         
         return file_entries
 
-    def generate_payload(self, session_id: Optional[str] = None, limit: int = 100, collection: str = "content") -> Dict[str, Any]:
+    def generate_payloads(self, limit: int = 100, collection: str = "content", content_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Generate the complete index payload.
+        Generate index payloads grouped by session ID.
 
         Args:
-            session_id: Optional session ID (generated if not provided)
             limit: Maximum number of content items to include
             collection: Collection to query for content items
+            content_id: Optional content ID to filter by
 
         Returns:
-            Complete index payload
+            List of payloads, one per session ID
         """
-        # Generate session ID if not provided
-        if not session_id:
-            session_id = f"session-{uuid.uuid4()}"
-        
         # Get content documents
-        content_items = self.get_content_documents(collection, limit)
+        content_items = []
+        if content_id:
+            # If specific content ID is provided, get just that document
+            doc = self.get_content_by_id(content_id, collection)
+            if doc:
+                content_items = [doc]
+                logger.info(f"Retrieved document with ID {content_id}")
+            else:
+                return []
+        else:
+            # Otherwise get all documents up to the limit
+            content_items = self.get_content_documents(collection, limit)
         
-        # Create file list
-        file_list = []
+        # Group content by session ID
+        session_content_map = defaultdict(list)
+        
         for item in content_items:
-            entries = self.create_file_entries(item)
-            file_list.extend(entries)
+            # Get sessionId, or use content ID if no sessionId
+            session_id = item.get("sessionId")
+            if not session_id:
+                session_id = item.get("id", str(uuid.uuid4()))
+            
+            # Add to the appropriate session group
+            session_content_map[session_id].append(item)
         
-        # Create the complete payload
-        payload = {
-            "session_id": session_id,
-            "file_list": file_list
-        }
+        # Generate one payload per session ID
+        payloads = []
         
-        return payload
+        for session_id, items in session_content_map.items():
+            # Generate a payload for this session
+            file_list = []
+            
+            # Process each content item in this session
+            for item in items:
+                # Create file entries for this content item
+                entries = self.create_file_entries(item)
+                file_list.extend(entries)
+            
+            # Only create a payload if we have files to index
+            if file_list:
+                payload = {
+                    "session_id": session_id,
+                    "file_list": file_list
+                }
+                payloads.append(payload)
+        
+        logger.info(f"Generated {len(payloads)} payloads for {len(content_items)} content items")
+        return payloads
 
-    def save_payload(self, payload: Dict[str, Any], output_file: str = "index_payload.json"):
+    def save_payloads(self, payloads: List[Dict[str, Any]], output_dir: str = "./payloads"):
         """
-        Save the payload to a JSON file.
+        Save the payloads to JSON files.
 
         Args:
-            payload: The index payload
-            output_file: Path to output file
+            payloads: List of index payloads
+            output_dir: Directory to save the payload files
         """
         try:
-            with open(output_file, 'w') as f:
-                json.dump(payload, f, indent=2)
-            logger.info(f"Saved payload to {output_file}")
-            print(f"Payload saved to {output_file}")
-            print(f"Total files in payload: {len(payload['file_list'])}")
+            # Create output directory if it doesn't exist
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Save each payload to a separate file
+            for i, payload in enumerate(payloads):
+                session_id = payload["session_id"]
+                file_path = os.path.join(output_dir, f"{session_id}.json")
+                
+                with open(file_path, 'w') as f:
+                    json.dump(payload, f, indent=2)
+                logger.info(f"Saved payload for session {session_id} to {file_path}")
+                print(f"Saved payload for session {session_id} to {file_path}")
+                print(f"Total files in payload: {len(payload['file_list'])}")
+                
         except Exception as e:
-            logger.error(f"Error saving payload: {e}")
-            print(f"Error saving payload: {e}")
+            logger.error(f"Error saving payloads: {e}")
+            print(f"Error saving payloads: {e}")
 
     def send_to_indexer(self, payload: Dict[str, Any], endpoint_url: str):
         """
@@ -286,7 +365,7 @@ class IndexPayloadGenerator:
             import requests
             
             print(f"Sending payload to indexer API: {endpoint_url}")
-            print(f"Payload contains {len(payload['file_list'])} files")
+            print(f"Payload contains {len(payload['file_list'])} files for session {payload['session_id']}")
             
             response = requests.post(
                 endpoint_url,
@@ -312,15 +391,38 @@ class IndexPayloadGenerator:
             print(f"Failed to send payload: {e}")
             return False
 
+    def send_all_payloads(self, payloads: List[Dict[str, Any]], endpoint_url: str):
+        """
+        Send all payloads to the indexer API.
+        
+        Args:
+            payloads: List of index payloads
+            endpoint_url: The indexer API endpoint URL
+            
+        Returns:
+            Tuple of (success_count, total_count)
+        """
+        if not endpoint_url:
+            print("No endpoint URL provided")
+            return 0, len(payloads)
+            
+        success_count = 0
+        
+        for payload in payloads:
+            if self.send_to_indexer(payload, endpoint_url):
+                success_count += 1
+        
+        return success_count, len(payloads)
+
 
 def main():
     """Main function to run the script."""
     parser = argparse.ArgumentParser(description="Generate index payload from Firestore content")
     parser.add_argument("--credentials", help="Path to service account credentials file")
     parser.add_argument("--collection", default="content", help="Collection name to use")
-    parser.add_argument("--session-id", help="Session ID for the indexing batch")
+    parser.add_argument("--content-id", help="Specific content ID to process")
     parser.add_argument("--limit", type=int, default=100, help="Maximum number of documents to process")
-    parser.add_argument("--output", default="index_payload.json", help="Output file path")
+    parser.add_argument("--output-dir", default="./payloads", help="Output directory path")
     parser.add_argument("--endpoint", help="Indexer API endpoint URL")
     
     args = parser.parse_args()
@@ -328,24 +430,24 @@ def main():
     # Initialize the generator with credentials
     generator = IndexPayloadGenerator(credentials_path=args.credentials)
     
-    # Generate payload
-    print(f"Generating indexing payload from '{args.collection}' collection...")
-    payload = generator.generate_payload(
-        session_id=args.session_id,
+    # Generate payloads
+    print(f"Generating indexing payloads from '{args.collection}' collection...")
+    payloads = generator.generate_payloads(
         limit=args.limit,
-        collection=args.collection
+        collection=args.collection,
+        content_id=args.content_id
     )
     
-    # Display summary of generated payload
-    print(f"Generated payload with session_id: {payload['session_id']}")
-    print(f"Total files in payload: {len(payload['file_list'])}")
+    # Display summary of generated payloads
+    print(f"Generated {len(payloads)} payloads")
     
-    # Save payload to file
-    generator.save_payload(payload, args.output)
+    # Save payloads to files
+    generator.save_payloads(payloads, args.output_dir)
     
     # Send to indexer if endpoint provided
     if args.endpoint:
-        generator.send_to_indexer(payload, args.endpoint)
+        success_count, total_count = generator.send_all_payloads(payloads, args.endpoint)
+        print(f"Sent {success_count}/{total_count} payloads to indexer API")
 
 
 if __name__ == "__main__":

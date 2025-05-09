@@ -298,6 +298,20 @@ async def upload_content(
 
             # Or create a Cloud Task for production
             # task_service.create_file_processing_task(task_data)
+        else:
+            # No file was uploaded, but we might have fileUrls ready to index
+            # Check if we have any URLs or GCS paths
+            has_indexable_files = False
+            for file_entry in content_data.get("fileUrls", []):
+                if (file_entry.get("gcs_path") or file_entry.get("url") or 
+                    file_entry.get("drive_url")):
+                    has_indexable_files = True
+                    break
+            
+            # If we have files to index, trigger indexing
+            if has_indexable_files:
+                logger.info(f"Triggering indexing for content {content_id} with existing files")
+                background_tasks.add_task(task_service.trigger_indexing, content_id)
         
         # Ensure we only have the 4 required types in fileUrls
         content_data["fileUrls"] = [

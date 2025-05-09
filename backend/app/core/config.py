@@ -87,6 +87,9 @@ class Settings(BaseSettings):
     FIRESTORE_COLLECTION_CONTENT: str = os.getenv("FIRESTORE_COLLECTION_CONTENT", "content")
     FIRESTORE_EMULATOR_HOST: Optional[str] = os.getenv("FIRESTORE_EMULATOR_HOST")
 
+    # Indexer API Settings
+    INDEXER_API_ENDPOINT: Optional[str] = os.getenv("INDEXER_API_ENDPOINT")
+
     # Session Settings
     SESSION_SECRET_KEY: str = os.getenv("SESSION_SECRET_KEY", "supersecretkey")
     

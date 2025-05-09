@@ -1,0 +1,144 @@
+{
+  "session_id": "AVH3eBIoFzOTvoXNNluf",
+  "file_list": [
+    {
+      "is_updated": false,
+      "is_summary_updated": false,
+      "summary": "",
+      "drive_url": "https://docs.google.com/presentation/d/1Vjg5HK1uI0rzMjwLh2Uwv4uqomDABECU99DKTXC6kIw/edit#slide=id.g25edbf6b7aa_0_0",
+      "file_url": "gs://conference-cms-content/uploads/b5f6f218-2dac-4f96-9425-19bfae2ab22d.pptx",
+      "meta_data": {
+        "demoType": "Single Screen Demo",
+        "durationMinutes": 45,
+        "presentationSlidesUrl": "https://docs.google.com/presentation/d/1Vjg5HK1uI0rzMjwLh2Uwv4uqomDABECU99DKTXC6kIw/edit#slide=id.g25edbf6b7aa_0_0",
+        "sessionDate": "2025-05-12",
+        "status": "Published",
+        "areasOfInterest": [
+          "Digital",
+          "Strategy",
+          "Business"
+        ],
+        "industry": "Multiple",
+        "sessionType": "Presentation",
+        "learningLevel": "Intermediate",
+        "abstract": "Comprehensive guide to help MSMEs navigate digital transformation",
+        "recapSlidesUrl": "https://docs.google.com/presentation/d/1OwgWMpG0UN4OJ8T8gwoBi3ZGn67138GmxE6rzBqYbOE/edit#slide=id.g34b9ca4a52a_0_22",
+        "title": "Digital Transformation Guide",
+        "topics": [
+          "Digital Transformation",
+          "Technology Adoption",
+          "Process Automation"
+        ],
+        "track": "Digital Transformation",
+        "sessionRecordingStatus": "Processing",
+        "videoYoutubeUrl": "https://www.youtube.com/watch?v=GwQVFviyjUk",
+        "jobRoles": [
+          "Business Consultant",
+          "Business Owner",
+          "IT Manager"
+        ],
+        "fileType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "fileName": "Identify AI projects to optimize your workflows",
+        "fileSize": 15635668,
+        "tags": [
+          "digital",
+          "transformation",
+          "msme",
+          "guide"
+        ]
+      }
+    },
+    {
+      "is_updated": false,
+      "is_summary_updated": false,
+      "summary": "",
+      "drive_url": "https://docs.google.com/presentation/d/1OwgWMpG0UN4OJ8T8gwoBi3ZGn67138GmxE6rzBqYbOE/edit#slide=id.g34b9ca4a52a_0_22",
+      "file_url": "gs://conference-cms-content/uploads/09477850-d5fa-4465-87d0-e771273e3868.pptx",
+      "meta_data": {
+        "demoType": "Single Screen Demo",
+        "durationMinutes": 45,
+        "presentationSlidesUrl": "https://docs.google.com/presentation/d/1Vjg5HK1uI0rzMjwLh2Uwv4uqomDABECU99DKTXC6kIw/edit#slide=id.g25edbf6b7aa_0_0",
+        "sessionDate": "2025-05-12",
+        "status": "Published",
+        "areasOfInterest": [
+          "Digital",
+          "Strategy",
+          "Business"
+        ],
+        "industry": "Multiple",
+        "sessionType": "Presentation",
+        "learningLevel": "Intermediate",
+        "abstract": "Comprehensive guide to help MSMEs navigate digital transformation",
+        "recapSlidesUrl": "https://docs.google.com/presentation/d/1OwgWMpG0UN4OJ8T8gwoBi3ZGn67138GmxE6rzBqYbOE/edit#slide=id.g34b9ca4a52a_0_22",
+        "title": "Digital Transformation Guide",
+        "topics": [
+          "Digital Transformation",
+          "Technology Adoption",
+          "Process Automation"
+        ],
+        "track": "Digital Transformation",
+        "sessionRecordingStatus": "Processing",
+        "videoYoutubeUrl": "https://www.youtube.com/watch?v=GwQVFviyjUk",
+        "jobRoles": [
+          "Business Consultant",
+          "Business Owner",
+          "IT Manager"
+        ],
+        "fileType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "fileName": "NEW test",
+        "fileSize": 1131447,
+        "tags": [
+          "digital",
+          "transformation",
+          "msme",
+          "guide"
+        ]
+      }
+    },
+    {
+      "is_updated": false,
+      "is_summary_updated": false,
+      "summary": "",
+      "drive_url": "https://www.youtube.com/watch?v=GwQVFviyjUk",
+      "file_url": "https://www.youtube.com/watch?v=GwQVFviyjUk",
+      "meta_data": {
+        "demoType": "Single Screen Demo",
+        "durationMinutes": 45,
+        "presentationSlidesUrl": "https://docs.google.com/presentation/d/1Vjg5HK1uI0rzMjwLh2Uwv4uqomDABECU99DKTXC6kIw/edit#slide=id.g25edbf6b7aa_0_0",
+        "sessionDate": "2025-05-12",
+        "status": "Published",
+        "areasOfInterest": [
+          "Digital",
+          "Strategy",
+          "Business"
+        ],
+        "industry": "Multiple",
+        "sessionType": "Presentation",
+        "learningLevel": "Intermediate",
+        "abstract": "Comprehensive guide to help MSMEs navigate digital transformation",
+        "recapSlidesUrl": "https://docs.google.com/presentation/d/1OwgWMpG0UN4OJ8T8gwoBi3ZGn67138GmxE6rzBqYbOE/edit#slide=id.g34b9ca4a52a_0_22",
+        "title": "Digital Transformation Guide",
+        "topics": [
+          "Digital Transformation",
+          "Technology Adoption",
+          "Process Automation"
+        ],
+        "track": "Digital Transformation",
+        "sessionRecordingStatus": "Processing",
+        "videoYoutubeUrl": "https://www.youtube.com/watch?v=GwQVFviyjUk",
+        "jobRoles": [
+          "Business Consultant",
+          "Business Owner",
+          "IT Manager"
+        ],
+        "fileName": "YouTube Video",
+        "tags": [
+          "digital",
+          "transformation",
+          "msme",
+          "guide"
+        ]
+      }
+    }
+  ]
+}
