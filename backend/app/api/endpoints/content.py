@@ -26,6 +26,22 @@ async def list_content(limit: int = 100, offset: int = 0) -> List[Content]:
     return [Content.model_validate(item.model_dump()) for item in content_items]
 
 
+@router.get("/latest", response_model=List[Content])
+async def get_latest_content(limit: int = 10) -> List[Content]:
+    """Get content marked as latest."""
+    content_items = content_service.get_latest_content(limit=limit)
+    # Convert ContentInDB to Content
+    return [Content.model_validate(item.model_dump()) for item in content_items]
+
+
+@router.get("/recommended", response_model=List[Content])
+async def get_recommended_content(limit: int = 10) -> List[Content]:
+    """Get content marked as recommended."""
+    content_items = content_service.get_recommended_content(limit=limit)
+    # Convert ContentInDB to Content
+    return [Content.model_validate(item.model_dump()) for item in content_items]
+
+
 @router.get("/{content_id}", response_model=Content)
 async def get_content(content_id: str) -> Content:
     """Get content by ID."""
@@ -49,6 +65,9 @@ async def create_content(
     session_id: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
     demo_type: Optional[str] = Form(None),
+    # Promotional flags
+    is_latest: Optional[bool] = Form(False),
+    is_recommended: Optional[bool] = Form(False),
     # Categorization
     tags: str = Form("[]"),  # JSON string of tags
     track: Optional[str] = Form(None),
@@ -87,6 +106,8 @@ async def create_content(
             tags=tags_list,
             metadata=metadata_dict,
             fileId=None,  # Set explicitly
+            isLatest=is_latest,
+            isRecommended=is_recommended,
         )
 
         # Create content in database
@@ -109,6 +130,9 @@ async def create_content(
             "presentation_slides_url": presentation_slides_url,
             "recap_slides_url": recap_slides_url,
             "video_recording_status": video_recording_status,
+            # Ensure promotional flags are also set in additional data
+            "is_latest": is_latest,
+            "is_recommended": is_recommended,
         }
 
         # Remove None values
@@ -260,27 +284,6 @@ async def get_recent_content(page: int = 1, page_size: int = 10) -> Dict[str, An
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recent content: {str(e)}",
         )
-@router.get("/", response_model=List[Content])
-async def list_content(limit: int = 100, offset: int = 0) -> List[Content]:
-    """List all content with pagination."""
-    print("\n\nDEBUG: API list_content called with limit:", limit, "offset:", offset)
-    content_items = content_service.get_all_content(limit=limit, offset=offset)
-    print(f"DEBUG: API received {len(content_items)} items from service")
-    
-    # Debug the model validation
-    result = []
-    for item in content_items:
-        try:
-            validated = Content.model_validate(item.model_dump())
-            result.append(validated)
-            print(f"DEBUG: Successfully validated content item {item.id} -> {validated.id}")
-        except Exception as e:
-            print(f"DEBUG: Error validating content item: {str(e)}")
-            import traceback
-            traceback.print_exc()
-    
-    print(f"DEBUG: API returning {len(result)} validated items")
-    return result
 
 @router.get("/test-firestore", response_model=Dict[str, Any])
 async def test_firestore():
@@ -359,233 +362,34 @@ async def test_firestore():
         
     return result
 
-@router.get("/test-firestore", response_model=Dict[str, Any])
-async def test_firestore():
-    """Test Firestore connection and collection access."""
-    from app.db.firestore_client import FirestoreClient
-    from app.core.config import settings
-    import datetime
-    import uuid
-    import traceback
+@router.put("/{content_id}/promotional-status", response_model=Content)
+async def update_promotional_status(
+    content_id: str, 
+    is_latest: Optional[bool] = Body(None),
+    is_recommended: Optional[bool] = Body(None)
+) -> Content:
+    """Update the promotional status (latest/recommended) of content."""
+    # Check if at least one field is provided
+    if is_latest is None and is_recommended is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="At least one of is_latest or is_recommended must be provided"
+        )
     
-    result = {
-        "success": False,
-        "collections": [],
-        "test_write": False,
-        "errors": []
-    }
+    # Prepare update fields (only include non-None values)
+    update_fields = {}
+    if is_latest is not None:
+        update_fields["is_latest"] = is_latest
+    if is_recommended is not None:
+        update_fields["is_recommended"] = is_recommended
     
-    try:
-        # Initialize client
-        firestore = FirestoreClient()
-        result["client_initialized"] = True
-        
-        # Get settings
-        result["project_id"] = settings.FIRESTORE_PROJECT_ID
-        result["collection"] = settings.FIRESTORE_COLLECTION_CONTENT
-        
-        # List collections
-        collections = firestore.db.collections()
-        for col in collections:
-            result["collections"].append(col.id)
-            
-        # Try to read from content collection 
-        collection = settings.FIRESTORE_COLLECTION_CONTENT
-        docs = list(firestore.db.collection(collection).limit(5).stream())
-        result["documents_found"] = len(docs)
-        
-        # If no documents, try to create a test one
-        if len(docs) == 0:
-            # Try a different capitalization
-            alt_collection = "Content" if collection == "content" else "content"
-            alt_docs = list(firestore.db.collection(alt_collection).limit(5).stream())
-            result["alt_documents_found"] = len(alt_docs)
-            result["alt_collection"] = alt_collection
-            
-            # Create a test document
-            test_id = f"test-{uuid.uuid4()}"
-            test_data = {
-                "title": "Test Document",
-                "description": "Created for testing Firestore access",
-                "content_type": "test",
-                "created_at": datetime.datetime.now().isoformat(),
-                "updated_at": datetime.datetime.now().isoformat()
-            }
-            
-            # Try to write to both collections
-            try:
-                firestore.db.collection(collection).document(test_id).set(test_data)
-                result["test_write"] = True
-                result["test_write_collection"] = collection
-                result["test_document_id"] = test_id
-            except Exception as write_err:
-                result["errors"].append(f"Write error: {str(write_err)}")
-                # Try alternate collection
-                try:
-                    firestore.db.collection(alt_collection).document(test_id).set(test_data)
-                    result["test_write"] = True
-                    result["test_write_collection"] = alt_collection
-                    result["test_document_id"] = test_id
-                except Exception as alt_write_err:
-                    result["errors"].append(f"Alt write error: {str(alt_write_err)}")
-        
-        result["success"] = True
-    except Exception as e:
-        result["errors"].append(f"Error: {str(e)}")
-        result["traceback"] = traceback.format_exc()
-        
-    return result
-
-@router.get("/test-firestore", response_model=Dict[str, Any])
-async def test_firestore():
-    """Test Firestore connection and collection access."""
-    from app.db.firestore_client import FirestoreClient
-    from app.core.config import settings
-    import datetime
-    import uuid
-    import traceback
+    # Update the content
+    updated_content = content_service.update_content_fields(content_id, update_fields)
+    if not updated_content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Content with ID {content_id} not found"
+        )
     
-    result = {
-        "success": False,
-        "collections": [],
-        "test_write": False,
-        "errors": []
-    }
-    
-    try:
-        # Initialize client
-        firestore = FirestoreClient()
-        result["client_initialized"] = True
-        
-        # Get settings
-        result["project_id"] = settings.FIRESTORE_PROJECT_ID
-        result["collection"] = settings.FIRESTORE_COLLECTION_CONTENT
-        
-        # List collections
-        collections = firestore.db.collections()
-        for col in collections:
-            result["collections"].append(col.id)
-            
-        # Try to read from content collection 
-        collection = settings.FIRESTORE_COLLECTION_CONTENT
-        docs = list(firestore.db.collection(collection).limit(5).stream())
-        result["documents_found"] = len(docs)
-        
-        # If no documents, try to create a test one
-        if len(docs) == 0:
-            # Try a different capitalization
-            alt_collection = "Content" if collection == "content" else "content"
-            alt_docs = list(firestore.db.collection(alt_collection).limit(5).stream())
-            result["alt_documents_found"] = len(alt_docs)
-            result["alt_collection"] = alt_collection
-            
-            # Create a test document
-            test_id = f"test-{uuid.uuid4()}"
-            test_data = {
-                "title": "Test Document",
-                "description": "Created for testing Firestore access",
-                "content_type": "test",
-                "created_at": datetime.datetime.now().isoformat(),
-                "updated_at": datetime.datetime.now().isoformat()
-            }
-            
-            # Try to write to both collections
-            try:
-                firestore.db.collection(collection).document(test_id).set(test_data)
-                result["test_write"] = True
-                result["test_write_collection"] = collection
-                result["test_document_id"] = test_id
-            except Exception as write_err:
-                result["errors"].append(f"Write error: {str(write_err)}")
-                # Try alternate collection
-                try:
-                    firestore.db.collection(alt_collection).document(test_id).set(test_data)
-                    result["test_write"] = True
-                    result["test_write_collection"] = alt_collection
-                    result["test_document_id"] = test_id
-                except Exception as alt_write_err:
-                    result["errors"].append(f"Alt write error: {str(alt_write_err)}")
-        
-        result["success"] = True
-    except Exception as e:
-        result["errors"].append(f"Error: {str(e)}")
-        result["traceback"] = traceback.format_exc()
-        
-    return result
-
-@router.get("/test-firestore", response_model=Dict[str, Any])
-async def test_firestore():
-    """Test Firestore connection and collection access."""
-    from app.db.firestore_client import FirestoreClient
-    from app.core.config import settings
-    import datetime
-    import uuid
-    import traceback
-    
-    result = {
-        "success": False,
-        "collections": [],
-        "test_write": False,
-        "errors": []
-    }
-    
-    try:
-        # Initialize client
-        firestore = FirestoreClient()
-        result["client_initialized"] = True
-        
-        # Get settings
-        result["project_id"] = settings.FIRESTORE_PROJECT_ID
-        result["collection"] = settings.FIRESTORE_COLLECTION_CONTENT
-        
-        # List collections
-        collections = firestore.db.collections()
-        for col in collections:
-            result["collections"].append(col.id)
-            
-        # Try to read from content collection 
-        collection = settings.FIRESTORE_COLLECTION_CONTENT
-        docs = list(firestore.db.collection(collection).limit(5).stream())
-        result["documents_found"] = len(docs)
-        
-        # If no documents, try to create a test one
-        if len(docs) == 0:
-            # Try a different capitalization
-            alt_collection = "Content" if collection == "content" else "content"
-            alt_docs = list(firestore.db.collection(alt_collection).limit(5).stream())
-            result["alt_documents_found"] = len(alt_docs)
-            result["alt_collection"] = alt_collection
-            
-            # Create a test document
-            test_id = f"test-{uuid.uuid4()}"
-            test_data = {
-                "title": "Test Document",
-                "description": "Created for testing Firestore access",
-                "content_type": "test",
-                "created_at": datetime.datetime.now().isoformat(),
-                "updated_at": datetime.datetime.now().isoformat()
-            }
-            
-            # Try to write to both collections
-            try:
-                firestore.db.collection(collection).document(test_id).set(test_data)
-                result["test_write"] = True
-                result["test_write_collection"] = collection
-                result["test_document_id"] = test_id
-            except Exception as write_err:
-                result["errors"].append(f"Write error: {str(write_err)}")
-                # Try alternate collection
-                try:
-                    firestore.db.collection(alt_collection).document(test_id).set(test_data)
-                    result["test_write"] = True
-                    result["test_write_collection"] = alt_collection
-                    result["test_document_id"] = test_id
-                except Exception as alt_write_err:
-                    result["errors"].append(f"Alt write error: {str(alt_write_err)}")
-        
-        result["success"] = True
-    except Exception as e:
-        result["errors"].append(f"Error: {str(e)}")
-        result["traceback"] = traceback.format_exc()
-        
-    return result
+    # Convert ContentInDB to Content
+    return Content.model_validate(updated_content.model_dump())

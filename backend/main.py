@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.batch import router as batch_router
+from app.api.endpoints.bookmarks import router as bookmarks_router
 from app.api.endpoints.content import router as content_router
 
 # Import routers
@@ -433,6 +434,7 @@ app.include_router(auth_router, prefix="/api", tags=["Authentication"])
 app.include_router(upload_router, prefix="/api", tags=["File Uploads"])
 app.include_router(batch_router, prefix="/api", tags=["Batch Operations"])
 app.include_router(files_router, prefix="/api", tags=["File Serving"])
+app.include_router(bookmarks_router, prefix="/api", tags=["Bookmarks"])
 
 
 # Add a dedicated health check endpoint for App Engine

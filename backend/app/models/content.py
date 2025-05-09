@@ -89,6 +89,8 @@ class ContentCreate(BaseModel):
     tags: Optional[List[str]] = Field([], description="Tags associated with the content")
     metadata: Optional[Dict[str, Any]] = Field({}, description="Additional metadata")
     fileId: Optional[str] = Field(None, description="For Google Drive files")
+    isLatest: Optional[bool] = Field(False, description="Flag to mark content as latest")
+    isRecommended: Optional[bool] = Field(False, description="Flag to mark content as recommended")
 
 
 class ContentUpdate(BaseModel):
@@ -99,6 +101,8 @@ class ContentUpdate(BaseModel):
     tags: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
     used: Optional[bool] = None
+    isLatest: Optional[bool] = None
+    isRecommended: Optional[bool] = None
 
 
 class ContentInDB(ContentBase):
@@ -130,6 +134,10 @@ class ContentInDB(ContentBase):
     used: bool = False
     embeddingId: Optional[str] = None
     aiTags: Optional[List[str]] = None
+    
+    # Promotional flags
+    isLatest: bool = Field(False, description="Flag to mark content as latest")
+    isRecommended: bool = Field(False, description="Flag to mark content as recommended")
 
     # Categorization
     categorization: Dict[str, Any] = Field(

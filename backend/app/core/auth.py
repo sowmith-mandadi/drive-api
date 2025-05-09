@@ -4,6 +4,7 @@ Authentication utilities for Google OAuth.
 import json
 import logging
 import os
+import requests
 from typing import Any, Dict
 
 from fastapi import HTTPException, Request, status
@@ -13,6 +14,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 
 from app.core.config import settings
+from app.utils.hash import generate_user_hash
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -153,8 +155,14 @@ class GoogleOAuth:
 
             # Get credentials
             credentials = flow.credentials
+            
+            # Get user info from Google
+            user_info = self.get_user_info_from_credentials(credentials)
+            
+            # Generate privacy-preserving user hash
+            user_hash = generate_user_hash(user_info, settings.SECRET_KEY)
 
-            # Return credentials as dictionary
+            # Return credentials as dictionary with user hash
             return {
                 "token": credentials.token,
                 "refresh_token": credentials.refresh_token,
@@ -162,6 +170,7 @@ class GoogleOAuth:
                 "client_id": credentials.client_id,
                 "client_secret": credentials.client_secret,
                 "scopes": credentials.scopes,
+                "user_hash": user_hash,  # Include the user hash
             }
         except HTTPException:
             raise
@@ -170,6 +179,24 @@ class GoogleOAuth:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to exchange code for credentials: {str(e)}",
+            )
+    
+    def get_user_info_from_credentials(self, credentials) -> Dict[str, Any]:
+        """Get user info from Google using credentials."""
+        try:
+            # Make request to Google's userinfo endpoint
+            response = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {credentials.token}"}
+            )
+            response.raise_for_status()
+            
+            return response.json()
+        except Exception as e:
+            logger.error(f"Failed to get user info: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get user info: {str(e)}",
             )
 
     def refresh_credentials(self, credentials_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -248,7 +275,7 @@ async def get_current_user_credentials(request: Request) -> Dict[str, Any]:
         HTTPException: If user is not authenticated.
     """
     try:
-        # If auth is disabled, return mock credentials
+        # If auth is disabled, return mock credentials with mock user hash
         if GOOGLE_AUTH_DISABLED:
             logger.info("OAuth is disabled, using mock credentials")
             return {
@@ -258,6 +285,7 @@ async def get_current_user_credentials(request: Request) -> Dict[str, Any]:
                 "client_id": "mock_client_id",
                 "client_secret": "mock_client_secret",
                 "scopes": settings.GOOGLE_DRIVE_SCOPES,
+                "user_hash": "mock_user_hash",  # Include mock user hash
                 "mock": True,
             }
 
@@ -271,6 +299,7 @@ async def get_current_user_credentials(request: Request) -> Dict[str, Any]:
                 "client_id": "mock_client_id",
                 "client_secret": "mock_client_secret",
                 "scopes": settings.GOOGLE_DRIVE_SCOPES,
+                "user_hash": "mock_user_hash",  # Include mock user hash
                 "mock": True,
             }
 

@@ -67,6 +67,28 @@ class ContentService:
         """
         return self.repository.get_all(limit=limit, offset=offset)
 
+    def get_latest_content(self, limit: int = 10) -> List[ContentInDB]:
+        """Get content marked as latest.
+
+        Args:
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of content items marked as latest.
+        """
+        return self.repository.get_latest_content(limit=limit)
+
+    def get_recommended_content(self, limit: int = 10) -> List[ContentInDB]:
+        """Get content marked as recommended.
+
+        Args:
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of content items marked as recommended.
+        """
+        return self.repository.get_recommended_content(limit=limit)
+
     def get_content_by_id(self, content_id: str) -> Optional[ContentInDB]:
         """Get content by ID.
 
@@ -106,6 +128,8 @@ class ContentService:
                 createdAt=now,
                 updatedAt=now,
                 driveId=content_data.fileId if content_data.source == "drive" else None,
+                isLatest=content_data.isLatest,
+                isRecommended=content_data.isRecommended,
             )
 
         logger.info(f"Created content item with ID {content_id}")
@@ -160,7 +184,7 @@ class ContentService:
                     "areasOfInterest", "presentationSlidesUrl", "recapSlidesUrl", 
                     "sessionRecordingStatus", "videoSourceFileUrl", "videoYoutubeUrl", 
                     "youtubeUrl", "youtubeChannel", "youtubeVisibility", 
-                    "ytVideoTitle", "ytDescription"
+                    "ytVideoTitle", "ytDescription", "isLatest", "isRecommended"
                 ]:
                     # Convert camelCase to snake_case
                     snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key])

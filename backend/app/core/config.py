@@ -89,6 +89,9 @@ class Settings(BaseSettings):
 
     # Session Settings
     SESSION_SECRET_KEY: str = os.getenv("SESSION_SECRET_KEY", "supersecretkey")
+    
+    # Security Settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-for-hashing")
 
     # Flask Settings (for compatibility)
     FLASK_ENV: Optional[str] = os.getenv("FLASK_ENV")

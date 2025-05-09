@@ -91,6 +91,54 @@ class ContentRepository:
         print(f"DEBUG: Successfully converted {len(result)}/{len(docs)} documents to models")
         return result
 
+    def get_latest_content(self, limit: int = 10) -> List[ContentInDB]:
+        """Get content marked as latest.
+
+        Args:
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of content items marked as latest.
+        """
+        try:
+            # Use Firestore filters to get content where isLatest is True
+            # Note we need to use "is_latest" for the Firestore field (snake_case)
+            firestore_filters = [("is_latest", "==", True)]
+            
+            docs = self.firestore.search_documents(
+                self.collection, "", [], filters=firestore_filters, limit=limit, order_by="updated_at"
+            )
+            
+            # Convert to ContentInDB models
+            return [self._to_content_model(doc) for doc in docs]
+        except Exception as e:
+            logger.error(f"Error retrieving latest content: {str(e)}")
+            return []
+
+    def get_recommended_content(self, limit: int = 10) -> List[ContentInDB]:
+        """Get content marked as recommended.
+
+        Args:
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of content items marked as recommended.
+        """
+        try:
+            # Use Firestore filters to get content where isRecommended is True
+            # Note we need to use "is_recommended" for the Firestore field (snake_case)
+            firestore_filters = [("is_recommended", "==", True)]
+            
+            docs = self.firestore.search_documents(
+                self.collection, "", [], filters=firestore_filters, limit=limit, order_by="updated_at"
+            )
+            
+            # Convert to ContentInDB models
+            return [self._to_content_model(doc) for doc in docs]
+        except Exception as e:
+            logger.error(f"Error retrieving recommended content: {str(e)}")
+            return []
+
     def get_by_id(self, content_id: str) -> Optional[ContentInDB]:
         """Get content by ID.
 
@@ -372,6 +420,10 @@ class ContentRepository:
         tags = doc.get("tags") or []
         metadata = doc.get("metadata") or {}
         used = bool(doc.get("used", False))
+        
+        # Get promotional flags
+        is_latest = bool(doc.get("is_latest", False))
+        is_recommended = bool(doc.get("is_recommended", False))
 
         # Process speakers if present
         speakers = []
@@ -421,6 +473,9 @@ class ContentRepository:
             tags=tags,
             metadata=metadata,
             used=used,
+            # Promotional flags
+            isLatest=is_latest,  # Map is_latest to isLatest
+            isRecommended=is_recommended,  # Map is_recommended to isRecommended
             # Text and embedding fields
             extractedText=doc.get("extracted_text"),  # Map extracted_text to extractedText
             pageContent=doc.get("page_content"),  # Map page_content to pageContent
