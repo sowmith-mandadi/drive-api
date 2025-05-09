@@ -37,10 +37,19 @@ class ContentRepository:
         # Get documents from Firestore
         print("\n\nDEBUG: Retrieving documents from Firestore...")
         print(f"DEBUG: Using collection: '{self.collection}'")
-        print(f"DEBUG: Ordering by 'created_at'")
+        
+        # Try first with createdAt field (camelCase)
+        print(f"DEBUG: Attempting to order by 'createdAt'")
         docs = self.firestore.list_documents(
-            self.collection, limit=limit, offset=offset, order_by="created_at"
+            self.collection, limit=limit, offset=offset, order_by="createdAt"
         )
+        
+        # If no documents found, try without ordering
+        if not docs:
+            print(f"DEBUG: No documents found with 'createdAt' ordering, trying without ordering")
+            docs = self.firestore.list_documents(
+                self.collection, limit=limit, offset=offset
+            )
         
         # Log the number of documents retrieved
         print(f"DEBUG: Retrieved {len(docs)} documents from Firestore")

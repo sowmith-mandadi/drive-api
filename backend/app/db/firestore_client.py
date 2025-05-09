@@ -156,7 +156,36 @@ class FirestoreClient:
 
             # Execute query
             print(f"DEBUG (Firestore): Executing query...")
-            docs = query.stream()
+            
+            try:
+                # Try to execute the query with the ordering
+                docs = query.stream()
+                
+                # Convert to list of dictionaries with document ID
+                results = []
+                for doc in docs:
+                    doc_data = doc.to_dict()
+                    doc_data["id"] = doc.id  # Add document ID to the data
+                    results.append(doc_data)
+                
+                print(f"DEBUG (Firestore): Query returned {len(results)} documents")
+                
+                # If no results and we were trying to order by a field, try again without ordering
+                if len(results) == 0 and order_by:
+                    print(f"DEBUG (Firestore): No results with ordering, trying without ordering")
+                    return self.list_documents(collection, limit, offset, None, filters)
+                
+                return results
+                
+            except Exception as query_error:
+                print(f"DEBUG (Firestore): Error executing query, possibly invalid order_by field: {str(query_error)}")
+                # If ordering caused the error, try again without ordering
+                if order_by:
+                    print(f"DEBUG (Firestore): Retrying without ordering")
+                    return self.list_documents(collection, limit, offset, None, filters)
+                else:
+                    # If there was an error and we weren't ordering, re-raise
+                    raise
 
             # Check if collection exists with a direct approach
             try:
@@ -170,15 +199,6 @@ class FirestoreClient:
             except Exception as count_error:
                 print(f"DEBUG (Firestore): Error checking collection existence: {str(count_error)}")
 
-            # Convert to list of dictionaries with document ID
-            results = []
-            for doc in docs:
-                doc_data = doc.to_dict()
-                doc_data["id"] = doc.id  # Add document ID to the data
-                results.append(doc_data)
-
-            print(f"DEBUG (Firestore): Query returned {len(results)} documents")
-            return results
         except Exception as e:
             print(f"DEBUG (Firestore): Error listing documents from {collection}: {str(e)}")
             logger.error(f"Error listing documents from {collection}: {str(e)}")

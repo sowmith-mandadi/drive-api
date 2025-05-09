@@ -124,7 +124,7 @@ if [ -f "credentials.json" ]; then
     export DEBUG="true"
     
     # TESTING DIFFERENT COLLECTION NAMES
-    export FIRESTORE_COLLECTION_CONTENT="Content"  # Try capitalized version
+    export FIRESTORE_COLLECTION_CONTENT="content"  # Try capitalized version
     echo -e "${YELLOW}TESTING ENVIRONMENT VARIABLE: FIRESTORE_COLLECTION_CONTENT=${FIRESTORE_COLLECTION_CONTENT}${NC}"
     
     # Try to extract the service account email
