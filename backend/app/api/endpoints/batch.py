@@ -521,6 +521,7 @@ async def process_batch_upload(job_id: str, contents: bytes, file_extension: str
                         "jobRoles": job_roles,
                         "areasOfInterest": areas_of_interest,
                         "industry": row_dict.get("industry"),
+                        "presenters": presenters,
                         "presentationSlidesUrl": row_dict.get("presentationSlidesUrl"),
                         "recapSlidesUrl": row_dict.get("recapSlidesUrl"),
                         "sessionRecordingStatus": row_dict.get("sessionRecordingStatus") or row_dict.get("videoRecordingStatus"),

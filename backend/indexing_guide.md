@@ -122,6 +122,108 @@ Task statuses include:
 - `error` - An error occurred while processing the task
 - `unknown` - Could not determine the task status
 
+## Deployment Management
+
+### Stopping Deployments
+
+To stop a deployment that's currently in progress:
+
+```bash
+gcloud app versions cancel-deployment VERSION_ID
+```
+
+To list all ongoing operations:
+
+```bash
+gcloud app operations list
+```
+
+To cancel a specific operation:
+
+```bash
+gcloud app operations cancel OPERATION_ID
+```
+
+After stopping a deployment, you can deploy a new version:
+
+```bash
+gcloud app deploy
+```
+
+### Permissions Management
+
+If encountering 403 errors or insufficient permissions when accessing Firestore or other Google Cloud services from App Engine:
+
+```bash
+# Get your current project ID
+gcloud config get-value project
+```
+
+#### Granting Firestore Access
+
+Grant basic Firestore access to your App Engine service account:
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member=serviceAccount:YOUR_PROJECT_ID@appspot.gserviceaccount.com \
+  --role=roles/datastore.user
+```
+
+For administrative access to Firestore:
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member=serviceAccount:YOUR_PROJECT_ID@appspot.gserviceaccount.com \
+  --role=roles/datastore.owner
+```
+
+#### Granting Storage Access
+
+Grant Cloud Storage access for file uploads:
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member=serviceAccount:YOUR_PROJECT_ID@appspot.gserviceaccount.com \
+  --role=roles/storage.objectAdmin
+```
+
+#### Verifying Permissions
+
+Verify the permissions have been applied correctly:
+
+```bash
+gcloud projects get-iam-policy YOUR_PROJECT_ID \
+  --flatten="bindings[].members" \
+  --format='table(bindings.role)' \
+  --filter="bindings.members:YOUR_PROJECT_ID@appspot.gserviceaccount.com"
+```
+
+### Additional Deployment Commands
+
+View deployed versions:
+
+```bash
+gcloud app versions list
+```
+
+Set traffic splitting between versions:
+
+```bash
+gcloud app services set-traffic default --splits=VERSION1=0.8,VERSION2=0.2
+```
+
+Migrate traffic immediately to a new version:
+
+```bash
+gcloud app services set-traffic default --splits=VERSION=1.0 --migrate
+```
+
+View application logs:
+
+```bash
+gcloud app logs tail -s default
+```
+
 ## Troubleshooting
 
 ### Common Issues
