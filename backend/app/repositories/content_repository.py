@@ -105,12 +105,18 @@ class ContentRepository:
             # Note we need to use "is_latest" for the Firestore field (snake_case)
             firestore_filters = [("is_latest", "==", True)]
             
+            # Removed the order_by parameter to avoid requiring a composite index
             docs = self.firestore.search_documents(
-                self.collection, "", [], filters=firestore_filters, limit=limit, order_by="updated_at"
+                self.collection, "", [], filters=firestore_filters, limit=limit
             )
             
             # Convert to ContentInDB models
-            return [self._to_content_model(doc) for doc in docs]
+            results = [self._to_content_model(doc) for doc in docs]
+            
+            # Sort in memory instead of in the query
+            results.sort(key=lambda x: x.updatedAt, reverse=True)
+            
+            return results
         except Exception as e:
             logger.error(f"Error retrieving latest content: {str(e)}")
             return []
@@ -129,12 +135,18 @@ class ContentRepository:
             # Note we need to use "is_recommended" for the Firestore field (snake_case)
             firestore_filters = [("is_recommended", "==", True)]
             
+            # Removed the order_by parameter to avoid requiring a composite index
             docs = self.firestore.search_documents(
-                self.collection, "", [], filters=firestore_filters, limit=limit, order_by="updated_at"
+                self.collection, "", [], filters=firestore_filters, limit=limit
             )
             
             # Convert to ContentInDB models
-            return [self._to_content_model(doc) for doc in docs]
+            results = [self._to_content_model(doc) for doc in docs]
+            
+            # Sort in memory instead of in the query
+            results.sort(key=lambda x: x.updatedAt, reverse=True)
+            
+            return results
         except Exception as e:
             logger.error(f"Error retrieving recommended content: {str(e)}")
             return []
